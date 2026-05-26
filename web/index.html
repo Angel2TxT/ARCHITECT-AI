@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="ARCHITECT AI · Plano IA — Revisión profesional de planos arquitectónicos" />
+  <title>ARCHITECT AI | Plano IA</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=42" />
+  <style id="loader-critical">
+    body.app-loading { overflow: hidden; }
+    #appLoader.app-loader--visible {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    html.dark #appLoader.app-loader--visible { background: #000; }
+    #appLoader .app-loader-spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: plano-loader-spin 0.7s linear infinite;
+    }
+    html.dark #appLoader .app-loader-spinner {
+      border-color: rgba(255, 255, 255, 0.15);
+      border-top-color: #fff;
+    }
+    @keyframes plano-loader-spin { to { transform: rotate(360deg); } }
+  </style>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#000000",
+            "on-primary": "#ffffff",
+            background: "#ffffff",
+            surface: "#ffffff",
+            "on-surface": "#000000",
+            secondary: "#000000",
+            "inverse-surface": "#000000",
+            "inverse-on-surface": "#ffffff",
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          },
+          maxWidth: {
+            "container-max": "1440px",
+          },
+          spacing: {
+            gutter: "24px",
+            "margin-desktop": "64px",
+            "margin-mobile": "20px",
+          },
+        },
+      },
+    };
+  </script>
+  <script>
+    (function () {
+      var KEY = "plano_ia_theme";
+      var VER = "bw-light-default";
+      if (localStorage.getItem("plano_ia_theme_ver") !== VER) {
+        localStorage.setItem(KEY, "light");
+        localStorage.setItem("plano_ia_theme_ver", VER);
+      }
+      var dark = localStorage.getItem(KEY) === "dark";
+      var root = document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(dark ? "dark" : "light");
+      root.setAttribute("data-theme", dark ? "dark" : "light");
+      root.style.colorScheme = dark ? "dark" : "light";
+    })();
+  </script>
+</head>
+<body class="app-loading bg-white text-black overflow-hidden font-sans antialiased dark:bg-black dark:text-white">
+  <div id="appLoader" class="app-loader app-loader--visible" role="status" aria-live="polite" aria-busy="true">
+    <div class="app-loader-inner">
+      <p class="app-loader-brand">ARCHITECT AI</p>
+      <div class="app-loader-spinner" aria-hidden="true"></div>
+      <p class="app-loader-text" id="appLoaderText">Cargando…</p>
+    </div>
+  </div>
+  <script src="/static/loader-bootstrap.js?v=1"></script>
+
+  <div class="mesh-bg" aria-hidden="true">
+    <div class="mesh-pattern w-full h-full"></div>
+  </div>
+
+  <div class="app-shell flex h-screen w-full">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 z-40 flex h-full flex-col border-r px-3 py-6 backdrop-blur-xl">
+      <div class="sidebar-inner flex h-full min-h-0 flex-col">
+      <div class="mb-6 px-1">
+        <h1 class="text-[15px] font-semibold tracking-tight text-black dark:text-white">ARCHITECT AI</h1>
+        <p class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-black/40 dark:text-white/40">Plano IA · Studio</p>
+      </div>
+
+      <button type="button" id="btnNewChat" class="mb-3 flex w-full items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold transition-opacity hover:opacity-80">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+        Nuevo chat
+      </button>
+
+      <div class="search-wrap mb-3 flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5">
+        <span class="material-symbols-outlined text-[17px]">search</span>
+        <input type="search" id="searchChats" placeholder="Buscar chats" class="w-full border-0 bg-transparent text-[13px] focus:ring-0" />
+      </div>
+
+      <div class="usage-bar mb-3 hidden rounded-[10px] border px-3 py-2 text-[11px]" id="usageBar">
+        <div class="flex justify-between font-medium">
+          <span id="planLabel">Plan</span>
+          <span id="usageLabel">0 / 5</span>
+        </div>
+        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
+          <div class="usage-fill h-full bg-black transition-all dark:bg-white" id="usageFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <nav class="mb-2 space-y-0.5">
+        <a href="#" id="btnWorkspace" class="nav-item active flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-transform active:scale-[0.98]">
+          <span class="material-symbols-outlined text-[20px]">architecture</span>
+          <span class="text-[13px] font-medium">Workspace</span>
+        </a>
+        <a href="#" id="btnPlans" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">workspace_premium</span>
+          <span class="text-sm font-medium">Planes</span>
+        </a>
+        <a href="#" id="btnSettings" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">settings</span>
+          <span class="text-sm font-medium">Ajustes</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-section min-h-0 flex-1 overflow-hidden flex flex-col gap-2">
+        <div class="min-h-0 flex-1 flex flex-col overflow-hidden">
+          <p class="section-label mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]">Recientes</p>
+          <ul class="chat-list flex-1 overflow-y-auto pr-1" id="chatList"></ul>
+        </div>
+        <div class="analysis-history-wrap hidden shrink-0" id="analysisHistoryWrap">
+          <p class="section-label mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]">Análisis</p>
+          <ul class="analysis-list max-h-28 overflow-y-auto pr-1" id="analysisList"></ul>
+        </div>
+      </div>
+
+      <div class="sidebar-footer mt-3 border-t pt-3">
+        <div class="user-pill flex w-full items-center gap-2.5 px-1">
+          <button type="button" class="user-pill-main flex min-w-0 flex-1 items-center gap-2.5 text-left" id="btnAccount" title="Mi cuenta">
+            <div class="avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" id="userAvatar">IA</div>
+            <div class="user-info min-w-0 flex-1">
+              <span class="user-name block truncate text-[13px] font-semibold text-black dark:text-white" id="userName">—</span>
+              <span class="user-role text-[10px]" id="userRole">—</span>
+            </div>
+          </button>
+          <button type="button" class="btn-logout shrink-0 rounded-lg p-1 opacity-60 hover:opacity-100" id="btnLogout" title="Cerrar sesión">
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+          </button>
+        </div>
+      </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main main-content relative flex min-h-0 flex-1 flex-col">
+      <header class="topbar flex shrink-0 items-center gap-3 border-b px-4 py-2.5 backdrop-blur-xl md:px-8">
+        <button type="button" class="btn-sidebar-toggle rounded-[10px] p-2 transition-colors" id="btnMenu" aria-label="Ocultar menú" title="Mostrar u ocultar panel">
+          <span class="material-symbols-outlined" id="sidebarToggleIcon">menu_open</span>
+        </button>
+        <div class="topbar-center flex flex-1 items-center gap-2 min-w-0">
+          <button type="button" class="model-badge rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider cursor-pointer hover:opacity-80" id="planBadge" title="Ver planes">FREE</button>
+          <span class="model-name text-[13px] font-medium truncate" id="modelName">Revisión estructural · IA</span>
+        </div>
+        <div class="topbar-guest-actions hidden shrink-0 items-center gap-2" id="guestTopbarActions">
+          <a href="/login" class="guest-auth-btn guest-auth-btn--ghost">Iniciar sesión</a>
+          <a href="/login" class="guest-auth-btn">Crear cuenta</a>
+        </div>
+      </header>
+
+      <div class="guest-trial-bar hidden mx-4 mt-2 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="guestTrialBar">
+        <span class="material-symbols-outlined guest-trial-icon">science</span>
+        <span id="guestTrialText">Prueba gratuita</span>
+        <a href="/login" class="guest-trial-link">Registrarse</a>
+      </div>
+
+      <div class="setup-banner mx-4 mt-3 hidden rounded-[10px] border border-black/15 bg-white px-4 py-2.5 text-[13px] dark:border-white/20 dark:bg-black md:mx-8" id="setupBanner">
+        <strong>Modelo no entrenado.</strong>
+        <span class="ml-1">Ejecuta <code class="rounded bg-black/10 px-1">python scripts/train_demo.py</code></span>
+      </div>
+
+      <div class="chat-area flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-28 pt-4 md:px-margin-desktop md:pb-32" id="chatArea">
+        <!-- Welcome -->
+        <div class="welcome flex flex-1 flex-col items-center justify-center py-6" id="welcome">
+          <div class="welcome-hero mb-8 max-w-xl text-center animate-fade-up">
+            <h2 class="mb-2 text-[2rem] font-semibold tracking-tight md:text-[2.35rem]">
+              ¿Qué plano revisamos hoy?
+            </h2>
+            <p class="welcome-sub text-[15px] leading-relaxed" id="welcomeSub">
+              Pregunta sobre construcción (medidas en Ocosingo, normativa, etc.) o sube un plano para revisarlo. Las tarjetas son solo ejemplos.
+            </p>
+          </div>
+
+          <div class="suggestion-grid grid w-full grid-cols-1 gap-3 px-2 sm:grid-cols-3">
+            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Este plano está bien?">
+              <div class="card-icon-wrap">
+                <span class="material-symbols-outlined">report_problem</span>
+              </div>
+              <h3>¿Está bien?</h3>
+              <p>Respuesta clara según normativa y lo detectado.</p>
+            </div>
+            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="Revisa las puertas y sus medidas de ancho">
+              <div class="card-icon-wrap">
+                <span class="material-symbols-outlined">sensor_door</span>
+              </div>
+              <h3>Revisión de Puertas</h3>
+              <p>Giros, anchos y accesibilidad.</p>
+            </div>
+            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="Revisa si las ventanas son del mismo tamaño">
+              <div class="card-icon-wrap">
+                <span class="material-symbols-outlined">window</span>
+              </div>
+              <h3>Ventanas</h3>
+              <p>Tamaños, uniformidad e iluminación.</p>
+            </div>
+          </div>
+          <p class="welcome-examples mt-3 text-center text-[12px] text-on-surface-variant/70 px-4">
+            Ejemplos: «¿Medidas oficiales en Ocosingo?», «¿Este plano está bien?», «Ancho mínimo de puertas»
+          </p>
+        </div>
+
+        <div class="messages mx-auto w-full max-w-3xl" id="messages" hidden></div>
+      </div>
+
+      <!-- Composer dock (fixed) -->
+      <div class="drop-overlay hidden" id="dropOverlay" aria-hidden="true">
+        <div class="drop-overlay-inner glass-panel">
+          <span class="material-symbols-outlined">upload_file</span>
+          <p>Suelta el plano aquí</p>
+          <p class="drop-overlay-sub">Imágenes · PDF · DXF · DWG</p>
+        </div>
+      </div>
+
+      <div class="composer-wrap composer-dock pointer-events-none fixed bottom-0 left-0 right-0 z-30" id="composerDock">
+        <div class="composer-inner pointer-events-auto mx-auto max-w-2xl px-4 pb-3 pt-2">
+          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf,.dxf,.dwg" hidden />
+
+          <div class="composer-stack mb-2">
+            <div class="attachments-row flex justify-center" id="attachmentsRow" hidden>
+              <div class="attach-chip glass-panel inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2">
+                <div class="attach-thumb h-9 w-9 overflow-hidden rounded-full" id="attachThumb">
+                  <img id="previewImg" alt="" class="h-full w-full object-cover" data-hidden="true" />
+                  <span class="attach-fallback flex h-full w-full items-center justify-center" id="attachFallback" hidden>
+                    <span class="material-symbols-outlined text-[18px]">image</span>
+                  </span>
+                </div>
+                <div class="attach-meta min-w-0 text-left">
+                  <span class="attach-name block max-w-[12rem] truncate text-xs font-semibold" id="attachName"></span>
+                  <span class="attach-type text-[10px] text-on-surface-variant/60" id="attachType"></span>
+                </div>
+                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5" id="btnRemoveAttach" aria-label="Quitar archivo">
+                  <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <form class="composer-bar glass-panel flex items-end gap-1 rounded-full p-1 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/15" id="composerForm">
+            <div class="attach-picker-wrap ml-0.5 shrink-0" id="attachPickerWrap">
+              <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true">
+                <span class="material-symbols-outlined">attach_file</span>
+              </button>
+              <div class="attach-picker-menu glass-panel" id="attachPickerMenu" role="menu" hidden>
+                <p class="attach-picker-title">Tipo de archivo</p>
+                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+                  <span class="material-symbols-outlined">image</span>
+                  <span class="attach-picker-label"><strong>Imagen</strong><small>PNG, JPG, WEBP</small></span>
+                </button>
+                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="application/pdf,.pdf">
+                  <span class="material-symbols-outlined">picture_as_pdf</span>
+                  <span class="attach-picker-label"><strong>PDF</strong><small>Plano en PDF</small></span>
+                </button>
+                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dxf,application/dxf">
+                  <span class="material-symbols-outlined">architecture</span>
+                  <span class="attach-picker-label"><strong>DXF</strong><small>AutoCAD intercambio</small></span>
+                </button>
+                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dwg">
+                  <span class="material-symbols-outlined">domain</span>
+                  <span class="attach-picker-label"><strong>DWG</strong><small>AutoCAD nativo</small></span>
+                </button>
+                <button type="button" class="attach-picker-item attach-picker-item--all" role="menuitem" data-attach-accept="all">
+                  <span class="material-symbols-outlined">folder_open</span>
+                  <span class="attach-picker-label"><strong>Todos</strong><small>Cualquier formato soportado</small></span>
+                </button>
+              </div>
+            </div>
+            <textarea
+              id="messageInput"
+              rows="1"
+              class="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2.5 text-[14px] focus:ring-0"
+              placeholder="Pregunta de construcción o adjunta plano y escribe qué revisar…"
+              aria-label="Mensaje"
+            ></textarea>
+            <button type="submit" class="btn-send mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-30" id="btnSend" aria-label="Enviar" disabled>
+              <span class="material-symbols-outlined">arrow_upward</span>
+            </button>
+          </form>
+          <p class="composer-hint mt-2 text-center text-[10px]">Imagen, PDF, DXF o DWG · arrastra o Ctrl+V</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="footer-bar pointer-events-none fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between border-t border-white/20 bg-surface/40 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-inverse-surface/30 md:left-64 md:px-margin-desktop">
+    <div class="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/40">© 2024 Architectural AI Systems</div>
+    <div class="pointer-events-auto flex gap-6">
+      <button type="button" class="footer-link" id="btnPrivacy">Privacy</button>
+      <button type="button" class="footer-link" id="btnApi">API</button>
+      <button type="button" class="footer-link" id="btnSupport">Support</button>
+    </div>
+  </footer>
+
+  <dialog class="modal" id="plansModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Planes y suscripción</h2>
+        <button type="button" class="modal-close" id="btnClosePlans" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p class="mb-4 text-sm text-black/60 dark:text-white/60" id="plansUsageText"></p>
+      <div class="plans-grid space-y-3" id="plansGrid"></div>
+      <p class="mt-4 text-xs text-black/45 dark:text-white/45">Pago con Stripe próximamente. Por ahora el cambio de plan es manual (demo).</p>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="settingsModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Configuración</h2>
+        <button type="button" class="modal-close" id="btnCloseSettings" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="settingsForm">
+        <div class="form-group">
+          <label>Modelo YOLO (.pt)</label>
+          <input type="text" id="weightsPath" placeholder="runs/detect/.../best.pt" />
+          <small>Ruta al archivo de pesos entrenado</small>
+        </div>
+        <div class="form-group">
+          <label>Apariencia</label>
+          <div class="theme-switch" role="group" aria-label="Tema">
+            <button type="button" class="theme-option active" data-theme="light" id="themeLight">Claro</button>
+            <button type="button" class="theme-option" data-theme="dark" id="themeDark">Oscuro</button>
+          </div>
+          <small>Predeterminado: fondo blanco</small>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-row">
+            <input type="checkbox" id="autoCalibrate" checked />
+            <span>Calibración automática (escala y confianza por plano)</span>
+          </label>
+          <small id="autoCalHelp">Se estiman píxeles/m y confianza con puertas, ventanas, recintos y circulación del plano.</small>
+          <p class="auto-cal-readout hidden" id="autoCalReadout"></p>
+        </div>
+        <div class="form-row" id="manualCalRow">
+          <div class="form-group">
+            <label>Píxeles por metro (manual)</label>
+            <input type="number" id="ppmInput" min="10" max="500" step="5" value="100" disabled />
+          </div>
+          <div class="form-group">
+            <label>Confianza mínima (manual)</label>
+            <input type="number" id="confInput" min="0.01" max="0.95" step="0.01" value="0.25" disabled />
+          </div>
+        </div>
+        <div class="form-group norms-panel" id="normsPanel">
+          <label>Normativa aplicada</label>
+          <p class="norms-bundle" id="normsBundleTitle">Chiapas, México</p>
+          <ul class="norms-thresholds" id="normsThresholdsList"></ul>
+          <small>Revisión integral: habitabilidad, vanos, muros, circulación, urbano, instalaciones, estructura y accesibilidad. Ver <code>docs/NORMAS_CHIAPAS.md</code>.</small>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelSettings">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="accountModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Mi cuenta</h2>
+        <button type="button" class="modal-close" id="btnCloseAccount" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="account-body text-sm space-y-2" id="accountBody"></div>
+      <div class="modal-actions mt-4">
+        <button type="button" class="btn-secondary" id="btnAccountPlans">Ver planes</button>
+        <button type="button" class="btn-primary" id="btnAccountLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="image-viewer-modal" id="imageViewerModal" aria-label="Visor de plano">
+    <div class="image-viewer-shell">
+      <header class="image-viewer-toolbar">
+        <p class="image-viewer-caption" id="imageViewerCaption">Plano</p>
+        <div class="image-viewer-actions">
+          <button type="button" class="iv-btn" id="btnIvZoomOut" title="Alejar" aria-label="Alejar">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <span class="image-viewer-zoom-pct" id="imageViewerZoomPct">100%</span>
+          <button type="button" class="iv-btn" id="btnIvZoomIn" title="Acercar" aria-label="Acercar">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button type="button" class="iv-btn iv-btn--text" id="btnIvFit" title="Ajustar a pantalla">Ajustar</button>
+          <button type="button" class="iv-btn iv-btn--text" id="btnIvZoomReset" title="Tamaño real">1:1</button>
+          <button type="button" class="iv-btn" id="btnCloseImageViewer" title="Cerrar" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </header>
+      <div class="image-viewer-stage" id="imageViewerStage">
+        <img id="imageViewerImg" alt="Plano ampliado" draggable="false" />
+      </div>
+      <p class="image-viewer-hint">Clic en la imagen del chat · rueda o botones para zoom · arrastra para mover · doble clic acerca/aleja</p>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="trialModal">
+    <div class="modal-box glass-panel trial-modal-box">
+      <div class="modal-header">
+        <h2>Prueba terminada</h2>
+        <button type="button" class="modal-close" id="btnCloseTrial" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p class="trial-modal-text text-sm leading-relaxed">
+        Ya usaste tu prueba gratuita. Para seguir analizando planos y haciendo preguntas con la IA,
+        inicia sesión o crea tu cuenta (plan gratis con más análisis al mes).
+      </p>
+      <div class="modal-actions mt-4 flex flex-col gap-2 sm:flex-row">
+        <a href="/login" class="auth-submit btn-primary text-center no-underline">Iniciar sesión</a>
+        <a href="/login" class="btn-secondary text-center py-2.5 text-sm no-underline">Crear cuenta</a>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="infoModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2 id="infoModalTitle">Info</h2>
+        <button type="button" class="modal-close" id="btnCloseInfo" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="info-modal-body text-sm leading-relaxed" id="infoModalBody"></div>
+    </div>
+  </dialog>
+
+  <div class="sidebar-backdrop hidden" id="sidebarBackdrop" aria-hidden="true"></div>
+  <div class="toast hidden" id="toast" role="status"></div>
+
+  <script src="/static/auth.js?v=20"></script>
+  <script src="/static/app.js?v=39"></script>
+</body>
+</html>

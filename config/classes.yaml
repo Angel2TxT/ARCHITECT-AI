@@ -1,0 +1,21 @@
+# Mapeo de etiquetas SVG CubiCasa5K -> clase YOLO
+# Iconos (model.svg, capa Icons)
+icons:
+  Door: door
+  Window: window
+
+# Muros
+walls:
+  - Wall
+
+# Habitaciones (todas se agrupan en "room" para detección)
+rooms:
+  - Kitchen
+  - "Living Room"
+  - Bedroom
+  - Bath
+  - Hallway
+  - Storage
+  - Garage
+  - "Other rooms"
+  - Outdoor

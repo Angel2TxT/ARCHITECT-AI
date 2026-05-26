@@ -1,0 +1,11 @@
+# Rutas relativas al directorio plano-validador/
+path: datasets/cubicasa_yolo
+train: images/train
+val: images/val
+
+nc: 4
+names:
+  0: door
+  1: window
+  2: wall
+  3: room
