@@ -5,7 +5,6 @@ ARCHITECT es una plataforma para revisar planos de arquitectura, ingenieria civi
 Documentacion util para el equipo:
 
 - [Guia del equipo](docs/TEAM_SETUP.md)
-- [Mantenimiento del repositorio](docs/REPOSITORY_MAINTENANCE.md)
 - [Entrenamiento de planos](docs/ENTRENAMIENTO_PLANOS.md)
 - [CAD, DXF y DWG](docs/CAD_DWG.md)
 
@@ -118,4 +117,4 @@ Para Docker, `docker-compose.yml` define la conexion interna de MySQL. Para desa
 - La app nueva vive en `frontend/`.
 - La app anterior se conserva en `web/` y se sirve en `/legacy-app`.
 - No subas `.env`, `.venv`, `node_modules`, `runs`, `datasets`, `weights` ni archivos `.pt`.
-- El repositorio recomendado debe llamarse `architect`.
+- El repositorio se mantiene como `ARCHITECT-AI`.
