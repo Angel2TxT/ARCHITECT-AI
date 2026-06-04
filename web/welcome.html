@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>ARCHITECT | Revisión técnica de planos</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#000000",
+            "on-primary": "#ffffff",
+            secondary: "#5d5e63",
+            background: "#f9f9fb",
+            surface: "#f9f9fb",
+            "surface-container": "#eeeef0",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f3f3f5",
+            "secondary-container": "#e0dfe4",
+            "on-secondary-container": "#626267",
+            "outline-variant": "#cfc4c5",
+            outline: "#7e7576",
+            error: "#ba1a1a",
+            "on-surface": "#1a1c1d",
+            "inverse-surface": "#2f3132",
+            "inverse-on-surface": "#f0f0f2"
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+            full: "9999px"
+          },
+          spacing: {
+            unit: "8px",
+            "margin-mobile": "20px",
+            "container-max": "1440px",
+            "margin-desktop": "64px",
+            gutter: "24px"
+          },
+          fontFamily: {
+            "display-lg": ["Inter"],
+            "display-lg-mobile": ["Inter"],
+            "body-lg": ["Inter"],
+            "label-sm": ["Inter"],
+            "headline-md": ["Inter"],
+            "body-md": ["Inter"]
+          },
+          fontSize: {
+            "display-lg": ["40px", { lineHeight: "1.08", letterSpacing: "0", fontWeight: "600" }],
+            "display-lg-mobile": ["28px", { lineHeight: "1.16", letterSpacing: "0", fontWeight: "600" }],
+            "body-lg": ["15px", { lineHeight: "1.55", letterSpacing: "0", fontWeight: "400" }],
+            "label-sm": ["12px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
+            "headline-md": ["24px", { lineHeight: "1.3", letterSpacing: "0", fontWeight: "500" }],
+            "body-md": ["15px", { lineHeight: "1.5", letterSpacing: "0", fontWeight: "400" }]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .technical-grid {
+      background-size: 40px 40px;
+      background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    }
+    .welcome-nav {
+      transition: height 0.35s ease, background-color 0.35s ease, box-shadow 0.35s ease;
+    }
+    .welcome-nav.nav-scrolled {
+      height: 4rem;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 16px 42px rgba(30, 41, 59, 0.08);
+    }
+    .hero-clean {
+      min-height: min(760px, calc(100dvh - 80px));
+      display: flex;
+      align-items: center;
+      padding-top: 2.75rem;
+      padding-bottom: 3.75rem;
+    }
+    .hero-orbit {
+      position: absolute;
+      width: 13rem;
+      height: 13rem;
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      border-radius: 9999px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .hero-orbit--one {
+      top: 18%;
+      left: 13%;
+    }
+    .hero-orbit--two {
+      right: 10%;
+      bottom: 12%;
+      width: 18rem;
+      height: 18rem;
+    }
+    .hero-scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 1.35rem;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(26, 28, 29, 0.56);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .hero-scroll-cue::before {
+      content: "";
+      width: 0.42rem;
+      height: 0.42rem;
+      border-radius: 9999px;
+      background: currentColor;
+    }
+    .model-section {
+      position: relative;
+      margin-top: 0;
+      padding: 4.75rem 1.25rem 4.5rem;
+      background: linear-gradient(180deg, #f9f9fb 0%, #ffffff 46%, #f1f5f7 100%);
+      overflow: hidden;
+    }
+    .model-section::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, transparent, black 20%, black 82%, transparent);
+      pointer-events: none;
+    }
+    .model-shell {
+      position: relative;
+      width: min(100%, 64rem);
+      margin: 0 auto;
+    }
+    .model-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 0.75rem;
+      color: #5d5e63;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .model-eyebrow::before {
+      content: "";
+      width: 2.4rem;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.38;
+    }
+    .model-title {
+      max-width: 39rem;
+      margin: 0 0 0.85rem;
+      font-size: clamp(1.85rem, 3.6vw, 3.25rem);
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .model-copy {
+      max-width: 35rem;
+      color: #5d5e63;
+      font-size: 0.94rem;
+      line-height: 1.62;
+    }
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(32px) scale(0.98);
+      transition:
+        opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: var(--reveal-delay, 0ms);
+    }
+    .scroll-reveal.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+    }
+    .ai-plan-stage {
+      position: relative;
+      min-height: 460px;
+      background:
+        radial-gradient(circle at 72% 24%, rgba(255, 174, 51, 0.18), transparent 24%),
+        radial-gradient(circle at 45% 44%, rgba(36, 128, 255, 0.16), transparent 34%),
+        linear-gradient(135deg, #ffffff, #eef2f5 62%, #ffffff);
+    }
+    .ai-plan-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 460px;
+    }
+    .ai-plan-hud {
+      pointer-events: none;
+    }
+    .ai-plan-chip {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(180, 190, 200, 0.36);
+      box-shadow: 0 18px 50px rgba(42, 54, 72, 0.14);
+    }
+    @media (max-width: 768px) {
+      .hero-clean {
+        min-height: calc(100dvh - 80px);
+        padding-top: 2.25rem;
+        padding-bottom: 4rem;
+      }
+      .hero-orbit {
+        width: 12rem;
+        height: 12rem;
+      }
+      .hero-orbit--two {
+        width: 15rem;
+        height: 15rem;
+      }
+      .model-section {
+        padding: 4.5rem 1rem;
+      }
+      .ai-plan-stage,
+      .ai-plan-canvas {
+        min-height: 360px;
+      }
+      .ai-plan-chip {
+        max-width: calc(100vw - 64px);
+      }
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+  <nav class="welcome-nav fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl border-b border-outline-variant/30 h-20">
+    <div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop h-full">
+      <a class="font-display-lg text-[24px] md:text-[34px] tracking-normal text-primary no-underline" href="/">ARCHITECT</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a class="text-primary font-semibold border-b border-primary font-body-md text-body-md transition-all duration-300" href="#product">Inicio</a>
+        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#model-3d">Análisis visual</a>
+        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#features">Revisión de planos</a>
+        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#structural">Criterios técnicos</a>
+      </div>
+      <div class="flex items-center gap-3 md:gap-4">
+        <a class="text-secondary font-body-md text-body-md px-3 md:px-4 py-2 hover:text-primary transition-colors no-underline" href="/login">Ingresar</a>
+        <a class="bg-primary text-on-primary font-body-md text-body-md px-4 md:px-6 py-2 rounded-full font-semibold hover:opacity-80 transition-opacity no-underline" href="/login#register">Crear cuenta</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-20">
+    <section id="product" class="hero-clean relative text-center px-margin-mobile md:px-margin-desktop technical-grid overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-b from-transparent to-background/50 pointer-events-none"></div>
+      <span class="hero-orbit hero-orbit--one" aria-hidden="true"></span>
+      <span class="hero-orbit hero-orbit--two" aria-hidden="true"></span>
+      <div class="relative z-10 max-w-4xl mx-auto scroll-reveal visible" id="hero-text">
+        <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Revisión técnica de planos asistida por IA</span>
+        <h1 class="font-display-lg text-display-lg md:text-[54px] leading-[1.06] mb-6 tracking-normal">Detecta inconsistencias en planos antes de construir</h1>
+        <p class="font-body-lg text-body-lg text-secondary max-w-[38rem] mx-auto mb-9">
+          Plataforma para revisar planos arquitectónicos, estructurales y de instalaciones, identificar errores de coordinación, señalar omisiones documentales y apoyar la validación técnica antes de enviar el proyecto a obra.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a class="bg-primary text-on-primary font-body-md text-body-md px-7 py-3 rounded-full font-semibold text-[15px] transition-transform hover:scale-105 no-underline" href="/login#register">Iniciar revisión</a>
+          <a class="glass px-7 py-3 rounded-full font-semibold text-[15px] hover:bg-white/50 transition-all no-underline text-primary" href="/login">Entrar al sistema</a>
+        </div>
+      </div>
+      <div class="hero-scroll-cue">Desplazar</div>
+    </section>
+
+    <section class="model-section" id="model-3d">
+      <div class="model-shell">
+        <div class="mb-8 scroll-reveal">
+          <p class="model-eyebrow">Coordinación visual</p>
+          <h2 class="model-title">Lectura espacial para revisar interferencias y elementos críticos.</h2>
+          <p class="model-copy">La vista 3D representa cómo la plataforma puede apoyar la interpretación de elementos estructurales, cruces entre disciplinas, ejes, vanos y zonas que requieren revisión por parte del equipo técnico.</p>
+        </div>
+        <div class="w-full mx-auto scroll-reveal" id="hero-image">
+          <div class="glass p-4 rounded-xl shadow-2xl relative group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/10 to-transparent rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <div class="ai-plan-stage relative rounded-lg overflow-hidden border border-outline-variant/20">
+            <canvas id="aiPlanCanvas" class="ai-plan-canvas" aria-label="Plano arquitectónico 3D analizado por IA"></canvas>
+            <div class="ai-plan-hud absolute inset-0">
+              <div class="absolute top-6 left-6 space-y-3 text-left">
+                <div class="ai-plan-chip px-4 py-2 rounded-lg flex items-center gap-3 animate-pulse">
+                  <span class="w-2 h-2 bg-error rounded-full"></span>
+                  <span class="text-label-sm font-label-sm">Alerta: posible interferencia viga-ducto</span>
+                </div>
+                <div class="ai-plan-chip px-4 py-2 rounded-lg flex items-center gap-3">
+                  <span class="w-2 h-2 bg-[#19a8ff] rounded-full"></span>
+                  <span class="text-label-sm font-label-sm">Revisión pendiente: cotas, ejes y niveles</span>
+                </div>
+              </div>
+              <div class="absolute bottom-6 right-6 hidden md:block">
+                <div class="ai-plan-chip px-5 py-3 rounded-xl text-left">
+                  <p class="text-label-sm font-label-sm uppercase tracking-widest text-secondary">Análisis en curso</p>
+                  <p class="text-body-md font-body-md text-primary mt-1">Estructura, arquitectura e instalaciones</p>
+                </div>
+              </div>
+            </div>
+            <noscript>
+              <div class="absolute inset-0 flex items-center justify-center bg-inverse-surface text-inverse-on-surface">
+                Vista 3D disponible con JavaScript habilitado.
+              </div>
+            </noscript>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16 bg-surface-container-lowest">
+      <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter text-center">
+          <div class="p-6 scroll-reveal">
+            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="3" data-suffix="">3</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Disciplinas coordinadas</p>
+            <p class="mt-4 text-secondary/70">Arquitectura, estructura e instalaciones revisadas dentro del mismo flujo.</p>
+          </div>
+          <div class="p-6 scroll-reveal" style="transition-delay: 100ms">
+            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="4" data-suffix="">4</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Frentes de revisión</p>
+            <p class="mt-4 text-secondary/70">Geometría, cotas, interferencias y documentación técnica del plano.</p>
+          </div>
+          <div class="p-6 scroll-reveal" style="transition-delay: 200ms">
+            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="1" data-suffix="">1</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Reporte centralizado</p>
+            <p class="mt-4 text-secondary/70">Hallazgos organizados para revisión, corrección y seguimiento del equipo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="py-20 px-margin-mobile md:px-margin-desktop">
+      <div class="max-w-container-max mx-auto">
+        <div class="text-center mb-12 scroll-reveal">
+          <h2 class="font-display-lg text-display-lg mb-4 tracking-normal">Capacidades de revisión técnica</h2>
+          <p class="font-body-lg text-body-lg text-secondary max-w-xl mx-auto">Herramientas pensadas para reducir retrabajo, ordenar observaciones y mejorar la coordinación entre disciplinas antes de obra.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+          <div class="md:col-span-8 group scroll-reveal">
+            <div class="glass p-7 rounded-xl h-full flex flex-col justify-between overflow-hidden relative">
+              <div class="relative z-10">
+                <span class="material-symbols-outlined text-3xl mb-4 bg-surface-container rounded-full p-3">architecture</span>
+                <h3 class="font-headline-md text-headline-md mb-4">Detección de inconsistencias</h3>
+                <p class="font-body-md text-body-md text-secondary max-w-md">Identifica señales de planos incompletos o contradictorios: cotas faltantes, simbología inconsistente, elementos duplicados, cruces no resueltos y zonas que requieren validación técnica.</p>
+              </div>
+              <div class="mt-8 grid grid-cols-3 gap-3 opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+                <div class="h-16 rounded-xl bg-surface-container border border-outline-variant/30"></div>
+                <div class="h-16 rounded-xl bg-primary/10 border border-outline-variant/30"></div>
+                <div class="h-16 rounded-xl bg-error/10 border border-outline-variant/30"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="structural" class="md:col-span-4 scroll-reveal" style="transition-delay: 150ms">
+            <div class="glass p-7 rounded-xl h-full border border-primary/5">
+              <span class="material-symbols-outlined text-3xl mb-4 bg-surface-container rounded-full p-3">layers</span>
+              <h3 class="font-headline-md text-headline-md mb-4">Revisión estructural preliminar</h3>
+              <p class="font-body-md text-body-md text-secondary">Apoya la lectura de ejes, niveles, columnas, vigas, claros y continuidad de elementos. Funciona como filtro de revisión documental; no sustituye el cálculo ni la firma de un especialista.</p>
+              <div class="mt-8 pt-8 border-t border-outline-variant/20">
+                <ul class="space-y-4">
+                  <li class="flex items-center gap-3 text-label-sm font-label-sm">
+                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+                    EJES Y NIVELES
+                  </li>
+                  <li class="flex items-center gap-3 text-label-sm font-label-sm">
+                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+                    ELEMENTOS PORTANTES
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div id="bim" class="md:col-span-4 scroll-reveal" style="transition-delay: 200ms">
+            <div class="glass p-7 rounded-xl h-full bg-primary text-on-primary">
+              <span class="material-symbols-outlined text-3xl mb-4 bg-white/10 rounded-full p-3">sync_alt</span>
+              <h3 class="font-headline-md text-headline-md mb-4">Coordinación de especialidades</h3>
+              <p class="font-body-md text-body-md opacity-70">Compara información entre arquitectura, estructura e instalaciones para localizar interferencias, cambios no reflejados y criterios que deben confirmarse antes de emitir planos.</p>
+            </div>
+          </div>
+
+          <div class="md:col-span-8 scroll-reveal" style="transition-delay: 250ms">
+            <div class="glass p-7 rounded-xl h-full flex items-center gap-8">
+              <div class="hidden lg:block w-1/3">
+                <div class="aspect-square rounded-full border-4 border-dashed border-outline-variant/30 flex items-center justify-center p-8">
+                  <div class="w-full h-full rounded-full bg-gradient-to-tr from-primary to-secondary/20"></div>
+                </div>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-headline-md text-headline-md mb-4">Criterios normativos configurables</h3>
+                <p class="font-body-md text-body-md text-secondary">Permite estructurar listas de verificación por proyecto, municipio o despacho: accesibilidad, seguridad, documentación mínima, simbología, escalas, notas generales y criterios de entrega.</p>
+                <a class="mt-6 font-label-sm text-label-sm uppercase tracking-widest text-primary flex items-center gap-2 group no-underline" href="/login">
+                  Revisar criterios
+                  <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-20 text-center relative overflow-hidden">
+      <div class="absolute inset-0 technical-grid opacity-20 pointer-events-none"></div>
+      <div class="max-w-3xl mx-auto px-margin-mobile relative z-10 scroll-reveal">
+        <h2 class="font-display-lg text-display-lg mb-8 tracking-normal">Revisa tus planos antes de emitirlos a obra.</h2>
+        <p class="font-body-lg text-body-lg text-secondary mb-12">Centraliza observaciones, documenta inconsistencias y entrega al equipo una base clara para corregir el proyecto con mayor control técnico.</p>
+        <div class="flex flex-col sm:flex-row gap-6 justify-center">
+          <a class="bg-primary text-on-primary font-body-md text-body-md px-8 py-3.5 rounded-full font-bold text-[15px] hover:opacity-90 transition-all shadow-xl no-underline" href="/login#register">Crear cuenta</a>
+          <a class="px-8 py-3.5 rounded-full font-bold text-[15px] hover:bg-surface-container transition-all border border-outline no-underline text-primary" href="/login">Iniciar sesión</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="w-full py-14 bg-surface border-t border-outline-variant/20">
+    <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop grid grid-cols-1 md:grid-cols-2 gap-gutter">
+      <div>
+        <div class="font-display-lg-mobile text-display-lg-mobile text-primary mb-6">ARCHITECT</div>
+        <p class="text-secondary font-body-md text-body-md max-w-sm mb-8 opacity-60">Asistente de revisión técnica para planos de arquitectura, ingeniería civil e instalaciones. Diseñado para apoyar decisiones, no para reemplazar la validación profesional.</p>
+        <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary/40">© 2026 ARCHITECT. Todos los derechos reservados.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-8">
+        <div class="flex flex-col gap-4">
+          <h4 class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Plataforma</h4>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login">Revisión de planos</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login">Reportes técnicos</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/docs">API</a>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h4 class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Acceso</h4>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login">Ingresar</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login#register">Crear cuenta</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/app">App</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script>
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nav = document.querySelector(".welcome-nav");
+
+    function updateNav() {
+      nav?.classList.toggle("nav-scrolled", window.scrollY > 16);
+    }
+    updateNav();
+    window.addEventListener("scroll", updateNav, { passive: true });
+
+    document.querySelectorAll(".scroll-reveal").forEach((el, index) => {
+      el.style.setProperty("--reveal-delay", `${Math.min(index * 55, 220)}ms`);
+    });
+
+    if (window.gsap && window.ScrollTrigger && !reduceMotion) {
+      gsap.registerPlugin(ScrollTrigger);
+
+      gsap.from(".welcome-nav", {
+        y: -26,
+        opacity: 0,
+        duration: 0.85,
+        ease: "power3.out"
+      });
+
+      gsap.from("#hero-text > *", {
+        y: 34,
+        opacity: 0,
+        duration: 0.9,
+        stagger: 0.12,
+        delay: 0.12,
+        ease: "power3.out"
+      });
+
+      gsap.to(".hero-orbit--one", {
+        y: -80,
+        rotate: 22,
+        scrollTrigger: {
+          trigger: "#product",
+          start: "top top",
+          end: "bottom top",
+          scrub: 1
+        }
+      });
+
+      gsap.to(".hero-orbit--two", {
+        y: 95,
+        rotate: -18,
+        scrollTrigger: {
+          trigger: "#product",
+          start: "top top",
+          end: "bottom top",
+          scrub: 1
+        }
+      });
+
+      gsap.utils.toArray(".scroll-reveal").forEach((el) => {
+        if (el.id === "hero-text") return;
+        gsap.fromTo(el, {
+          y: 48,
+          opacity: 0,
+          scale: 0.98
+        }, {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.85,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 86%",
+            toggleActions: "play none none reverse"
+          }
+        });
+      });
+
+      gsap.utils.toArray(".stat-number").forEach((el) => {
+        const value = Number(el.dataset.value || 0);
+        const suffix = el.dataset.suffix || "";
+        const state = { value: 0 };
+        gsap.to(state, {
+          value,
+          duration: 1.4,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 86%",
+            once: true
+          },
+          onUpdate: () => {
+            const current = value < 1 ? state.value.toFixed(1) : Math.round(state.value);
+            el.textContent = `${current}${suffix}`;
+          }
+        });
+      });
+
+      document.querySelectorAll("a, .glass").forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+          gsap.to(el, { y: -3, duration: 0.25, ease: "power2.out" });
+        });
+        el.addEventListener("mouseleave", () => {
+          gsap.to(el, { y: 0, duration: 0.25, ease: "power2.out" });
+        });
+      });
+
+      gsap.from(".ai-plan-chip", {
+        x: -22,
+        opacity: 0,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: "#hero-image",
+          start: "top 72%"
+        }
+      });
+
+      gsap.to("#hero-image", {
+        y: -34,
+        scrollTrigger: {
+          trigger: ".model-section",
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1
+        }
+      });
+    } else {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add("visible");
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".scroll-reveal").forEach((el) => observer.observe(el));
+    }
+  </script>
+  <script type="module">
+    const canvas = document.getElementById("aiPlanCanvas");
+
+    function drawFallbackPlan() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.strokeStyle = "rgba(30,41,59,0.08)";
+      for (let x = 0; x < rect.width; x += 28) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, rect.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < rect.height; y += 28) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(rect.width, y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "#607080";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(rect.width * 0.18, rect.height * 0.22, rect.width * 0.62, rect.height * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(rect.width * 0.48, rect.height * 0.22);
+      ctx.lineTo(rect.width * 0.48, rect.height * 0.72);
+      ctx.moveTo(rect.width * 0.18, rect.height * 0.48);
+      ctx.lineTo(rect.width * 0.8, rect.height * 0.48);
+      ctx.stroke();
+      ctx.fillStyle = "#ba1a1a";
+      ctx.beginPath();
+      ctx.arc(rect.width * 0.68, rect.height * 0.35, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2480ff";
+      ctx.beginPath();
+      ctx.arc(rect.width * 0.36, rect.height * 0.62, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    async function initThreePlan() {
+      if (!canvas) return;
+      let THREE;
+      try {
+        THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+      } catch (error) {
+        drawFallbackPlan();
+        window.addEventListener("resize", drawFallbackPlan);
+        return;
+      }
+
+      const stage = canvas.parentElement;
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0xf7f9fb, 20, 52);
+
+      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 90);
+      camera.position.set(8.4, 5.2, 8.2);
+      camera.lookAt(0, 1.7, 0);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const root = new THREE.Group();
+      scene.add(root);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xdce8f4, 1.45));
+      const key = new THREE.DirectionalLight(0xffffff, 2.25);
+      key.position.set(6, 10, 8);
+      key.castShadow = true;
+      key.shadow.mapSize.set(2048, 2048);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0x7ecbff, 1.35);
+      rim.position.set(-8, 5, -5);
+      scene.add(rim);
+      const warm = new THREE.PointLight(0xffa63d, 4.8, 18);
+      warm.position.set(3.5, 3.4, -1.8);
+      scene.add(warm);
+      const blueLight = new THREE.PointLight(0x138dff, 5.4, 22);
+      blueLight.position.set(-2.4, 2.8, 2.2);
+      scene.add(blueLight);
+
+      const concreteMat = new THREE.MeshStandardMaterial({ color: 0xe7e9ea, roughness: 0.58, metalness: 0.02 });
+      const slabMat = new THREE.MeshStandardMaterial({ color: 0xf6f7f7, roughness: 0.42, metalness: 0.04 });
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x59636d, roughness: 0.2, metalness: 0.72 });
+      const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x26313a, roughness: 0.18, metalness: 0.8 });
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xbfe8ff,
+        transparent: true,
+        opacity: 0.22,
+        roughness: 0.02,
+        metalness: 0,
+        transmission: 0.52,
+        thickness: 0.32,
+        depthWrite: false
+      });
+      const blueMat = new THREE.MeshBasicMaterial({ color: 0x19a8ff, transparent: true, opacity: 0.82 });
+      const warmMat = new THREE.MeshBasicMaterial({ color: 0xffa63d, transparent: true, opacity: 0.9 });
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xba1a1a, emissive: 0x9c1111, emissiveIntensity: 1.1 });
+      const edgeMat = new THREE.LineBasicMaterial({ color: 0x111820, transparent: true, opacity: 0.18 });
+
+      function mesh(geometry, material, x, y, z, group = root) {
+        const item = new THREE.Mesh(geometry, material);
+        item.position.set(x, y, z);
+        item.castShadow = true;
+        item.receiveShadow = true;
+        group.add(item);
+        return item;
+      }
+      function addEdges(target, opacity = 0.18) {
+        const line = new THREE.LineSegments(new THREE.EdgesGeometry(target.geometry), edgeMat.clone());
+        line.material.opacity = opacity;
+        target.add(line);
+        return line;
+      }
+
+      const building = new THREE.Group();
+      root.add(building);
+
+      const base = mesh(new THREE.BoxGeometry(8.8, 0.18, 5.8), concreteMat, 0, -0.1, 0, building);
+      addEdges(base, 0.16);
+
+      const slabs = [];
+      [0, 1.55, 3.08].forEach((y, idx) => {
+        const slab = mesh(new THREE.BoxGeometry(8.5, 0.16, 5.35), slabMat, 0, y, 0, building);
+        slab.castShadow = idx !== 0;
+        addEdges(slab, 0.22);
+        slabs.push(slab);
+      });
+
+      const columns = [];
+      function addColumn(x, z, h = 3.35) {
+        const col = mesh(new THREE.CylinderGeometry(0.075, 0.09, h, 32), steelMat, x, h / 2, z, building);
+        addEdges(col, 0.1);
+        columns.push(col);
+        return col;
+      }
+      [-3.85, 0, 3.85].forEach((x) => {
+        addColumn(x, -2.35);
+        addColumn(x, 2.35);
+      });
+
+      const beams = [];
+      function addBeam(x, y, z, w, d, mat = darkSteelMat) {
+        const beam = mesh(new THREE.BoxGeometry(w, 0.12, d), mat, x, y, z, building);
+        addEdges(beam, 0.16);
+        beams.push(beam);
+        return beam;
+      }
+      [1.55, 3.08].forEach((y) => {
+        addBeam(0, y + 0.16, -2.35, 8.1, 0.14);
+        addBeam(0, y + 0.16, 2.35, 8.1, 0.14);
+        addBeam(-3.85, y + 0.16, 0, 0.14, 5.0);
+        addBeam(0, y + 0.16, 0, 0.14, 5.0);
+        addBeam(3.85, y + 0.16, 0, 0.14, 5.0);
+      });
+
+      function addPanel(x, y, z, w, h, rotation = 0) {
+        const panel = mesh(new THREE.BoxGeometry(w, h, 0.035), glassMat, x, y, z, building);
+        panel.rotation.y = rotation;
+        panel.castShadow = false;
+        addEdges(panel, 0.18);
+        return panel;
+      }
+      const panels = [];
+      [-2.9, -1.45, 0, 1.45, 2.9].forEach((x) => {
+        panels.push(addPanel(x, 0.78, -2.48, 1.25, 1.2));
+        panels.push(addPanel(x, 2.32, -2.48, 1.25, 1.2));
+      });
+      [-1.9, 0, 1.9].forEach((x) => {
+        panels.push(addPanel(x, 0.78, 2.48, 1.55, 1.2));
+        panels.push(addPanel(x, 2.32, 2.48, 1.55, 1.2));
+      });
+      [0.72, 2.05].forEach((y) => {
+        panels.push(addPanel(4.05, y, -0.8, 1.35, 1.18, Math.PI / 2));
+        panels.push(addPanel(4.05, y, 0.8, 1.35, 1.18, Math.PI / 2));
+      });
+
+      const core = mesh(new THREE.BoxGeometry(0.78, 2.75, 1.0), concreteMat, 1.55, 1.42, 0.55, building);
+      core.castShadow = false;
+      addEdges(core, 0.12);
+
+      const guideLines = new THREE.Group();
+      building.add(guideLines);
+      function addLine(points, mat = blueMat) {
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat);
+        guideLines.add(line);
+        return line;
+      }
+      const path = addLine([
+        new THREE.Vector3(-3.85, 1.72, -2.35),
+        new THREE.Vector3(0, 1.72, -2.35),
+        new THREE.Vector3(0, 1.72, 2.35),
+        new THREE.Vector3(3.85, 1.72, 2.35)
+      ]);
+      addLine([new THREE.Vector3(-3.85, 3.24, -2.35), new THREE.Vector3(3.85, 3.24, -2.35)]);
+      addLine([new THREE.Vector3(3.85, 0.12, -2.35), new THREE.Vector3(3.85, 3.35, -2.35)], warmMat);
+      addLine([new THREE.Vector3(3.85, 1.68, -2.35), new THREE.Vector3(3.85, 1.68, 2.35)], warmMat);
+
+      function addMarker(x, y, z, mat = redMat, scale = 1) {
+        const marker = new THREE.Group();
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.13 * scale, 32, 16), mat);
+        sphere.position.y = 0.16;
+        marker.add(sphere);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32 * scale, 0.01, 8, 64), mat);
+        ring.rotation.x = Math.PI / 2;
+        marker.add(ring);
+        marker.position.set(x, y, z);
+        building.add(marker);
+        return marker;
+      }
+      const markerA = addMarker(3.85, 1.7, -2.35, redMat, 1);
+      const markerB = addMarker(0, 1.7, 2.35, blueMat, 0.9);
+
+      const scanPlane = new THREE.Mesh(new THREE.PlaneGeometry(8.6, 5.3), new THREE.MeshBasicMaterial({
+        color: 0x39b8ff,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }));
+      scanPlane.rotation.x = -Math.PI / 2;
+      scanPlane.position.y = 1.62;
+      building.add(scanPlane);
+
+      const glassVolume = building;
+      const walls = [...columns, ...beams];
+      const plinth = base;
+      const slab = slabs[0];
+
+      function resize() {
+        const rect = stage.getBoundingClientRect();
+        const w = Math.max(1, Math.floor(rect.width));
+        const h = Math.max(1, Math.floor(rect.height));
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      if (window.gsap) {
+        window.gsap.fromTo(root.rotation, { y: -0.22 }, { y: 0.16, duration: 9, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(root.position, { y: 0.14, duration: 3.8, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(camera.position, { x: 6.2, y: 7.4, z: 10.8, duration: 10, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(scanPlane.position, { y: 1.75, duration: 2.4, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(scanPlane.material, { opacity: 0.05, duration: 2.4, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(glassVolume.rotation, { y: 0.08, duration: 4, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(markerA.scale, { x: 1.38, y: 1.38, z: 1.38, duration: 0.9, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.to(markerB.scale, { x: 1.26, y: 1.26, z: 1.26, duration: 1.1, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        window.gsap.from(walls.map((wall) => wall.scale), { y: 0.04, duration: 1.25, stagger: 0.04, ease: "power3.out" });
+        window.gsap.from([plinth.scale, slab.scale], { x: 0.92, z: 0.92, duration: 1.2, stagger: 0.08, ease: "power3.out" });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+      camera.lookAt(0, 1.55, 0);
+        markerA.rotation.y += 0.02;
+        markerB.rotation.y -= 0.018;
+        path.material.opacity = 0.65 + Math.sin(performance.now() * 0.003) * 0.25;
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    initThreePlan();
+  </script>
+</body>
+</html>

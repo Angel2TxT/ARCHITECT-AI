@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARCHITECT AI | Acceso</title>
+  <title>ARCHITECT | Acceso</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=40" />
+  <link rel="stylesheet" href="/static/style.css?v=44" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -50,9 +50,9 @@
 <body class="auth-page app-loading">
   <div id="appLoader" class="app-loader app-loader--visible" role="status" aria-live="polite" aria-busy="true">
     <div class="app-loader-inner">
-      <p class="app-loader-brand">ARCHITECT AI</p>
+      <p class="app-loader-brand">ARCHITECT</p>
       <div class="app-loader-spinner" aria-hidden="true"></div>
-      <p class="app-loader-text" id="appLoaderText">Cargando…</p>
+      <p class="app-loader-text" id="appLoaderText">Cargando...</p>
     </div>
   </div>
   <script src="/static/loader-bootstrap.js?v=1"></script>
@@ -64,8 +64,8 @@
   <main class="auth-shell">
     <div class="auth-card glass-panel">
       <header class="auth-header">
-        <p class="auth-kicker">Plano IA · Studio</p>
-        <h1 class="auth-title">ARCHITECT AI</h1>
+        <p class="auth-kicker">ARCHITECT · Studio</p>
+        <h1 class="auth-title">ARCHITECT</h1>
         <p class="auth-subtitle">Revisa planos con IA y normativa de referencia</p>
       </header>
 
@@ -80,88 +80,88 @@
       </div>
 
       <div class="auth-panels" id="authPanels" data-tab="login">
-      <form id="loginForm" class="auth-panel auth-panel--active" autocomplete="on">
-        <div class="auth-field">
-          <label for="loginEmail">Correo electrónico</label>
-          <input
-            type="email"
-            id="loginEmail"
-            class="auth-input"
-            required
-            autocomplete="email"
-            placeholder="tu@correo.com"
-          />
-        </div>
-        <div class="auth-field">
-          <label for="loginPassword">Contraseña</label>
-          <div class="auth-input-wrap">
+        <form id="loginForm" class="auth-panel auth-panel--active" autocomplete="on">
+          <div class="auth-field">
+            <label for="loginEmail">Correo electrónico</label>
             <input
-              type="password"
-              id="loginPassword"
+              type="email"
+              id="loginEmail"
               class="auth-input"
               required
-              autocomplete="current-password"
-              placeholder="••••••••"
+              autocomplete="email"
+              placeholder="tu@correo.com"
             />
-            <button type="button" class="auth-toggle-pw" data-target="loginPassword" aria-label="Mostrar contraseña">
-              <span class="material-symbols-outlined">visibility</span>
-            </button>
           </div>
-        </div>
-        <p id="loginError" class="auth-error hidden" role="alert"></p>
-        <button type="submit" class="auth-submit btn-primary">
-          Entrar
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
-      </form>
+          <div class="auth-field">
+            <label for="loginPassword">Contraseña</label>
+            <div class="auth-input-wrap">
+              <input
+                type="password"
+                id="loginPassword"
+                class="auth-input"
+                required
+                autocomplete="current-password"
+                placeholder="••••••••"
+              />
+              <button type="button" class="auth-toggle-pw" data-target="loginPassword" aria-label="Mostrar contraseña">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </div>
+          </div>
+          <p id="loginError" class="auth-error hidden" role="alert"></p>
+          <button type="submit" class="auth-submit btn-primary">
+            Entrar
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </form>
 
-      <form id="registerForm" class="auth-panel" autocomplete="on" hidden>
-        <div class="auth-field">
-          <label for="regName">Nombre (opcional)</label>
-          <input
-            type="text"
-            id="regName"
-            class="auth-input"
-            autocomplete="name"
-            placeholder="Tu nombre"
-          />
-        </div>
-        <div class="auth-field">
-          <label for="regEmail">Correo electrónico</label>
-          <input
-            type="email"
-            id="regEmail"
-            class="auth-input"
-            required
-            autocomplete="email"
-            placeholder="tu@correo.com"
-          />
-        </div>
-        <div class="auth-field">
-          <label for="regPassword">Contraseña</label>
-          <div class="auth-input-wrap">
+        <form id="registerForm" class="auth-panel" autocomplete="on" hidden>
+          <div class="auth-field">
+            <label for="regName">Nombre (opcional)</label>
             <input
-              type="password"
-              id="regPassword"
+              type="text"
+              id="regName"
+              class="auth-input"
+              autocomplete="name"
+              placeholder="Tu nombre"
+            />
+          </div>
+          <div class="auth-field">
+            <label for="regEmail">Correo electrónico</label>
+            <input
+              type="email"
+              id="regEmail"
               class="auth-input"
               required
-              minlength="8"
-              autocomplete="new-password"
-              placeholder="Mínimo 8 caracteres"
+              autocomplete="email"
+              placeholder="tu@correo.com"
             />
-            <button type="button" class="auth-toggle-pw" data-target="regPassword" aria-label="Mostrar contraseña">
-              <span class="material-symbols-outlined">visibility</span>
-            </button>
           </div>
-        </div>
-        <p id="regError" class="auth-error hidden" role="alert"></p>
-        <button type="submit" class="auth-submit btn-primary">
-          Crear cuenta
-          <span class="material-symbols-outlined">person_add</span>
-        </button>
-        <p class="auth-footnote">Plan Gratis: 5 análisis al mes con modelo demo.</p>
-        <p class="auth-demo-hint">Demo admin: <code>admin@planoia.com</code> / <code>admin123</code></p>
-      </form>
+          <div class="auth-field">
+            <label for="regPassword">Contraseña</label>
+            <div class="auth-input-wrap">
+              <input
+                type="password"
+                id="regPassword"
+                class="auth-input"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                placeholder="Mínimo 8 caracteres"
+              />
+              <button type="button" class="auth-toggle-pw" data-target="regPassword" aria-label="Mostrar contraseña">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </div>
+          </div>
+          <p id="regError" class="auth-error hidden" role="alert"></p>
+          <button type="submit" class="auth-submit btn-primary">
+            Crear cuenta
+            <span class="material-symbols-outlined">person_add</span>
+          </button>
+          <p class="auth-footnote">Plan Gratis: 5 análisis al mes con modelo demo.</p>
+          <p class="auth-demo-hint">Demo admin: <code>admin@planoia.com</code> / <code>admin123</code></p>
+        </form>
       </div>
 
       <div id="dbStatus" class="auth-db-warn hidden" role="status"></div>
@@ -172,7 +172,7 @@
     </p>
   </main>
 
-  <script src="/static/auth.js?v=20"></script>
+  <script src="/static/auth.js?v=22"></script>
   <script>
     document.querySelectorAll(".auth-toggle-pw").forEach((btn) => {
       btn.addEventListener("click", () => {

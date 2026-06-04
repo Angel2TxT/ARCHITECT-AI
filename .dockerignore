@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.npm-cache
+frontend/node_modules
+frontend/dist
+data
+datasets
+runs
+weights
+*.pt
+*.zip

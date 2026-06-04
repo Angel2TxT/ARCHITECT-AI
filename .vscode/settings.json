@@ -1,0 +1,30 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    ".npm-cache": true,
+    ".venv": true,
+    "frontend/dist": true,
+    "frontend/node_modules": true,
+    "venv": true,
+    "data": true,
+    "datasets": true,
+    "runs": true,
+    "weights": true
+  },
+  "search.exclude": {
+    "**/__pycache__": true,
+    ".npm-cache": true,
+    ".venv": true,
+    "frontend/dist": true,
+    "frontend/node_modules": true,
+    "venv": true,
+    "data": true,
+    "datasets": true,
+    "runs": true,
+    "weights": true
+  },
+  "explorer.compactFolders": false
+}

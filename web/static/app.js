@@ -2855,7 +2855,7 @@ async function refreshAfterPageRestore() {
 
 async function boot() {
   const loader = window.PlanoLoader;
-  loader?.show(PlanoAuth.getToken() ? "Preparando tu espacio…" : "Cargando ARCHITECT AI…");
+  loader?.show(PlanoAuth.getToken() ? "Preparando tu espacio…" : "Cargando ARCHITECT…");
 
   try {
     setupImageViewer();

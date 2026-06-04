@@ -1,5 +1,5 @@
 """
-Interfaz estilo ChatGPT — NO es Gradio.
+ARCHITECT local server.
 
 Uso:
   python app.py
@@ -15,7 +15,7 @@ import webbrowser
 
 import uvicorn
 
-PORT = int(os.environ.get("PLANO_IA_PORT", "8080"))
+PORT = int(os.environ.get("ARCHITECT_PORT", os.environ.get("PLANO_IA_PORT", "8080")))
 
 
 def _free_port(port: int) -> None:
@@ -52,7 +52,7 @@ def _port_free(port: int) -> bool:
 
 
 if __name__ == "__main__":
-    # Cierra Gradio viejo que suele quedarse en 7860
+    # Cierra procesos viejos que suelen quedarse escuchando en desarrollo local.
     for old in (7860, PORT):
         _free_port(old)
 
@@ -63,10 +63,10 @@ if __name__ == "__main__":
     url = f"http://127.0.0.1:{PORT}"
     print()
     print("  ========================================")
-    print("  PLANO IA — interfaz tipo ChatGPT")
+    print("  ARCHITECT")
     print(f"  App:    {url}")
     print(f"  Login:  {url}/login")
-    print("  Admin:  admin@planoia.com / admin123")
+    print("  Admin:  admin@architect.local / admin123")
     print("  (Si /login da 404: Ctrl+C y vuelve a ejecutar python app.py)")
     print("  ========================================")
     print()

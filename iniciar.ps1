@@ -1,4 +1,4 @@
-# Cierra vista vieja (Gradio en 7860) y abre interfaz ChatGPT
+# Arranca ARCHITECT en modo local sin Docker.
 Set-Location $PSScriptRoot
 
 foreach ($port in 7860, 8080, 8081) {

@@ -140,7 +140,7 @@ function logout() {
 if (document.getElementById("loginForm")) {
   if (getToken()) {
     showAppLoader("Ya tienes sesión activa…");
-    window.location.href = "/";
+    window.location.href = "/app";
   }
 
   document.getElementById("loginForm").onsubmit = async (e) => {
@@ -171,7 +171,7 @@ if (document.getElementById("loginForm")) {
       }
       setSession(data);
       showAppLoader("Entrando al estudio…");
-      window.location.href = "/";
+      window.location.href = "/app";
     } catch {
       err.textContent = "No se pudo conectar con el servidor.";
       err.classList.remove("hidden");
@@ -210,7 +210,7 @@ if (document.getElementById("loginForm")) {
       }
       setSession(data);
       showAppLoader("Preparando tu espacio…");
-      window.location.href = "/";
+      window.location.href = "/app";
     } catch {
       err.textContent = "No se pudo conectar con el servidor.";
       err.classList.remove("hidden");

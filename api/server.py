@@ -44,8 +44,9 @@ from services.knowledge_service import knowledge_stats  # noqa: E402
 
 WEB_DIR = ROOT / "web"
 STATIC_DIR = WEB_DIR / "static"
+FRONTEND_DIST = ROOT / "frontend" / "dist"
 
-app = FastAPI(title="Plano IA", version="2.0")
+app = FastAPI(title="ARCHITECT", version="2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -57,8 +58,10 @@ app.add_middleware(
 class NoCacheHTML(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        if request.url.path in ("/", "/login", "/index.html") or request.url.path.startswith(
-            "/static/"
+        if (
+            request.url.path
+            in ("/", "/app", "/login", "/welcome", "/index.html", "/legacy-app")
+            or request.url.path.startswith("/static/")
         ):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         return response
@@ -159,14 +162,41 @@ def get_config():
     }
 
 
+def _react_index() -> Path | None:
+    index_file = FRONTEND_DIST / "index.html"
+    return index_file if index_file.is_file() else None
+
+
+def _frontend_page(fallback: Path):
+    react = _react_index()
+    return FileResponse(react or fallback, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/")
 def index():
-    return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
+    return _frontend_page(WEB_DIR / "welcome.html")
+
+
+@app.get("/app")
+def app_page():
+    return _frontend_page(WEB_DIR / "index.html")
 
 
 @app.get("/login")
 def login_page():
-    return FileResponse(WEB_DIR / "login.html", headers={"Cache-Control": "no-store"})
+    return _frontend_page(WEB_DIR / "login.html")
+
+
+@app.get("/welcome")
+def welcome_page():
+    return _frontend_page(WEB_DIR / "welcome.html")
+
+
+@app.get("/legacy-app")
+def legacy_app_page():
+    return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if (FRONTEND_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
