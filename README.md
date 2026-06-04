@@ -18,6 +18,8 @@ Documentacion util para el equipo:
 
 ## Arranque recomendado
 
+Con Docker no necesitas correr `npm install` ni `pip install` manualmente. Docker instala las dependencias dentro de los contenedores:
+
 ```powershell
 cd C:\UNI\ARCHITECT
 docker compose up --build
@@ -31,6 +33,31 @@ Abre:
 - MySQL Docker: localhost:3307
 
 React usa proxy para `/api`, `/static` y `/legacy-app`, asi el login y la app comparten el mismo origen en `localhost:3000`.
+
+## Instalacion de dependencias
+
+Este proyecto no usa PHP, Laravel ni Composer, asi que **no se necesita**:
+
+```powershell
+composer install
+```
+
+Para desarrollo local sin Docker, instala dependencias asi:
+
+Backend Python:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Frontend React:
+
+```powershell
+cd frontend
+npm install --cache ..\.npm-cache
+```
 
 ## Flujo de analisis
 
