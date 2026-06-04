@@ -495,6 +495,7 @@ button {
 }
 
 .auth-view {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -503,19 +504,90 @@ button {
     radial-gradient(circle at 15% 14%, rgba(30, 167, 255, 0.12), transparent 24%),
     radial-gradient(circle at 82% 78%, rgba(255, 174, 51, 0.16), transparent 24%),
     #f8f8fa;
+  overflow: hidden;
+}
+
+.auth-bg-motion {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-bg-motion::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: 44px 44px;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at 50% 48%, black, transparent 72%);
+  animation: authGridDrift 18s linear infinite;
+}
+
+.auth-orbit {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(12, 18, 24, 0.08);
+  box-shadow: inset 0 0 42px rgba(255, 255, 255, 0.78);
+}
+
+.auth-orbit-one {
+  width: 260px;
+  height: 260px;
+  left: 9%;
+  top: 18%;
+}
+
+.auth-orbit-two {
+  width: 360px;
+  height: 360px;
+  right: 7%;
+  bottom: 8%;
+}
+
+.auth-grid-line {
+  position: absolute;
+  height: 1px;
+  width: 42vw;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.12), transparent);
+  opacity: 0.46;
+  transform: rotate(-18deg);
+  animation: authLineScan 5.5s ease-in-out infinite;
+}
+
+.auth-grid-line-one {
+  left: 4%;
+  top: 32%;
+}
+
+.auth-grid-line-two {
+  right: -4%;
+  bottom: 26%;
+  animation-delay: 1.7s;
 }
 
 .back-link {
   position: fixed;
+  z-index: 2;
   left: clamp(20px, 5vw, 70px);
   top: 28px;
   border: 0;
   background: transparent;
   color: #5f6269;
   font-weight: 650;
+  transition: color 0.22s ease, transform 0.22s ease;
+}
+
+.back-link:hover {
+  color: #000;
+  transform: translateX(-4px);
 }
 
 .auth-panel {
+  position: relative;
+  z-index: 1;
   width: min(100%, 520px);
   border: 1px solid rgba(20, 24, 28, 0.09);
   border-radius: 18px;
@@ -523,9 +595,30 @@ button {
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 30px 90px rgba(30, 41, 59, 0.11);
   backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+.auth-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.18), transparent);
+}
+
+.auth-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -25% -45% 35%;
+  height: 220px;
+  background: radial-gradient(circle, rgba(30, 167, 255, 0.12), transparent 64%);
+  transform: rotate(-12deg);
+  pointer-events: none;
 }
 
 .auth-heading {
+  position: relative;
+  z-index: 1;
   text-align: center;
 }
 
@@ -548,6 +641,8 @@ button {
 }
 
 .auth-tabs {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
@@ -556,23 +651,48 @@ button {
   border: 1px solid rgba(20, 24, 28, 0.08);
   border-radius: 999px;
   background: #f1f1f3;
+  overflow: hidden;
+}
+
+.auth-tab-indicator {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  border-radius: 999px;
+  background: #000;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16);
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-tabs--register .auth-tab-indicator {
+  transform: translateX(100%);
 }
 
 .auth-tabs button {
+  position: relative;
+  z-index: 1;
   border: 0;
   border-radius: 999px;
   padding: 11px 12px;
   background: transparent;
   color: #686b72;
   font-weight: 750;
+  transition: color 0.28s ease, transform 0.22s ease;
+}
+
+.auth-tabs button:hover {
+  transform: translateY(-1px);
 }
 
 .auth-tabs button.active {
-  background: #000;
   color: #fff;
 }
 
 .auth-form {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 16px;
 }
@@ -593,11 +713,14 @@ button {
   padding: 0 14px;
   outline: none;
   background: rgba(255, 255, 255, 0.72);
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
 }
 
 .auth-form input:focus {
   border-color: #000;
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.06);
+  background: #fff;
+  transform: translateY(-1px);
 }
 
 .password-field {
@@ -618,6 +741,12 @@ button {
   border-radius: 10px;
   background: transparent;
   transform: translateY(-50%);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.password-field button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: translateY(-50%) scale(1.04);
 }
 
 .form-error {
@@ -628,17 +757,56 @@ button {
   background: rgba(197, 34, 34, 0.08);
   color: #9f1717;
   font-size: 13px;
+  animation: authErrorIn 0.28s ease both;
 }
 
 .auth-submit {
   height: 52px;
   width: 100%;
   margin-top: 4px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+}
+
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.16);
 }
 
 .auth-submit:disabled {
   cursor: wait;
   opacity: 0.68;
+}
+
+@keyframes authGridDrift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(44px, 44px, 0);
+  }
+}
+
+@keyframes authLineScan {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: translateX(-18px) rotate(-18deg);
+  }
+  50% {
+    opacity: 0.58;
+    transform: translateX(26px) rotate(-18deg);
+  }
+}
+
+@keyframes authErrorIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .legacy-shell {

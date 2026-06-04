@@ -474,10 +474,70 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const formRef = useRef(null);
 
   useEffect(() => {
     if (getToken()) navigate("/app");
   }, []);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return undefined;
+
+    const ctx = gsap.context(() => {
+      gsap.from(".auth-panel", {
+        y: 28,
+        opacity: 0,
+        scale: 0.98,
+        duration: 0.72,
+        ease: "power3.out"
+      });
+      gsap.from(".back-link", {
+        x: -12,
+        opacity: 0,
+        duration: 0.55,
+        delay: 0.12,
+        ease: "power2.out"
+      });
+      gsap.to(".auth-orbit-one", {
+        y: -34,
+        rotate: 12,
+        duration: 7,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+      });
+      gsap.to(".auth-orbit-two", {
+        y: 38,
+        rotate: -10,
+        duration: 8,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  useEffect(() => {
+    const form = formRef.current;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!form || reduceMotion) return;
+
+    gsap.fromTo(
+      form.querySelectorAll(".auth-animated-field"),
+      { x: mode === "register" ? 18 : -18, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.42, stagger: 0.055, ease: "power2.out" }
+    );
+  }, [mode]);
+
+  function switchMode(nextMode) {
+    setError("");
+    setShowPassword(false);
+    setMode(nextMode);
+    window.history.replaceState({}, "", nextMode === "register" ? "/login#register" : "/login");
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -513,7 +573,13 @@ function Login() {
   }
 
   return (
-    <main className="auth-view">
+    <main className={`auth-view auth-view--${mode}`}>
+      <div className="auth-bg-motion" aria-hidden="true">
+        <span className="auth-orbit auth-orbit-one" />
+        <span className="auth-orbit auth-orbit-two" />
+        <span className="auth-grid-line auth-grid-line-one" />
+        <span className="auth-grid-line auth-grid-line-two" />
+      </div>
       <button className="back-link" onClick={() => navigate("/")}>Volver al inicio</button>
       <section className="auth-panel">
         <div className="auth-heading">
@@ -522,23 +588,24 @@ function Login() {
           <p>Acceso al entorno de revision tecnica de planos asistida por IA.</p>
         </div>
 
-        <div className="auth-tabs">
-          <button className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Iniciar sesion</button>
-          <button className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>Registrarse</button>
+        <div className={`auth-tabs auth-tabs--${mode}`}>
+          <span className="auth-tab-indicator" aria-hidden="true" />
+          <button className={mode === "login" ? "active" : ""} onClick={() => switchMode("login")}>Iniciar sesion</button>
+          <button className={mode === "register" ? "active" : ""} onClick={() => switchMode("register")}>Registrarse</button>
         </div>
 
-        <form onSubmit={submit} className="auth-form">
+        <form onSubmit={submit} className="auth-form" ref={formRef} key={mode}>
           {mode === "register" && (
-            <label>
+            <label className="auth-animated-field">
               Nombre
               <input name="full_name" autoComplete="name" placeholder="Tu nombre" />
             </label>
           )}
-          <label>
+          <label className="auth-animated-field">
             Correo electronico
             <input name="email" type="email" autoComplete="email" required placeholder="tu@correo.com" />
           </label>
-          <label>
+          <label className="auth-animated-field">
             Contrasena
             <div className="password-field">
               <input
@@ -555,9 +622,9 @@ function Login() {
             </div>
           </label>
 
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="form-error auth-animated-field">{error}</p>}
 
-          <button className="auth-submit" type="submit" disabled={busy}>
+          <button className="auth-submit auth-animated-field" type="submit" disabled={busy}>
             {busy ? "Procesando..." : mode === "register" ? "Crear cuenta" : "Entrar"}
             {mode === "register" ? <Sparkles size={18} /> : <LogIn size={18} />}
           </button>
