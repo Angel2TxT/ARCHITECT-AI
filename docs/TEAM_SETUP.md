@@ -121,4 +121,11 @@ npm run dev
 - React corre en `localhost:3000` y reenvia `/api`, `/static` y `/legacy-app` al backend.
 - FastAPI corre en `localhost:8000`.
 - La app vieja sigue disponible en `/legacy-app` mientras se migran pantallas a React.
+- Para generar el modelo 3D de bienvenida con Blender:
+
+```powershell
+blender --background --python scripts/create_blender_welcome_model.py
+```
+
+- El archivo generado debe quedar en `frontend/public/models/architect-building.glb`.
 - No subas `.env`, `.venv`, `node_modules`, `runs`, `datasets`, `weights` ni archivos `.pt`.

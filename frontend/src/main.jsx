@@ -16,6 +16,7 @@ import {
   Workflow
 } from "lucide-react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import "./styles.css";
 
 const TOKEN_KEY = "plano_ia_token";
@@ -186,7 +187,26 @@ function StructureScene() {
       return item;
     }
 
-    addMesh(new THREE.BoxGeometry(8.8, 0.18, 5.8), concrete, [0, -0.1, 0]);
+    function line(points, material) {
+      const item = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+      building.add(item);
+      return item;
+    }
+
+    function marker(x, y, z, material) {
+      const group = new THREE.Group();
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 16), material);
+      sphere.position.y = 0.16;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.01, 8, 64), material);
+      ring.rotation.x = Math.PI / 2;
+      group.add(sphere, ring);
+      group.position.set(x, y, z);
+      building.add(group);
+      return group;
+    }
+
+    function buildProceduralModel() {
+      addMesh(new THREE.BoxGeometry(8.8, 0.18, 5.8), concrete, [0, -0.1, 0]);
     [0, 1.55, 3.08].forEach((y) => {
       addMesh(new THREE.BoxGeometry(8.5, 0.16, 5.35), slabMat, [0, y, 0]);
     });
@@ -226,11 +246,6 @@ function StructureScene() {
 
     addMesh(new THREE.BoxGeometry(0.78, 2.75, 1), concrete, [1.55, 1.42, 0.55]);
 
-    function line(points, material) {
-      const item = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
-      building.add(item);
-      return item;
-    }
     const scanPath = line(
       [
         new THREE.Vector3(-3.85, 1.72, -2.35),
@@ -244,17 +259,6 @@ function StructureScene() {
     line([new THREE.Vector3(3.85, 0.12, -2.35), new THREE.Vector3(3.85, 3.35, -2.35)], amber);
     line([new THREE.Vector3(3.85, 1.68, -2.35), new THREE.Vector3(3.85, 1.68, 2.35)], amber);
 
-    function marker(x, y, z, material) {
-      const group = new THREE.Group();
-      const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 16), material);
-      sphere.position.y = 0.16;
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.01, 8, 64), material);
-      ring.rotation.x = Math.PI / 2;
-      group.add(sphere, ring);
-      group.position.set(x, y, z);
-      building.add(group);
-      return group;
-    }
     const markerA = marker(3.85, 1.7, -2.35, red);
     const markerB = marker(0, 1.7, 2.35, blue);
 
@@ -271,6 +275,62 @@ function StructureScene() {
     scanPlane.rotation.x = -Math.PI / 2;
     scanPlane.position.y = 1.62;
     building.add(scanPlane);
+      return { markerA, markerB, scanPath, scanPlane };
+    }
+
+    let animatedParts = buildProceduralModel();
+
+    const loader = new GLTFLoader();
+    loader.load(
+      "/models/architect-building.glb",
+      (gltf) => {
+        building.clear();
+        const model = gltf.scene;
+        model.position.set(0, -0.08, 0);
+        model.rotation.y = -0.12;
+        model.scale.setScalar(1.04);
+        model.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+            if (obj.material) {
+              obj.material.needsUpdate = true;
+            }
+          }
+        });
+        building.add(model);
+
+        const markerMaterial = red;
+        const blueMarkerMaterial = blue;
+        const markerA = marker(3.85, 1.7, -2.35, markerMaterial);
+        const markerB = marker(0, 1.7, 2.35, blueMarkerMaterial);
+        const scanPath = line(
+          [
+            new THREE.Vector3(-3.85, 1.72, -2.35),
+            new THREE.Vector3(0, 1.72, -2.35),
+            new THREE.Vector3(0, 1.72, 2.35),
+            new THREE.Vector3(3.85, 1.72, 2.35)
+          ],
+          blue
+        );
+        const scanPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(8.6, 5.3),
+          new THREE.MeshBasicMaterial({
+            color: 0x39b8ff,
+            transparent: true,
+            opacity: 0.08,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          })
+        );
+        scanPlane.rotation.x = -Math.PI / 2;
+        scanPlane.position.y = 1.62;
+        building.add(scanPlane);
+        animatedParts = { markerA, markerB, scanPath, scanPlane };
+      },
+      undefined,
+      () => {}
+    );
 
     function resize() {
       const rect = stage.getBoundingClientRect();
@@ -286,17 +346,18 @@ function StructureScene() {
     gsap.to(root.rotation, { y: 0.18, duration: 8, repeat: -1, yoyo: true, ease: "sine.inOut" });
     gsap.to(root.position, { y: 0.14, duration: 3.8, repeat: -1, yoyo: true, ease: "sine.inOut" });
     gsap.to(camera.position, { x: 6.2, y: 7.4, z: 10.8, duration: 10, repeat: -1, yoyo: true, ease: "sine.inOut" });
-    gsap.to(scanPlane.position, { y: 1.76, duration: 2.4, repeat: -1, yoyo: true, ease: "sine.inOut" });
-    gsap.to(markerA.scale, { x: 1.35, y: 1.35, z: 1.35, duration: 0.9, repeat: -1, yoyo: true, ease: "sine.inOut" });
-    gsap.to(markerB.scale, { x: 1.25, y: 1.25, z: 1.25, duration: 1.1, repeat: -1, yoyo: true, ease: "sine.inOut" });
 
     let raf = 0;
     const animate = () => {
       raf = requestAnimationFrame(animate);
+      const now = performance.now();
       camera.lookAt(0, 1.55, 0);
-      markerA.rotation.y += 0.02;
-      markerB.rotation.y -= 0.018;
-      scanPath.material.opacity = 0.65 + Math.sin(performance.now() * 0.003) * 0.25;
+      animatedParts.markerA.rotation.y += 0.02;
+      animatedParts.markerB.rotation.y -= 0.018;
+      animatedParts.markerA.scale.setScalar(1.16 + Math.sin(now * 0.004) * 0.16);
+      animatedParts.markerB.scale.setScalar(1.1 + Math.sin(now * 0.0032) * 0.12);
+      animatedParts.scanPlane.position.y = 1.68 + Math.sin(now * 0.0024) * 0.08;
+      animatedParts.scanPath.material.opacity = 0.65 + Math.sin(now * 0.003) * 0.25;
       renderer.render(scene, camera);
     };
     animate();

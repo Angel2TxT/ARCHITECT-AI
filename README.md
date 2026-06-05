@@ -129,6 +129,14 @@ Docker:
 docker compose config
 ```
 
+Modelo 3D de bienvenida con Blender:
+
+```powershell
+blender --background --python scripts/create_blender_welcome_model.py
+```
+
+Ese comando genera `frontend/public/models/architect-building.glb`. Si el archivo no existe, el frontend usa un modelo procedural de Three.js como respaldo.
+
 ## Variables de entorno
 
 Usa `.env.example` como base:
