@@ -1144,6 +1144,173 @@ body {
   border-radius: 0;
 }
 
+.theme-toggle {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--dx-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--dx-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--dx-border-strong);
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.auth-theme-toggle {
+  position: fixed;
+  top: 22px;
+  right: clamp(20px, 5vw, 70px);
+  z-index: 2;
+}
+
+html.light {
+  --dx-primary: #7c3aed;
+  --dx-secondary: #2563eb;
+  --dx-tertiary: #6d28d9;
+  --dx-neutral: #f7f5ff;
+  --dx-surface: rgba(255, 255, 255, 0.72);
+  --dx-surface-strong: rgba(255, 255, 255, 0.82);
+  --dx-text: #0b0b0d;
+  --dx-text-muted: #475569;
+  --dx-border: rgba(15, 23, 42, 0.12);
+  --dx-border-strong: rgba(124, 58, 237, 0.32);
+  --dx-glow: rgba(124, 58, 237, 0.2);
+  --dx-grid: rgba(15, 23, 42, 0.07);
+  color: var(--dx-text);
+  background: var(--dx-neutral);
+}
+
+html.light body,
+html.light .welcome-page,
+html.light .legacy-shell,
+html.light .auth-view {
+  color: var(--dx-text);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(139, 92, 246, 0.22), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.14), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #f4f0ff 62%, #eef4ff 100%);
+}
+
+html.light .welcome-page .hero {
+  background:
+    radial-gradient(circle at 68% 44%, rgba(139, 92, 246, 0.24), transparent 26%),
+    radial-gradient(circle at 64% 45%, rgba(37, 99, 235, 0.14), transparent 28%),
+    radial-gradient(circle at 76% 54%, rgba(245, 158, 11, 0.12), transparent 24%),
+    linear-gradient(145deg, #ffffff 0%, #f7f2ff 54%, #eef4ff 100%);
+}
+
+html.light .welcome-page .site-nav,
+html.light .nav-scrolled .site-nav,
+html.light .legacy-topbar {
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom-color: rgba(15, 23, 42, 0.1);
+}
+
+html.light .brand,
+html.light .hero h1,
+html.light .section-intro h2,
+html.light .cta-section h2,
+html.light .capability-card h3,
+html.light .site-footer strong,
+html.light .auth-heading h1,
+html.light .legacy-topbar strong,
+html.light .metric strong,
+html.light .hero-stats strong,
+html.light .hero-proof-card strong {
+  color: #0b0b0d;
+}
+
+html.light .nav-links a,
+html.light .link-button,
+html.light .footer-links button,
+html.light .footer-links a,
+html.light .hero p,
+html.light .section-intro p,
+html.light .cta-section p,
+html.light .metric p,
+html.light .capability-card p,
+html.light .capability-card li,
+html.light .site-footer p,
+html.light .auth-heading p,
+html.light .auth-form label,
+html.light .back-link,
+html.light .model-status small,
+html.light .hero-stats span,
+html.light .hero-proof-card span {
+  color: #475569;
+}
+
+html.light .welcome-page .nav-links {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+html.light .welcome-page .nav-links a {
+  color: rgba(15, 23, 42, 0.68);
+}
+
+html.light .welcome-page .nav-links a:hover {
+  color: #0b0b0d;
+}
+
+html.light .theme-toggle,
+html.light .welcome-page .pill-button,
+html.light .secondary-action,
+html.light .legacy-topbar button,
+html.light .back-link,
+html.light .auth-tabs,
+html.light .auth-form input,
+html.light .password-field button {
+  color: #0b0b0d;
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+html.light .model-stage,
+html.light .capability-card,
+html.light .auth-panel,
+html.light .model-status,
+html.light .hud-chip,
+html.light .site-footer,
+html.light .hero-proof-card {
+  border-color: rgba(15, 23, 42, 0.1);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)) padding-box,
+    linear-gradient(145deg, rgba(124, 58, 237, 0.26), rgba(15, 23, 42, 0.08) 42%, transparent) border-box;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 60px rgba(59, 130, 246, 0.08);
+}
+
+html.light .model-stage {
+  background:
+    radial-gradient(circle at 70% 22%, rgba(139, 92, 246, 0.16), transparent 28%),
+    radial-gradient(circle at 35% 52%, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 244, 255, 0.98));
+}
+
+html.light .model-stage--hero {
+  background: transparent !important;
+}
+
+html.light .hero::after,
+html.light .welcome-page .hero::after {
+  background: linear-gradient(180deg, transparent, #f7f5ff 88%);
+}
+
+html.light .hero-asteroids span {
+  background: linear-gradient(145deg, #dbeafe, #7c3aed);
+}
+
+html.light .auth-panel::before {
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.26), transparent);
+}
+
 /* Hyperbolt-style hero composition adapted for ARCHITECT */
 .welcome-page .site-nav {
   top: 0;

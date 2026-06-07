@@ -38,7 +38,12 @@
   <script>
     (function () {
       var KEY = "plano_ia_theme";
-      var dark = localStorage.getItem(KEY) === "dark";
+      var saved = localStorage.getItem(KEY);
+      if (saved !== "light" && saved !== "dark") {
+        saved = "dark";
+        localStorage.setItem(KEY, saved);
+      }
+      var dark = saved === "dark";
       var root = document.documentElement;
       root.classList.remove("light", "dark");
       root.classList.add(dark ? "dark" : "light");

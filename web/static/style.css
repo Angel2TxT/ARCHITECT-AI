@@ -3380,6 +3380,141 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14), 0 0 24px rgba(139, 92, 246, 0.16) !important;
 }
 
+/* Functional light mode: must come after premium dark overrides */
+html.light {
+  --black: #0b0b0d;
+  --white: #ffffff;
+  --muted: #475569;
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(124, 58, 237, 0.32);
+  --fill-soft: rgba(15, 23, 42, 0.045);
+  --fill-hover: rgba(124, 58, 237, 0.1);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 60px rgba(59, 130, 246, 0.08);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 22px 70px rgba(124, 58, 237, 0.14);
+  color-scheme: light;
+  background: #f7f5ff;
+  color: #0b0b0d;
+}
+
+html.light,
+html.light body {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(139, 92, 246, 0.22), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.14), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #f4f0ff 62%, #eef4ff 100%) !important;
+  color: #0b0b0d !important;
+}
+
+html.light .mesh-bg,
+html.light .auth-page,
+html.light .welcome-page {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(139, 92, 246, 0.22), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.14), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #f4f0ff 62%, #eef4ff 100%) !important;
+}
+
+html.light .mesh-pattern,
+html.light .auth-bg-pattern,
+html.light .welcome-bg {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.07) 1px, transparent 1px) !important;
+}
+
+html.light .glass-panel,
+html.light .glass-card,
+html.light .sidebar,
+html.light .topbar,
+html.light .composer-inner,
+html.light .message-content,
+html.light .setup-banner,
+html.light .usage-bar,
+html.light .search-wrap,
+html.light .issue-card,
+html.light .analysis-item-btn,
+html.light .plan-card,
+html.light .auth-card,
+html.light .auth-stats div,
+html.light .auth-blueprint,
+html.light .welcome-hero-panel,
+html.light .welcome-capabilities article,
+html.light .modal-card,
+html.light .viewer-panel {
+  color: #0b0b0d !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)) padding-box,
+    linear-gradient(145deg, rgba(124, 58, 237, 0.26), rgba(15, 23, 42, 0.08) 42%, transparent) border-box !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 60px rgba(59, 130, 246, 0.08) !important;
+}
+
+html.light .welcome-hero h2,
+html.light .welcome-title,
+html.light .auth-title,
+html.light .auth-welcome-title,
+html.light .glass-card h3,
+html.light .user-name,
+html.light .model-name,
+html.light .topbar,
+html.light .message-content,
+html.light .section-label,
+html.light .auth-field label,
+html.light .auth-stats strong,
+html.light .auth-stats span,
+html.light .sidebar h1,
+html.light .nav-item {
+  color: #0b0b0d !important;
+}
+
+html.light .welcome-sub,
+html.light .welcome-text,
+html.light .auth-subtitle,
+html.light .auth-welcome-subtitle,
+html.light .auth-footnote,
+html.light .auth-demo-hint,
+html.light .chat-meta,
+html.light .user-role,
+html.light .glass-card p,
+html.light .welcome-capabilities p,
+html.light .sidebar p {
+  color: #475569 !important;
+}
+
+html.light .btn-secondary,
+html.light .auth-cta-secondary,
+html.light .welcome-secondary,
+html.light .guest-auth-btn--ghost,
+html.light .btn-sidebar-toggle,
+html.light .btn-attach-inline,
+html.light .correction-btn,
+html.light .auth-nav-link,
+html.light .theme-option {
+  color: #0b0b0d !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+html.light .auth-input,
+html.light input,
+html.light textarea,
+html.light select {
+  color: #0b0b0d !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+html.light .auth-input::placeholder,
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: rgba(71, 85, 105, 0.72) !important;
+}
+
+html.light .theme-option.active {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #8b5cf6, #2563eb) !important;
+}
+
 .iv-btn--text {
   width: auto;
   padding: 0 0.55rem;

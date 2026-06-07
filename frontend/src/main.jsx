@@ -22,8 +22,25 @@ import "./styles.css";
 const TOKEN_KEY = "plano_ia_token";
 const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
+const THEME_KEY = "plano_ia_theme";
 
 gsap.registerPlugin(ScrollTrigger);
+
+function getStoredTheme() {
+  return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+}
+
+function applyDocumentTheme(theme) {
+  const next = theme === "light" ? "light" : "dark";
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(next);
+  root.dataset.theme = next;
+  root.style.colorScheme = next;
+  localStorage.setItem(THEME_KEY, next);
+}
+
+applyDocumentTheme(getStoredTheme());
 
 function setSession(data) {
   localStorage.setItem(TOKEN_KEY, data.access_token);
@@ -65,6 +82,22 @@ function useRoute() {
   }, []);
 
   return path;
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState(getStoredTheme);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    applyDocumentTheme(next);
+    setTheme(next);
+  }
+
+  return (
+    <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label="Cambiar modo claro u oscuro">
+      {theme === "dark" ? "Claro" : "Oscuro"}
+    </button>
+  );
 }
 
 function useRevealAnimations() {
@@ -424,6 +457,7 @@ function Welcome() {
           <a href="#coordination">Proceso</a>
         </div>
         <div className="nav-actions">
+          <ThemeToggle />
           <button className="pill-button" onClick={() => navigate("/login#register")}>Empezar revision <ArrowRight size={15} /></button>
         </div>
         <Menu className="mobile-menu" size={22} />
@@ -667,6 +701,9 @@ function Login() {
         <span className="auth-grid-line auth-grid-line-two" />
       </div>
       <button className="back-link" onClick={() => navigate("/")}>Volver al inicio</button>
+      <div className="auth-theme-toggle">
+        <ThemeToggle />
+      </div>
       <section className="auth-panel">
         <div className="auth-heading">
           <span>ARCHITECT Studio</span>

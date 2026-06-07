@@ -75,12 +75,12 @@
   <script>
     (function () {
       var KEY = "plano_ia_theme";
-      var VER = "bw-light-default";
-      if (localStorage.getItem("plano_ia_theme_ver") !== VER) {
-        localStorage.setItem(KEY, "light");
-        localStorage.setItem("plano_ia_theme_ver", VER);
+      var saved = localStorage.getItem(KEY);
+      if (saved !== "light" && saved !== "dark") {
+        saved = "dark";
+        localStorage.setItem(KEY, saved);
       }
-      var dark = localStorage.getItem(KEY) === "dark";
+      var dark = saved === "dark";
       var root = document.documentElement;
       root.classList.remove("light", "dark");
       root.classList.add(dark ? "dark" : "light");
