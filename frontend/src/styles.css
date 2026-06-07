@@ -1148,6 +1148,8 @@ body {
 .welcome-page .site-nav {
   top: 0;
   height: 92px;
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
   padding: 0 clamp(28px, 3.2vw, 46px);
   background: rgba(5, 5, 5, 0.74);
   border-bottom: 1px solid rgba(255, 255, 255, 0.055);
@@ -1158,7 +1160,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  width: 290px;
+  width: auto;
   font-size: 14px;
   line-height: 1;
   letter-spacing: 0.34em;
@@ -1188,12 +1190,10 @@ body {
 }
 
 .welcome-page .nav-links {
-  position: absolute;
-  left: 50%;
-  top: 20px;
-  transform: translateX(-50%);
+  position: static;
+  transform: none;
   gap: 0;
-  min-width: min(575px, 42vw);
+  min-width: min(560px, 42vw);
   justify-content: space-between;
   padding: 19px 32px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1221,7 +1221,7 @@ body {
 }
 
 .welcome-page .nav-actions {
-  width: 290px;
+  width: auto;
   justify-content: flex-end;
 }
 

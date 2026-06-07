@@ -251,6 +251,318 @@
         max-width: calc(100vw - 64px);
       }
     }
+    /* Premium reference hero overrides for FastAPI fallback welcome */
+    body {
+      background: #050505 !important;
+      color: #ffffff !important;
+    }
+    .welcome-nav {
+      height: 92px !important;
+      background: rgba(5, 5, 5, 0.78) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(18px);
+    }
+    .welcome-nav.nav-scrolled {
+      height: 78px !important;
+      background: rgba(5, 5, 5, 0.9) !important;
+      box-shadow: none !important;
+    }
+    .welcome-nav > div {
+      max-width: none !important;
+      padding-left: clamp(28px, 3.2vw, 46px) !important;
+      padding-right: clamp(28px, 3.2vw, 46px) !important;
+    }
+    .welcome-nav a[href="/"] {
+      color: #fff !important;
+      width: 290px;
+      font-size: 14px !important;
+      letter-spacing: 0.34em !important;
+      text-transform: uppercase;
+    }
+    .welcome-nav a[href="/"]::before {
+      content: "A";
+      display: inline-grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      margin-right: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(167, 139, 250, 0.72);
+      background: linear-gradient(145deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.12));
+      color: #60a5fa;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 0 22px rgba(139, 92, 246, 0.24);
+      vertical-align: middle;
+    }
+    .welcome-nav .hidden.md\:flex {
+      position: absolute;
+      left: 50%;
+      top: 20px;
+      transform: translateX(-50%);
+      min-width: min(575px, 42vw);
+      justify-content: space-between;
+      gap: 0 !important;
+      padding: 19px 32px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.045);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .welcome-nav .hidden.md\:flex a {
+      color: rgba(255, 255, 255, 0.72) !important;
+      border: 0 !important;
+      font-size: 12px !important;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .welcome-nav .flex.items-center.gap-3 {
+      width: 290px;
+      justify-content: flex-end;
+    }
+    .welcome-nav .flex.items-center.gap-3 a:first-child {
+      display: none;
+    }
+    .welcome-nav .flex.items-center.gap-3 a:last-child {
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.045) !important;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      min-height: 46px;
+      padding: 0 22px !important;
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px !important;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    main.pt-20 {
+      padding-top: 0 !important;
+    }
+    .hero-clean {
+      min-height: 100svh !important;
+      display: block !important;
+      text-align: left !important;
+      padding: 136px clamp(28px, 3.2vw, 46px) 130px !important;
+      background:
+        radial-gradient(circle at 68% 44%, rgba(139, 92, 246, 0.5), transparent 26%),
+        radial-gradient(circle at 64% 45%, rgba(59, 130, 246, 0.26), transparent 28%),
+        radial-gradient(circle at 76% 54%, rgba(245, 158, 11, 0.18), transparent 24%),
+        linear-gradient(145deg, #020204 0%, #07040d 54%, #050505 100%) !important;
+      isolation: isolate;
+    }
+    .hero-clean::before {
+      content: "";
+      position: absolute;
+      inset: 92px 0 0;
+      z-index: -2;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+      background-size: 45px 45px;
+      mask-image: linear-gradient(to bottom, black, transparent 92%);
+    }
+    .hero-clean > .absolute.inset-0 {
+      display: none !important;
+    }
+    #hero-text {
+      max-width: min(760px, 54vw) !important;
+      margin: 0 !important;
+      text-align: left !important;
+    }
+    #hero-text > span {
+      padding: 0 !important;
+      margin-bottom: 28px !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: #a78bfa !important;
+      font-size: 12px !important;
+      letter-spacing: 0.44em !important;
+    }
+    #hero-text > span::before {
+      content: "";
+      display: inline-block;
+      width: 36px;
+      height: 1px;
+      margin-right: 16px;
+      background: #8b5cf6;
+      vertical-align: middle;
+    }
+    #hero-text h1 {
+      max-width: 760px;
+      margin: 0 !important;
+      color: #fff !important;
+      font-size: clamp(58px, 7.2vw, 108px) !important;
+      line-height: 0.96 !important;
+      font-weight: 700 !important;
+      letter-spacing: -0.04em !important;
+      text-transform: uppercase;
+    }
+    #hero-text h1::after {
+      content: " que frenan la obra.";
+      color: transparent;
+      background: linear-gradient(92deg, #60a5fa 0%, #8b5cf6 55%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    #hero-text p {
+      max-width: 650px !important;
+      margin: 28px 0 0 !important;
+      color: rgba(226, 232, 240, 0.82) !important;
+      font-size: 20px !important;
+      line-height: 1.45 !important;
+    }
+    #hero-text .flex {
+      justify-content: flex-start !important;
+      margin-top: 34px !important;
+    }
+    #hero-text a {
+      min-height: 54px;
+      padding: 0 30px !important;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px !important;
+      font-size: 13px !important;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    #hero-text a:first-child {
+      background: linear-gradient(135deg, #8b5cf6, #3b82f6) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 28px rgba(139, 92, 246, 0.28);
+    }
+    #hero-text a:last-child {
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.035) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .legacy-hero-energy {
+      position: absolute;
+      inset: 10% 0 0 26%;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 55% 42%, rgba(139, 92, 246, 0.52), transparent 16%),
+        radial-gradient(ellipse at 50% 48%, rgba(59, 130, 246, 0.24), transparent 24%),
+        linear-gradient(115deg, transparent 33%, rgba(167, 139, 250, 0.42) 34%, transparent 37%),
+        linear-gradient(67deg, transparent 48%, rgba(250, 204, 21, 0.34) 50%, transparent 52%);
+      filter: blur(3px);
+      opacity: 0.92;
+      animation: heroPulse 5.5s ease-in-out infinite;
+    }
+    .legacy-hero-shard {
+      position: absolute;
+      right: 18%;
+      top: 17%;
+      width: min(35vw, 420px);
+      aspect-ratio: 0.58;
+      z-index: 1;
+      background:
+        linear-gradient(145deg, rgba(96, 165, 250, 0.95), rgba(139, 92, 246, 0.85) 42%, rgba(5, 5, 5, 0.94) 44%, rgba(250, 204, 21, 0.72));
+      clip-path: polygon(44% 0, 78% 14%, 61% 45%, 100% 42%, 35% 100%, 48% 58%, 8% 62%, 38% 38%);
+      filter: drop-shadow(0 0 28px rgba(139, 92, 246, 0.55)) drop-shadow(0 0 42px rgba(59, 130, 246, 0.24));
+      opacity: 0.92;
+    }
+    .legacy-hero-card {
+      position: absolute;
+      right: clamp(30px, 3vw, 46px);
+      bottom: 13%;
+      width: min(286px, 26vw);
+      min-height: 124px;
+      padding: 28px 30px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.055);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(24px);
+      z-index: 4;
+    }
+    .legacy-hero-card strong {
+      display: block;
+      color: #fff;
+      font-size: 34px;
+      line-height: 1;
+    }
+    .legacy-hero-card span {
+      display: block;
+      margin-top: 10px;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.45;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .legacy-hero-stats {
+      position: absolute;
+      left: clamp(28px, 3.2vw, 46px);
+      right: clamp(28px, 3.2vw, 46px);
+      bottom: 0;
+      z-index: 4;
+      display: flex;
+      gap: clamp(54px, 9vw, 120px);
+      padding: 28px 0 22px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .legacy-hero-stats strong {
+      display: block;
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+    }
+    .legacy-hero-stats span {
+      display: block;
+      margin-top: 8px;
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .model-section,
+    .bg-surface-container-lowest,
+    section,
+    footer {
+      background: #050505 !important;
+      color: #fff !important;
+    }
+    .glass,
+    .ai-plan-chip {
+      background: rgba(255, 255, 255, 0.055) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #fff !important;
+    }
+    .text-primary,
+    .text-on-surface,
+    h2,
+    h3 {
+      color: #fff !important;
+    }
+    .text-secondary,
+    p {
+      color: #94a3b8 !important;
+    }
+    @keyframes heroPulse {
+      0%, 100% { opacity: 0.74; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+    @media (max-width: 900px) {
+      .welcome-nav .hidden.md\:flex {
+        display: none !important;
+      }
+      #hero-text {
+        max-width: 100% !important;
+      }
+      .legacy-hero-shard {
+        right: -18%;
+        top: 31%;
+        width: 80vw;
+        opacity: 0.34;
+      }
+      .legacy-hero-card {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body class="bg-background text-on-surface font-body-md overflow-x-hidden">
@@ -275,9 +587,11 @@
       <div class="absolute inset-0 bg-gradient-to-b from-transparent to-background/50 pointer-events-none"></div>
       <span class="hero-orbit hero-orbit--one" aria-hidden="true"></span>
       <span class="hero-orbit hero-orbit--two" aria-hidden="true"></span>
+      <div class="legacy-hero-energy" aria-hidden="true"></div>
+      <div class="legacy-hero-shard" aria-hidden="true"></div>
       <div class="relative z-10 max-w-4xl mx-auto scroll-reveal visible" id="hero-text">
         <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Revisión técnica de planos asistida por IA</span>
-        <h1 class="font-display-lg text-display-lg md:text-[54px] leading-[1.06] mb-6 tracking-normal">Detecta inconsistencias en planos antes de construir</h1>
+        <h1 class="font-display-lg text-display-lg md:text-[54px] leading-[1.06] mb-6 tracking-normal">Detecta errores en planos</h1>
         <p class="font-body-lg text-body-lg text-secondary max-w-[38rem] mx-auto mb-9">
           Plataforma para revisar planos arquitectónicos, estructurales y de instalaciones, identificar errores de coordinación, señalar omisiones documentales y apoyar la validación técnica antes de enviar el proyecto a obra.
         </p>
@@ -285,6 +599,15 @@
           <a class="bg-primary text-on-primary font-body-md text-body-md px-7 py-3 rounded-full font-semibold text-[15px] transition-transform hover:scale-105 no-underline" href="/login#register">Iniciar revisión</a>
           <a class="glass px-7 py-3 rounded-full font-semibold text-[15px] hover:bg-white/50 transition-all no-underline text-primary" href="/login">Entrar al sistema</a>
         </div>
+      </div>
+      <div class="legacy-hero-card" aria-hidden="true">
+        <strong>200+</strong>
+        <span>criterios tecnicos listos para auditoria documental</span>
+      </div>
+      <div class="legacy-hero-stats" aria-hidden="true">
+        <div><strong>3</strong><span>disciplinas</span></div>
+        <div><strong>4</strong><span>frentes</span></div>
+        <div><strong>1</strong><span>reporte</span></div>
       </div>
       <div class="hero-scroll-cue">Desplazar</div>
     </section>
