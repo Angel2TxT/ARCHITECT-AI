@@ -430,6 +430,23 @@ function StructureScene({ variant = "section" } = {}) {
   );
 }
 
+function HeroBolt() {
+  return (
+    <div className="hero-bolt-scene" aria-hidden="true">
+      <div className="hero-lightning hero-lightning--violet" />
+      <div className="hero-lightning hero-lightning--gold" />
+      <div className="hero-bolt">
+        <span className="bolt-face bolt-face-main" />
+        <span className="bolt-face bolt-face-left" />
+        <span className="bolt-face bolt-face-right" />
+        <span className="bolt-edge bolt-edge-one" />
+        <span className="bolt-edge bolt-edge-two" />
+        <span className="bolt-edge bolt-edge-three" />
+      </div>
+    </div>
+  );
+}
+
 function Welcome() {
   useRevealAnimations();
 
@@ -475,7 +492,7 @@ function Welcome() {
           <span />
         </div>
         <div className="hero-visual" aria-hidden="true">
-          <StructureScene variant="hero" />
+          <HeroBolt />
         </div>
         <div className="hero-copy">
           <span className="eyebrow">Revision tecnica. Menos retrabajo.</span>

@@ -1537,11 +1537,130 @@ html.light .auth-panel::before {
 .hero-visual {
   position: absolute;
   z-index: 2;
-  right: 7%;
-  top: 10%;
-  width: min(58vw, 880px);
-  height: 78vh;
+  right: 3%;
+  top: 8%;
+  width: min(62vw, 900px);
+  height: 82vh;
   pointer-events: none;
+}
+
+.hero-bolt-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  perspective: 900px;
+  animation: boltSceneFloat 6.8s ease-in-out infinite;
+}
+
+.hero-bolt-scene::before {
+  content: "";
+  position: absolute;
+  inset: 5% 0 5% -14%;
+  background:
+    radial-gradient(circle at 48% 44%, rgba(139, 92, 246, 0.54), transparent 20%),
+    radial-gradient(circle at 54% 50%, rgba(59, 130, 246, 0.22), transparent 28%),
+    radial-gradient(circle at 64% 52%, rgba(250, 204, 21, 0.2), transparent 22%);
+  filter: blur(18px);
+  opacity: 0.92;
+}
+
+.hero-bolt {
+  position: absolute;
+  left: 28%;
+  top: 3%;
+  width: min(370px, 33vw);
+  height: min(690px, 76vh);
+  transform: rotate(-8deg) rotateY(-18deg) rotateX(6deg);
+  transform-style: preserve-3d;
+  filter:
+    drop-shadow(0 0 14px rgba(139, 92, 246, 0.76))
+    drop-shadow(0 0 36px rgba(59, 130, 246, 0.28))
+    drop-shadow(0 0 56px rgba(250, 204, 21, 0.18));
+}
+
+.bolt-face {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(48% 0, 82% 12%, 63% 42%, 96% 39%, 35% 100%, 48% 59%, 7% 63%, 39% 37%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.bolt-face-main {
+  background:
+    linear-gradient(128deg, rgba(255,255,255,0.95) 0%, rgba(96,165,250,0.72) 14%, rgba(8,12,24,0.96) 33%, rgba(4,4,8,0.98) 57%, rgba(139,92,246,0.88) 72%, rgba(250,204,21,0.72) 100%);
+  box-shadow:
+    inset 22px 0 36px rgba(255, 255, 255, 0.28),
+    inset -26px -18px 44px rgba(0, 0, 0, 0.68);
+}
+
+.bolt-face-left {
+  transform: translate3d(-18px, 14px, -42px) rotateY(-16deg);
+  background: linear-gradient(150deg, rgba(4,6,12,0.96), rgba(59,130,246,0.42), rgba(139,92,246,0.52));
+  opacity: 0.72;
+  filter: blur(0.2px);
+}
+
+.bolt-face-right {
+  transform: translate3d(20px, -8px, -26px) rotateY(14deg);
+  background: linear-gradient(135deg, rgba(255,255,255,0.34), rgba(139,92,246,0.6), rgba(0,0,0,0.92));
+  opacity: 0.62;
+}
+
+.bolt-edge {
+  position: absolute;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #a78bfa, #60a5fa, transparent);
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.86);
+}
+
+.bolt-edge-one {
+  left: 43%;
+  top: 5%;
+  width: 42%;
+  transform: rotate(9deg);
+}
+
+.bolt-edge-two {
+  left: 33%;
+  top: 48%;
+  width: 48%;
+  transform: rotate(-1deg);
+  background: linear-gradient(90deg, transparent, #d946ef, #8b5cf6, transparent);
+}
+
+.bolt-edge-three {
+  left: 45%;
+  top: 77%;
+  width: 34%;
+  transform: rotate(-62deg);
+  background: linear-gradient(90deg, transparent, #facc15, #a78bfa, transparent);
+}
+
+.hero-lightning {
+  position: absolute;
+  width: 58%;
+  height: 42%;
+  clip-path: polygon(0 48%, 22% 42%, 26% 52%, 45% 44%, 52% 55%, 72% 47%, 100% 53%, 72% 57%, 52% 62%, 45% 51%, 26% 60%, 22% 50%);
+  filter: blur(1px) drop-shadow(0 0 16px currentColor);
+  opacity: 0.86;
+}
+
+.hero-lightning--violet {
+  left: 5%;
+  top: 25%;
+  color: #a855f7;
+  background: linear-gradient(90deg, transparent, #8b5cf6, #d946ef, transparent);
+  animation: lightningPulse 3.8s ease-in-out infinite;
+}
+
+.hero-lightning--gold {
+  right: 2%;
+  top: 34%;
+  color: #facc15;
+  background: linear-gradient(90deg, transparent, #facc15, #fb7185, transparent);
+  transform: scaleX(-1) rotate(7deg);
+  animation: lightningPulse 4.3s ease-in-out infinite 0.5s;
 }
 
 .model-stage--hero {
@@ -1648,6 +1767,31 @@ html.light .auth-panel::before {
   }
 }
 
+@keyframes boltSceneFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0) rotate(1.2deg);
+  }
+}
+
+@keyframes lightningPulse {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translateX(-8px) scaleX(0.96);
+  }
+  45% {
+    opacity: 0.94;
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(8px) scaleX(1.04);
+  }
+}
+
 @media (max-width: 1080px) {
   .welcome-page .nav-links {
     display: none;
@@ -1660,7 +1804,7 @@ html.light .auth-panel::before {
 
   .hero-visual {
     right: -16%;
-    opacity: 0.48;
+    opacity: 0.72;
   }
 
   .hero-copy {
@@ -1715,6 +1859,12 @@ html.light .auth-panel::before {
     width: 112vw;
     height: 56vh;
     opacity: 0.36;
+  }
+
+  .hero-bolt {
+    width: 250px;
+    height: 470px;
+    left: 32%;
   }
 
   .hero-proof-card {

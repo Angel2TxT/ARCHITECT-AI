@@ -439,29 +439,80 @@
     }
     .legacy-hero-energy {
       position: absolute;
-      inset: 10% 0 0 26%;
+      inset: 7% 0 0 28%;
       z-index: -1;
       background:
-        radial-gradient(ellipse at 55% 42%, rgba(139, 92, 246, 0.52), transparent 16%),
-        radial-gradient(ellipse at 50% 48%, rgba(59, 130, 246, 0.24), transparent 24%),
-        linear-gradient(115deg, transparent 33%, rgba(167, 139, 250, 0.42) 34%, transparent 37%),
-        linear-gradient(67deg, transparent 48%, rgba(250, 204, 21, 0.34) 50%, transparent 52%);
-      filter: blur(3px);
+        radial-gradient(ellipse at 54% 42%, rgba(139, 92, 246, 0.64), transparent 17%),
+        radial-gradient(ellipse at 50% 48%, rgba(59, 130, 246, 0.28), transparent 27%),
+        radial-gradient(ellipse at 68% 48%, rgba(250, 204, 21, 0.2), transparent 18%),
+        linear-gradient(115deg, transparent 27%, rgba(167, 139, 250, 0.56) 29%, transparent 33%),
+        linear-gradient(63deg, transparent 51%, rgba(250, 204, 21, 0.44) 53%, transparent 56%),
+        linear-gradient(174deg, transparent 42%, rgba(96, 165, 250, 0.42) 44%, transparent 47%);
+      filter: blur(2px);
       opacity: 0.92;
       animation: heroPulse 5.5s ease-in-out infinite;
     }
+    .legacy-hero-energy::before,
+    .legacy-hero-energy::after {
+      content: "";
+      position: absolute;
+      width: 56%;
+      height: 40%;
+      clip-path: polygon(0 48%, 22% 42%, 27% 53%, 46% 44%, 52% 56%, 74% 47%, 100% 54%, 74% 58%, 52% 63%, 46% 52%, 27% 61%, 22% 51%);
+      filter: blur(1px) drop-shadow(0 0 18px currentColor);
+    }
+    .legacy-hero-energy::before {
+      left: 0;
+      top: 28%;
+      color: #a855f7;
+      background: linear-gradient(90deg, transparent, #8b5cf6, #d946ef, transparent);
+    }
+    .legacy-hero-energy::after {
+      right: 2%;
+      top: 35%;
+      color: #facc15;
+      background: linear-gradient(90deg, transparent, #facc15, #fb7185, transparent);
+      transform: scaleX(-1) rotate(7deg);
+    }
     .legacy-hero-shard {
       position: absolute;
-      right: 18%;
-      top: 17%;
-      width: min(35vw, 420px);
+      right: 14%;
+      top: 7%;
+      width: min(36vw, 430px);
       aspect-ratio: 0.58;
       z-index: 1;
       background:
-        linear-gradient(145deg, rgba(96, 165, 250, 0.95), rgba(139, 92, 246, 0.85) 42%, rgba(5, 5, 5, 0.94) 44%, rgba(250, 204, 21, 0.72));
-      clip-path: polygon(44% 0, 78% 14%, 61% 45%, 100% 42%, 35% 100%, 48% 58%, 8% 62%, 38% 38%);
-      filter: drop-shadow(0 0 28px rgba(139, 92, 246, 0.55)) drop-shadow(0 0 42px rgba(59, 130, 246, 0.24));
+        linear-gradient(128deg, rgba(255, 255, 255, 0.94), rgba(96, 165, 250, 0.74) 13%, rgba(8, 12, 24, 0.96) 34%, rgba(5, 5, 8, 0.98) 57%, rgba(139, 92, 246, 0.9) 73%, rgba(250, 204, 21, 0.76));
+      clip-path: polygon(48% 0, 82% 12%, 63% 42%, 96% 39%, 35% 100%, 48% 59%, 7% 63%, 39% 37%);
+      filter:
+        drop-shadow(0 0 16px rgba(139, 92, 246, 0.8))
+        drop-shadow(0 0 42px rgba(59, 130, 246, 0.3))
+        drop-shadow(0 0 60px rgba(250, 204, 21, 0.2));
       opacity: 0.92;
+      transform: rotate(-8deg) skewY(-2deg);
+      animation: heroFloat 6.8s ease-in-out infinite;
+    }
+    .legacy-hero-shard::before,
+    .legacy-hero-shard::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      clip-path: inherit;
+      pointer-events: none;
+    }
+    .legacy-hero-shard::before {
+      transform: translate(-18px, 14px) scale(0.98);
+      background: linear-gradient(150deg, rgba(4, 6, 12, 0.96), rgba(59, 130, 246, 0.42), rgba(139, 92, 246, 0.52));
+      opacity: 0.62;
+      z-index: -1;
+    }
+    .legacy-hero-shard::after {
+      background:
+        linear-gradient(10deg, transparent 21%, rgba(167, 139, 250, 0.92) 22%, transparent 24%),
+        linear-gradient(88deg, transparent 46%, rgba(96, 165, 250, 0.9) 47%, transparent 49%),
+        linear-gradient(116deg, transparent 68%, rgba(250, 204, 21, 0.78) 69%, transparent 71%);
+      mix-blend-mode: screen;
+      opacity: 0.88;
     }
     .legacy-hero-card {
       position: absolute;
@@ -545,6 +596,10 @@
     @keyframes heroPulse {
       0%, 100% { opacity: 0.74; transform: scale(0.98); }
       50% { opacity: 1; transform: scale(1.04); }
+    }
+    @keyframes heroFloat {
+      0%, 100% { transform: rotate(-8deg) skewY(-2deg) translate3d(0, 0, 0); }
+      50% { transform: rotate(-6deg) skewY(-2deg) translate3d(10px, -18px, 0); }
     }
     @media (max-width: 900px) {
       .welcome-nav .hidden.md\:flex {
