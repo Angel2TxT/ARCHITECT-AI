@@ -22,6 +22,7 @@ import "./styles.css";
 const TOKEN_KEY = "plano_ia_token";
 const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
+const SELECTED_PLAN_KEY = "plano_ia_selected_plan";
 const THEME_KEY = "plano_ia_theme";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -70,6 +71,35 @@ function formatApiError(data, fallback) {
 function navigate(path) {
   window.history.pushState({}, "", path);
   window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function selectPlan(planSlug) {
+  localStorage.setItem(SELECTED_PLAN_KEY, planSlug);
+  navigate("/login#register");
+}
+
+async function applySelectedPlan(accessToken) {
+  const planSlug = localStorage.getItem(SELECTED_PLAN_KEY);
+  if (!planSlug || planSlug === "free") return;
+
+  try {
+    const res = await fetch("/api/billing/change-plan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ plan_slug: planSlug })
+    });
+
+    if (res.ok) {
+      const subscription = await res.json();
+      localStorage.setItem(SUB_KEY, JSON.stringify(subscription));
+      localStorage.removeItem(SELECTED_PLAN_KEY);
+    }
+  } catch {
+    // El registro no depende del cambio de plan; el usuario puede cambiarlo dentro de la app.
+  }
 }
 
 function useRoute() {
@@ -447,6 +477,55 @@ function HeroBolt() {
   );
 }
 
+const subscriptionPlans = [
+  {
+    slug: "starter",
+    name: "Starter",
+    tone: "violet",
+    price: "$99",
+    period: "/mes",
+    description: "Para estudiantes, freelancers o revisiones puntuales de planos.",
+    label: "Incluye",
+    features: [
+      "30 revisiones de planos al mes",
+      "Deteccion de cotas y simbologia",
+      "Modelo real habilitado",
+      "Reporte PDF con observaciones"
+    ]
+  },
+  {
+    slug: "pro",
+    name: "Pro",
+    tone: "blue",
+    price: "$299",
+    period: "/mes",
+    description: "Para despachos que revisan entregables de arquitectura e ingenieria cada semana.",
+    label: "Mas elegido",
+    popular: true,
+    features: [
+      "150 revisiones de planos al mes",
+      "Revision arquitectonica, estructural e instalaciones",
+      "Prioridad en procesamiento de IA",
+      "API y reportes exportables"
+    ]
+  },
+  {
+    slug: "enterprise",
+    name: "Enterprise",
+    tone: "slate",
+    price: "$999",
+    period: "/mes",
+    description: "Para constructoras, universidades o equipos con criterios tecnicos propios.",
+    label: "Equipo",
+    features: [
+      "Hasta 9999 revisiones mensuales",
+      "Criterios y listas de chequeo privadas",
+      "Usuarios por equipo y roles",
+      "Soporte dedicado y SLA"
+    ]
+  }
+];
+
 function Welcome() {
   useRevealAnimations();
 
@@ -471,6 +550,7 @@ function Welcome() {
           <a href="#product">Inicio</a>
           <a href="#capabilities">Servicios</a>
           <a href="#review">Revision</a>
+          <a href="#pricing">Planes</a>
           <a href="#coordination">Proceso</a>
         </div>
         <div className="nav-actions">
@@ -578,6 +658,39 @@ function Welcome() {
             <h3>Criterios tecnicos configurables</h3>
             <p>Permite estructurar listas de verificacion por proyecto, municipio o despacho: accesibilidad, seguridad, simbologia, escalas, notas generales y criterios de entrega.</p>
           </article>
+        </div>
+      </section>
+
+      <section className="pricing-section technical-grid" id="pricing">
+        <div className="pricing-intro reveal">
+          <span className="line-label">Suscripciones IA</span>
+          <h2>Planes flexibles para cada etapa de revision.</h2>
+          <p>Escoge un plan segun el volumen de planos, disciplinas y nivel de control tecnico que necesita tu equipo.</p>
+        </div>
+        <div className="pricing-stage reveal">
+          {subscriptionPlans.map((plan) => (
+            <article className={`pricing-card pricing-card--${plan.tone}${plan.popular ? " pricing-card--featured" : ""}`} key={plan.name}>
+              <div className="pricing-card-head">
+                <h3>{plan.name}</h3>
+                {plan.popular && <span><Sparkles size={13} /> Popular</span>}
+              </div>
+              <p>{plan.description}</p>
+              <div className="pricing-divider" />
+              <div className="pricing-price">
+                <strong>{plan.price}</strong>
+                {plan.period && <small>{plan.period}</small>}
+              </div>
+              <span className="pricing-label">{plan.label}</span>
+              <ul>
+                {plan.features.map((feature) => (
+                  <li key={feature}><CheckCircle2 size={18} /> {feature}</li>
+                ))}
+              </ul>
+              <button className={plan.popular ? "primary-action" : "secondary-action"} onClick={() => selectPlan(plan.slug)}>
+                Elegir plan <ArrowRight size={16} />
+              </button>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -702,6 +815,9 @@ function Login() {
         return;
       }
       setSession(data);
+      if (mode === "register") {
+        await applySelectedPlan(data.access_token);
+      }
       navigate("/app");
     } catch {
       setError("No se pudo conectar con el servidor.");

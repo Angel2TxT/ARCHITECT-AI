@@ -570,6 +570,198 @@
       letter-spacing: 0.18em;
       text-transform: uppercase;
     }
+    .legacy-pricing {
+      position: relative;
+      isolation: isolate;
+      padding: 96px clamp(20px, 5vw, 76px) 116px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 28% 58%, rgba(139, 92, 246, 0.16), transparent 28%),
+        radial-gradient(circle at 52% 54%, rgba(59, 130, 246, 0.14), transparent 24%),
+        #050505 !important;
+    }
+    .legacy-pricing::before {
+      content: "";
+      position: absolute;
+      inset: 32% 10% 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse at 34% 48%, rgba(217, 70, 239, 0.26), transparent 34%),
+        radial-gradient(ellipse at 55% 44%, rgba(59, 130, 246, 0.22), transparent 34%);
+      filter: blur(26px);
+      opacity: 0.84;
+    }
+    .legacy-pricing-intro {
+      max-width: 860px;
+      margin: 0 auto 74px;
+      text-align: center;
+    }
+    .legacy-pricing-intro h2 {
+      margin: 18px 0;
+      color: #fff;
+      font-size: clamp(38px, 5.3vw, 66px);
+      line-height: 1.03;
+    }
+    .legacy-pricing-intro p {
+      max-width: 620px;
+      margin: 0 auto;
+      color: #94a3b8 !important;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+    .legacy-pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      max-width: 1120px;
+      min-height: 560px;
+      margin: 0 auto;
+    }
+    .legacy-plan {
+      min-height: 440px;
+      padding: 38px 38px 34px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 34px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+        rgba(8, 8, 12, 0.82);
+      box-shadow: 0 30px 110px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(26px);
+      color: #fff;
+    }
+    .legacy-plan:first-child {
+      transform: translateX(44px) scale(0.92);
+      border-color: rgba(217, 70, 239, 0.42);
+      box-shadow: 0 0 70px rgba(217, 70, 239, 0.13);
+    }
+    .legacy-plan:last-child {
+      transform: translateX(-44px) scale(0.92);
+      opacity: 0.78;
+    }
+    .legacy-plan.featured {
+      position: relative;
+      z-index: 2;
+      min-height: 520px;
+      padding: 44px 46px 40px;
+      border-color: rgba(96, 165, 250, 0.44);
+      background:
+        radial-gradient(circle at 28% 88%, rgba(34, 211, 238, 0.16), transparent 28%),
+        linear-gradient(145deg, rgba(43, 66, 102, 0.82), rgba(10, 14, 24, 0.94));
+      box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.18) inset, 0 38px 120px rgba(59, 130, 246, 0.18);
+    }
+    .legacy-plan-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .legacy-plan h3 {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(24px, 2.6vw, 34px);
+    }
+    .legacy-plan-badge {
+      padding: 8px 12px;
+      border: 1px solid rgba(96, 165, 250, 0.36);
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.14);
+      color: #93c5fd;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .legacy-plan p {
+      min-height: 78px;
+      margin: 22px 0 0;
+      color: #a7b0c0 !important;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+    .legacy-plan-divider {
+      height: 1px;
+      margin: 26px 0 28px;
+      background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.28), transparent);
+    }
+    .legacy-plan-price {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 28px;
+      color: #fff;
+      font-size: clamp(44px, 5vw, 68px);
+      font-weight: 650;
+    }
+    .legacy-plan-price small {
+      color: #94a3b8;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .legacy-plan-label {
+      display: block;
+      margin-bottom: 24px;
+      color: #a78bfa;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .legacy-plan.featured .legacy-plan-label {
+      color: #7dd3fc;
+    }
+    .legacy-plan ul {
+      display: grid;
+      gap: 18px;
+      min-height: 126px;
+      margin: 0 0 30px;
+      padding: 0;
+      list-style: none;
+    }
+    .legacy-plan li {
+      color: #d5dbe7;
+      font-size: 15px;
+      font-weight: 750;
+    }
+    .legacy-plan li::before {
+      content: "✓";
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      margin-right: 13px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      color: #d946ef;
+      box-shadow: 0 0 10px rgba(217, 70, 239, 0.58);
+      font-size: 12px;
+    }
+    .legacy-plan.featured li::before {
+      color: #60a5fa;
+      box-shadow: 0 0 10px rgba(96, 165, 250, 0.62);
+    }
+    .legacy-plan a {
+      width: 100%;
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .legacy-plan a.primary {
+      color: #fff;
+      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .legacy-plan a.secondary {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
     .model-section,
     .bg-surface-container-lowest,
     section,
@@ -617,6 +809,24 @@
       .legacy-hero-card {
         display: none;
       }
+      .legacy-pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        min-height: 0;
+        max-width: 680px;
+      }
+      .legacy-plan,
+      .legacy-plan:first-child,
+      .legacy-plan:last-child,
+      .legacy-plan.featured {
+        min-height: auto;
+        transform: none;
+        opacity: 1;
+      }
+      .legacy-plan {
+        padding: 28px 24px;
+        border-radius: 26px;
+      }
     }
   </style>
 </head>
@@ -628,6 +838,7 @@
         <a class="text-primary font-semibold border-b border-primary font-body-md text-body-md transition-all duration-300" href="#product">Inicio</a>
         <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#model-3d">Análisis visual</a>
         <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#features">Revisión de planos</a>
+        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#pricing">Planes</a>
         <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#structural">Criterios técnicos</a>
       </div>
       <div class="flex items-center gap-3 md:gap-4">
@@ -798,6 +1009,67 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="pricing" class="legacy-pricing technical-grid">
+      <div class="legacy-pricing-intro scroll-reveal">
+        <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Suscripciones IA</span>
+        <h2>Planes flexibles para cada etapa de revision.</h2>
+        <p>Escoge un plan segun el volumen de planos, disciplinas y nivel de control tecnico que necesita tu equipo.</p>
+      </div>
+      <div class="legacy-pricing-grid scroll-reveal">
+        <article class="legacy-plan">
+          <div class="legacy-plan-head">
+            <h3>Starter</h3>
+          </div>
+          <p>Para estudiantes, freelancers o revisiones puntuales de planos.</p>
+          <div class="legacy-plan-divider"></div>
+          <div class="legacy-plan-price">$99 <small>/mes</small></div>
+          <span class="legacy-plan-label">Incluye</span>
+          <ul>
+            <li>30 revisiones de planos al mes</li>
+            <li>Deteccion de cotas y simbologia</li>
+            <li>Modelo real habilitado</li>
+            <li>Reporte PDF con observaciones</li>
+          </ul>
+          <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','starter')">Elegir plan</a>
+        </article>
+
+        <article class="legacy-plan featured">
+          <div class="legacy-plan-head">
+            <h3>Pro</h3>
+            <span class="legacy-plan-badge">Popular</span>
+          </div>
+          <p>Para despachos que revisan entregables de arquitectura e ingenieria cada semana.</p>
+          <div class="legacy-plan-divider"></div>
+          <div class="legacy-plan-price">$299 <small>/mes</small></div>
+          <span class="legacy-plan-label">Mas elegido</span>
+          <ul>
+            <li>150 revisiones de planos al mes</li>
+            <li>Revision arquitectonica, estructural e instalaciones</li>
+            <li>Prioridad en procesamiento de IA</li>
+            <li>API y reportes exportables</li>
+          </ul>
+          <a class="primary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','pro')">Elegir plan</a>
+        </article>
+
+        <article class="legacy-plan">
+          <div class="legacy-plan-head">
+            <h3>Enterprise</h3>
+          </div>
+          <p>Para constructoras, universidades o equipos con criterios tecnicos propios.</p>
+          <div class="legacy-plan-divider"></div>
+          <div class="legacy-plan-price">$999 <small>/mes</small></div>
+          <span class="legacy-plan-label">Equipo</span>
+          <ul>
+            <li>Hasta 9999 revisiones mensuales</li>
+            <li>Criterios y listas de chequeo privadas</li>
+            <li>Usuarios por equipo y roles</li>
+            <li>Soporte dedicado y SLA</li>
+          </ul>
+          <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','enterprise')">Elegir plan</a>
+        </article>
       </div>
     </section>
 

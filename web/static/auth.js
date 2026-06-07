@@ -1,6 +1,7 @@
 const TOKEN_KEY = "plano_ia_token";
 const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
+const SELECTED_PLAN_KEY = "plano_ia_selected_plan";
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -10,6 +11,29 @@ function setSession(data) {
   localStorage.setItem(TOKEN_KEY, data.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(data.user));
   localStorage.setItem(SUB_KEY, JSON.stringify(data.subscription));
+}
+
+async function applySelectedPlan(accessToken) {
+  const planSlug = localStorage.getItem(SELECTED_PLAN_KEY);
+  if (!planSlug || planSlug === "free") return;
+
+  try {
+    const res = await fetch("/api/billing/change-plan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ plan_slug: planSlug }),
+    });
+    if (res.ok) {
+      const subscription = await res.json();
+      localStorage.setItem(SUB_KEY, JSON.stringify(subscription));
+      localStorage.removeItem(SELECTED_PLAN_KEY);
+    }
+  } catch {
+    // El registro no depende del cambio de plan; se puede cambiar dentro de la app.
+  }
 }
 
 function clearSession() {
@@ -209,6 +233,7 @@ if (document.getElementById("loginForm")) {
         return;
       }
       setSession(data);
+      await applySelectedPlan(data.access_token);
       showAppLoader("Preparando tu espacio…");
       window.location.href = "/app";
     } catch {
