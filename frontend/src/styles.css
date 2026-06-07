@@ -504,6 +504,7 @@ button {
   max-width: 1120px;
   min-height: 560px;
   margin: 0 auto;
+  perspective: 1200px;
 }
 
 .pricing-card {
@@ -518,6 +519,15 @@ button {
   box-shadow: 0 30px 110px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(26px);
   color: #fff;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.45s ease,
+    filter 0.45s ease,
+    border-color 0.45s ease,
+    box-shadow 0.45s ease,
+    background 0.45s ease;
+  will-change: transform, filter, opacity;
 }
 
 .pricing-card:first-child {
@@ -529,6 +539,32 @@ button {
 .pricing-card:last-child {
   transform: translateX(-44px) scale(0.92);
   opacity: 0.78;
+}
+
+.pricing-stage:has(.pricing-card:hover) .pricing-card {
+  opacity: 0.32;
+  filter: blur(10px) brightness(0.52) saturate(0.72);
+  transform: scale(0.86);
+}
+
+.pricing-stage:has(.pricing-card:hover) .pricing-card:hover {
+  z-index: 5;
+  opacity: 1;
+  filter: none;
+  transform: translateX(0) scale(1.08) rotateX(0deg) rotateY(0deg);
+  border-color: rgba(167, 139, 250, 0.72);
+  background:
+    radial-gradient(circle at 28% 88%, rgba(34, 211, 238, 0.18), transparent 28%),
+    linear-gradient(145deg, rgba(43, 66, 102, 0.86), rgba(10, 14, 24, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(167, 139, 250, 0.28) inset,
+    0 42px 130px rgba(59, 130, 246, 0.22),
+    0 0 88px rgba(139, 92, 246, 0.18);
+}
+
+.pricing-stage:has(.pricing-card:first-child:hover) .pricing-card--featured,
+.pricing-stage:has(.pricing-card:last-child:hover) .pricing-card--featured {
+  transform: scale(0.86);
 }
 
 .pricing-card--featured {
@@ -1518,6 +1554,20 @@ html.light .pricing-card--featured {
     linear-gradient(145deg, rgba(59, 130, 246, 0.38), rgba(139, 92, 246, 0.2)) border-box;
 }
 
+html.light .pricing-stage:has(.pricing-card:hover) .pricing-card {
+  filter: blur(10px) brightness(0.74) saturate(0.7);
+}
+
+html.light .pricing-stage:has(.pricing-card:hover) .pricing-card:hover {
+  background:
+    radial-gradient(circle at 28% 88%, rgba(59, 130, 246, 0.16), transparent 28%),
+    linear-gradient(rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.9)) padding-box,
+    linear-gradient(145deg, rgba(59, 130, 246, 0.46), rgba(139, 92, 246, 0.26)) border-box;
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.18) inset,
+    0 34px 100px rgba(59, 130, 246, 0.2);
+}
+
 html.light .model-stage {
   background:
     radial-gradient(circle at 70% 22%, rgba(139, 92, 246, 0.16), transparent 28%),
@@ -2056,6 +2106,16 @@ html.light .auth-panel::before {
     min-height: auto;
     transform: none;
     opacity: 1;
+    filter: none;
+  }
+
+  .pricing-stage:has(.pricing-card:hover) .pricing-card,
+  .pricing-stage:has(.pricing-card:hover) .pricing-card:hover,
+  .pricing-stage:has(.pricing-card:first-child:hover) .pricing-card--featured,
+  .pricing-stage:has(.pricing-card:last-child:hover) .pricing-card--featured {
+    transform: none;
+    opacity: 1;
+    filter: none;
   }
 }
 
