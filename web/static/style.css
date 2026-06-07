@@ -3189,6 +3189,197 @@ html.dark .msg-media-zoomable:focus-visible {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* Digital Experiences | Premium Studio overrides */
+:root,
+html.light,
+html.dark {
+  --black: #ffffff;
+  --white: #0b0b0d;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(167, 139, 250, 0.38);
+  --fill-soft: rgba(255, 255, 255, 0.035);
+  --fill-hover: rgba(139, 92, 246, 0.14);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 28px rgba(139, 92, 246, 0.08);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 0 38px rgba(139, 92, 246, 0.18);
+  --radius: 16px;
+  --radius-lg: 32px;
+  --radius-pill: 9999px;
+  --dx-primary: #8b5cf6;
+  --dx-secondary: #3b82f6;
+  --dx-tertiary: #a78bfa;
+  --dx-neutral: #0b0b0d;
+  --dx-surface: rgba(255, 255, 255, 0.035);
+  color-scheme: dark;
+  background: #0b0b0d;
+  color: #ffffff;
+}
+
+html,
+html.dark,
+body {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(139, 92, 246, 0.34), transparent 32%),
+    radial-gradient(circle at 88% 18%, rgba(59, 130, 246, 0.22), transparent 30%),
+    linear-gradient(145deg, #120b1c 0%, #050505 68%, #0b0b0d 100%) !important;
+  color: #ffffff;
+}
+
+.mesh-bg,
+html.dark .mesh-bg,
+.auth-page,
+.welcome-page {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(139, 92, 246, 0.34), transparent 32%),
+    radial-gradient(circle at 88% 18%, rgba(59, 130, 246, 0.22), transparent 30%),
+    linear-gradient(145deg, #120b1c 0%, #050505 68%, #0b0b0d 100%) !important;
+}
+
+.mesh-pattern,
+html.dark .mesh-pattern,
+.auth-bg-pattern,
+.welcome-bg {
+  opacity: 1;
+  background-size: 32px 32px !important;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.075) 1px, transparent 1px) !important;
+}
+
+.glass-panel,
+.glass-card,
+.sidebar,
+.topbar,
+.composer-inner,
+.message-content,
+.setup-banner,
+.usage-bar,
+.search-wrap,
+.issue-card,
+.analysis-item-btn,
+.plan-card,
+.auth-card,
+.auth-stats div,
+.auth-blueprint,
+.welcome-hero-panel,
+.welcome-capabilities article,
+.modal-card,
+.viewer-panel {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background:
+    linear-gradient(rgba(11, 11, 13, 0.82), rgba(11, 11, 13, 0.82)) padding-box,
+    linear-gradient(145deg, rgba(168, 85, 247, 0.35), rgba(255, 255, 255, 0.08) 42%, transparent) border-box !important;
+  border-radius: 32px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 0 34px rgba(139, 92, 246, 0.08) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.sidebar,
+.topbar {
+  border-radius: 0;
+}
+
+.nav-item.active,
+.chat-item.active .chat-item-btn,
+.suggestion-card:hover,
+.analysis-item-btn:hover,
+.glass-card:hover {
+  background: rgba(139, 92, 246, 0.14) !important;
+  border-color: rgba(167, 139, 250, 0.38) !important;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.16) !important;
+}
+
+#btnNewChat,
+.btn-send,
+.btn-primary,
+.auth-submit,
+.auth-cta-primary,
+.welcome-primary,
+.guest-auth-btn:not(.guest-auth-btn--ghost) {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 28px rgba(139, 92, 246, 0.28) !important;
+}
+
+.btn-secondary,
+.auth-cta-secondary,
+.welcome-secondary,
+.guest-auth-btn--ghost,
+.btn-sidebar-toggle,
+.btn-attach-inline,
+.correction-btn,
+.auth-nav-link {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.welcome-hero h2,
+.welcome-title,
+.auth-title,
+.auth-welcome-title,
+.glass-card h3,
+html.dark .glass-card h3,
+.user-name,
+html.dark .user-name,
+.model-name,
+.topbar,
+.message-content,
+.section-label,
+.auth-field label,
+.auth-stats strong,
+.auth-stats span {
+  color: #ffffff !important;
+}
+
+.welcome-sub,
+.welcome-text,
+.auth-subtitle,
+.auth-welcome-subtitle,
+.auth-footnote,
+.auth-demo-hint,
+.chat-meta,
+.user-role,
+.glass-card p,
+html.dark .glass-card p,
+.welcome-capabilities p {
+  color: #94a3b8 !important;
+}
+
+.auth-kicker,
+.section-label,
+.plan-card .section-label {
+  color: #a78bfa !important;
+  letter-spacing: 0.17em;
+}
+
+.auth-tab-indicator,
+html.dark .auth-tab-indicator {
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6) !important;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.36) !important;
+}
+
+.auth-input,
+html.dark .auth-input,
+input,
+textarea,
+select {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.auth-input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(167, 139, 250, 0.58) !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14), 0 0 24px rgba(139, 92, 246, 0.16) !important;
+}
+
 .iv-btn--text {
   width: auto;
   padding: 0 0.55rem;
