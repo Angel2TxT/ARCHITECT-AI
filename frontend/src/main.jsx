@@ -118,7 +118,7 @@ function useRevealAnimations() {
   }, []);
 }
 
-function StructureScene() {
+function StructureScene({ variant = "section" } = {}) {
   const canvasRef = useRef(null);
   const stageRef = useRef(null);
 
@@ -377,7 +377,7 @@ function StructureScene() {
   }, []);
 
   return (
-    <div className="model-stage" ref={stageRef}>
+    <div className={`model-stage model-stage--${variant}`} ref={stageRef}>
       <canvas ref={canvasRef} aria-label="Modelo 3D de coordinacion tecnica ARCHITECT" />
       <div className="model-hud">
         <div className="hud-chip hud-chip-alert">
@@ -411,17 +411,20 @@ function Welcome() {
     <main className="welcome-page">
       <nav className="site-nav">
         <a href="/" className="brand" onClick={(event) => { event.preventDefault(); navigate("/"); }}>
-          ARCHITECT
+          <span className="brand-mark">A</span>
+          <span>
+            ARCHITECT
+            <small>STUDIO</small>
+          </span>
         </a>
         <div className="nav-links">
-          <a href="#product">Producto</a>
-          <a href="#capabilities">Capacidades</a>
-          <a href="#review">Revision tecnica</a>
-          <a href="#coordination">Coordinacion</a>
+          <a href="#product">Inicio</a>
+          <a href="#capabilities">Servicios</a>
+          <a href="#review">Revision</a>
+          <a href="#coordination">Proceso</a>
         </div>
         <div className="nav-actions">
-          <button className="link-button" onClick={() => navigate("/login")}>Login</button>
-          <button className="pill-button" onClick={() => navigate("/login#register")}>Get Started</button>
+          <button className="pill-button" onClick={() => navigate("/login#register")}>Empezar revision <ArrowRight size={15} /></button>
         </div>
         <Menu className="mobile-menu" size={22} />
       </nav>
@@ -429,11 +432,24 @@ function Welcome() {
       <section className="hero technical-grid" id="product">
         <span className="hero-ring hero-ring-one" />
         <span className="hero-ring hero-ring-two" />
+        <div className="hero-energy" aria-hidden="true" />
+        <div className="hero-asteroids" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="hero-visual" aria-hidden="true">
+          <StructureScene variant="hero" />
+        </div>
         <div className="hero-copy">
-          <span className="eyebrow">Revision tecnica de planos asistida por IA</span>
-          <h1>Detecta inconsistencias en planos antes de construir</h1>
+          <span className="eyebrow">Revision tecnica. Menos retrabajo.</span>
+          <h1>
+            Detecta errores en planos que <span>frenan la obra.</span>
+          </h1>
           <p>
-            ARCHITECT ayuda a revisar planos arquitectonicos, estructurales y de instalaciones para localizar errores de coordinacion, omisiones documentales y zonas que requieren validacion tecnica antes de enviar el proyecto a obra.
+            ARCHITECT revisa planos arquitectonicos, estructurales e instalaciones para localizar interferencias, omisiones y criterios tecnicos antes de construir.
           </p>
           <div className="hero-actions">
             <button className="primary-action" onClick={() => navigate("/login#register")}>
@@ -443,6 +459,15 @@ function Welcome() {
               Entrar al sistema
             </button>
           </div>
+        </div>
+        <div className="hero-proof-card">
+          <strong>200+</strong>
+          <span>criterios tecnicos listos para auditoria documental</span>
+        </div>
+        <div className="hero-stats">
+          <div><strong>3</strong><span>disciplinas</span></div>
+          <div><strong>4</strong><span>frentes</span></div>
+          <div><strong>1</strong><span>reporte</span></div>
         </div>
         <div className="scroll-cue">Desplazar</div>
       </section>
