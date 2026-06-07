@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 
-from db.models import Plan, Subscription, SubscriptionStatus, UsageRecord, User
+from db.models import Plan, Subscription, SubscriptionStatus, UsageRecord, User, UserRole
 
 
 def period_key(dt: datetime | None = None) -> str:
@@ -70,13 +70,18 @@ def get_usage(db: Session, user_id: int, key: str | None = None) -> UsageRecord:
     return row
 
 
+def is_admin_user(user: User) -> bool:
+    return user.role == UserRole.admin or str(user.role) == UserRole.admin.value
+
+
 def subscription_payload(db: Session, user: User) -> dict:
     sub = ensure_subscription(db, user)
     plan = sub.plan
     usage = get_usage(db, user.id)
     limit = plan.analyses_limit_monthly
     used = usage.analyses_count
-    remaining = max(0, limit - used) if limit < 9999 else None
+    is_unlimited = is_admin_user(user)
+    remaining = None if is_unlimited else max(0, limit - used)
 
     return {
         "plan": {
@@ -88,6 +93,7 @@ def subscription_payload(db: Session, user: User) -> dict:
             "price_monthly_cents": plan.price_monthly_cents,
             "features": plan.features or {},
         },
+        "is_unlimited": is_unlimited,
         "status": sub.status.value,
         "period_start": sub.current_period_start.isoformat(),
         "period_end": sub.current_period_end.isoformat(),
@@ -95,7 +101,7 @@ def subscription_payload(db: Session, user: User) -> dict:
             "period_key": usage.period_key,
             "analyses_used": used,
             "analyses_remaining": remaining,
-            "limit_reached": used >= limit if limit < 9999 else False,
+            "limit_reached": False if is_unlimited else used >= limit,
         },
     }
 
@@ -109,6 +115,7 @@ def assert_can_analyze(
 ) -> Subscription:
     sub = ensure_subscription(db, user)
     plan = sub.plan
+    is_unlimited = is_admin_user(user)
 
     if sub.status not in (
         SubscriptionStatus.active,
@@ -120,7 +127,7 @@ def assert_can_analyze(
         )
 
     usage = get_usage(db, user.id)
-    if usage.analyses_count >= plan.analyses_limit_monthly:
+    if not is_unlimited and usage.analyses_count >= plan.analyses_limit_monthly:
         raise HTTPException(
             402,
             f"Límite mensual alcanzado ({plan.analyses_limit_monthly} análisis). "

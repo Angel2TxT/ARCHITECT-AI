@@ -2500,10 +2500,11 @@ function updateUsageUI(sub) {
   const limit = plan.analyses_limit_monthly || 0;
   const used = usage.analyses_used || 0;
   const remaining = usage.analyses_remaining;
+  const isUnlimited = sub.is_unlimited === true;
   document.getElementById("planLabel").textContent = plan.name || plan.slug || "Plan";
   document.getElementById("usageLabel").textContent =
-    limit >= 9999 ? `${used} análisis` : `${used} / ${limit}`;
-  const pct = limit >= 9999 ? 8 : Math.min(100, Math.round((used / limit) * 100));
+    isUnlimited ? `${used} análisis` : `${used} / ${limit}`;
+  const pct = isUnlimited ? 8 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   const fill = document.getElementById("usageFill");
   if (fill) fill.style.width = `${pct}%`;
   const badge = document.getElementById("planBadge");
@@ -2511,7 +2512,7 @@ function updateUsageUI(sub) {
   const plansText = document.getElementById("plansUsageText");
   if (plansText) {
     plansText.textContent =
-      limit >= 9999
+      isUnlimited
         ? `Plan ${plan.name}: uso ilimitado este mes (${used} análisis).`
         : `Plan ${plan.name}: ${used} de ${limit} análisis este mes` +
           (remaining != null ? ` (${remaining} restantes).` : ".");
@@ -2561,7 +2562,7 @@ async function loadPlansModal() {
         </div>
         <span class="text-sm font-bold">${price}</span>
       </div>
-      <p class="text-xs mt-2">${p.analyses_limit_monthly >= 9999 ? "Ilimitado" : p.analyses_limit_monthly + " análisis/mes"} · ${p.allow_real_model ? "Modelo real" : "Solo demo"}</p>
+      <p class="text-xs mt-2">${p.analyses_limit_monthly + " análisis/mes"} · ${p.allow_real_model ? "Modelo real" : "Solo demo"}</p>
       <button type="button" class="btn-primary mt-3 w-full text-xs py-2 plan-select-btn" data-slug="${p.slug}" ${p.slug === current ? "disabled" : ""}>
         ${p.slug === current ? "Plan actual" : "Seleccionar"}
       </button>`;
@@ -2696,8 +2697,9 @@ function openAccountModal() {
   const plan = sub?.plan?.name || "—";
   const used = sub?.usage?.analyses_used ?? 0;
   const limit = sub?.plan?.analyses_limit_monthly ?? 0;
+  const isUnlimited = sub?.is_unlimited === true;
   const usageStr =
-    limit >= 9999 ? `${used} análisis este mes` : `${used} / ${limit} análisis`;
+    isUnlimited ? `${used} análisis este mes` : `${used} / ${limit} análisis`;
   body.innerHTML = `
     <p><strong>${escapeHtml(user.full_name || user.email)}</strong></p>
     <p class="opacity-60">${escapeHtml(user.email)}</p>

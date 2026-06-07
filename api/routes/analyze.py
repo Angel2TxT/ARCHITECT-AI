@@ -31,6 +31,7 @@ from services.storage_service import (
 )
 from services.subscription_service import (
     assert_can_analyze,
+    is_admin_user,
     record_analysis_usage,
     subscription_payload,
 )
@@ -177,7 +178,8 @@ async def analyze(
     db.add(assistant_msg)
 
     chat.updated_at = datetime.utcnow()
-    record_analysis_usage(db, user.id)
+    if not is_admin_user(user):
+        record_analysis_usage(db, user.id)
 
     db.commit()
 
