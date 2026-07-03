@@ -35,6 +35,7 @@ from api.routes import (  # noqa: E402
     feedback,
     guest,
     knowledge,
+    mobile,
     norms,
 )
 from core.pipeline import find_default_weights  # noqa: E402
@@ -79,6 +80,7 @@ app.include_router(feedback.router)
 app.include_router(analyses.router)
 app.include_router(ask.router)
 app.include_router(knowledge.router)
+app.include_router(mobile.router)
 app.include_router(norms.router)
 
 
