@@ -4,6 +4,31 @@ Plataforma para revisar planos de arquitectura y responder consultas de construc
 
 ---
 
+## App móvil (Flutter)
+
+Cliente Android/iOS conectado al mismo backend. Código y documentación:
+
+**[https://github.com/Arcogo12/movil-Architect](https://github.com/Arcogo12/movil-Architect)**
+
+```powershell
+git clone https://github.com/Arcogo12/movil-Architect.git
+cd movil-Architect
+flutter pub get
+flutter run
+```
+
+Requisitos: Flutter SDK ^3.11, backend ARCHITECT en el puerto **8000**. En la app, **Ajustes → Servidor**:
+
+| Entorno | URL del backend |
+|---------|-----------------|
+| Emulador Android | `http://10.0.2.2:8000` |
+| Simulador iOS | `http://localhost:8000` |
+| Dispositivo físico (misma Wi‑Fi) | `http://<IP_DE_TU_PC>:8000` |
+
+Credenciales de prueba: `admin@architect.local` / `admin123`.
+
+---
+
 ## Requisitos
 
 | Modo | Necesitas |
@@ -259,6 +284,7 @@ docker compose config
 | CAD / DWG | [docs/CAD_DWG.md](docs/CAD_DWG.md) |
 | Entrenamiento YOLO | [docs/ENTRENAMIENTO_PLANOS.md](docs/ENTRENAMIENTO_PLANOS.md) |
 | Diseño UI | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
+| **App móvil Flutter** | [github.com/Arcogo12/movil-Architect](https://github.com/Arcogo12/movil-Architect) |
 
 ---
 
