@@ -599,7 +599,7 @@ function Welcome() {
     <main className="welcome-page">
       <nav className="site-nav">
         <a href="/" className="brand" onClick={(event) => { event.preventDefault(); navigate("/"); }}>
-          <img src="/static/brand/architect-icon.png" alt="" className="brand-mark-img" width="42" height="42" />
+          <img src="/static/brand/architect-icon.png?v=3" alt="" className="brand-mark-img" width="42" height="42" />
           <span>
             ARCHITECT
             <small>STUDIO</small>

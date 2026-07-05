@@ -4,15 +4,15 @@
 .brand-mark-img {
   display: block;
   height: 2rem;
-  width: auto;
+  width: 2rem;
   object-fit: contain;
 }
 
 .brand-logo-img {
   display: block;
-  height: 2.35rem;
+  height: 2.75rem;
   width: auto;
-  max-width: 11rem;
+  max-width: 12rem;
   object-fit: contain;
 }
 
@@ -30,7 +30,7 @@
 .app-loader-brand-img {
   display: block;
   height: 3.25rem;
-  width: auto;
+  width: 3.25rem;
   margin: 0 auto;
   object-fit: contain;
 }
@@ -3647,7 +3647,7 @@ html.dark .app-loader {
 .app-loader-brand-img {
   display: block;
   height: 3.25rem;
-  width: auto;
+  width: 3.25rem;
   margin: 0 auto;
   object-fit: contain;
 }
