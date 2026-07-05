@@ -1,0 +1,142 @@
+# Etapas de proyecto — construcción de casa hogar (vivienda unifamiliar)
+# Fuente: LAS ETAPAS.docx + tareas operativas de despacho
+
+stages:
+  - number: 1
+    slug: programacion
+    title: Programación
+    summary: Identificación de necesidades del cliente y definición del programa arquitectónico.
+    tasks:
+      - Identificación de necesidades del cliente
+      - Definición de objetivos del proyecto
+      - Definición de espacios requeridos (recámaras, baños, cocina, sala, etc.)
+      - Definición de requerimientos (área, presupuesto orientativo, plazos)
+      - Entrevista / cuestionario de estilo de vida y prioridades
+      - Registro de restricciones conocidas del cliente
+      - Aprobación del programa arquitectónico por escrito
+    ai_hints:
+      - programa arquitectónico vivienda unifamiliar
+      - brief arquitectónico casa hogar
+
+  - number: 2
+    slug: investigacion
+    title: Investigación
+    summary: Análisis del terreno, entorno, clima y marco normativo aplicable.
+    tasks:
+      - Análisis del terreno (topografía, orientación, accesos, servicios)
+      - Estudio del entorno urbano o rural y vecindario
+      - Estudio de clima, insolación y vientos predominantes
+      - Identificación de normativas y reglamentos locales aplicables
+      - Verificación de uso de suelo y coeficientes permitidos
+      - Levantamiento fotográfico del sitio
+      - Subir fotos o PDF de estudio de sitio a la etapa
+    ai_hints:
+      - normativa construcción vivienda Chiapas
+      - estudio de sitio arquitectura
+
+  - number: 3
+    slug: esquematizacion
+    title: Esquematización
+    summary: Diagramas de funcionamiento, relaciones entre espacios y zonificación.
+    tasks:
+      - Diagramas de funcionamiento (burbujas o esquemas)
+      - Relaciones entre espacios y zonificación
+      - Definir zona pública, privada y de servicio
+      - Circulaciones principales y secundarias
+      - Validar coherencia con el programa aprobado
+      - Presentar esquemas al cliente para validación
+    ai_hints:
+      - zonificación vivienda unifamiliar
+      - diagrama de burbujas arquitectura
+
+  - number: 4
+    slug: anteproyecto
+    title: Anteproyecto
+    summary: Bocetos, propuestas preliminares, plantas y volumetrías iniciales.
+    tasks:
+      - Bocetos y propuestas preliminares
+      - Plantas preliminares con dimensiones orientativas
+      - Volumetrías iniciales y relación con el sitio
+      - Comparar alternativas con el cliente
+      - Seleccionar propuesta a desarrollar
+      - Acta de aprobación del anteproyecto
+    ai_hints:
+      - anteproyecto arquitectónico vivienda
+
+  - number: 5
+    slug: proyecto_arquitectonico
+    title: Proyecto Arquitectónico
+    summary: Desarrollo completo de planos arquitectónicos, fachadas, cortes y detalles.
+    tasks:
+      - Desarrollo completo de planos arquitectónicos
+      - Fachadas, cortes y detalles generales
+      - Cuadro de áreas y especificaciones arquitectónicas
+      - Simbología, niveles y cotas generales
+      - Revisión técnica del plano con IA ARCHITECT
+      - Vincular análisis de plano del historial a esta etapa
+      - Subir PDF o imagen del proyecto arquitectónico
+    ai_hints:
+      - revisión plano arquitectónico normativa habitabilidad
+    plan_review: true
+
+  - number: 6
+    slug: proyecto_ejecutivo
+    title: Proyecto Ejecutivo
+    summary: Planos constructivos, instalaciones, estructura y especificaciones técnicas.
+    tasks:
+      - Planos constructivos y detalles ejecutivos
+      - Instalaciones hidráulicas, sanitarias y eléctricas
+      - Integración de proyecto estructural
+      - Especificaciones técnicas y memorias
+      - Catálogo de conceptos base para presupuesto
+      - Revisión de planos ejecutivos con IA ARCHITECT
+      - Vincular análisis de plano del historial a esta etapa
+      - Subir planos ejecutivos (PDF / CAD)
+    ai_hints:
+      - plano ejecutivo instalaciones estructura
+    plan_review: true
+
+  - number: 7
+    slug: presupuesto_programacion
+    title: Presupuesto y Programación de Obra
+    summary: Cálculo de costos y cronograma de actividades de construcción.
+    tasks:
+      - Cálculo de costos por partida y concepto
+      - Cronograma de actividades de obra
+      - Identificar proveedores y materiales principales
+      - Hitos de pago y entregables
+      - Alinear presupuesto con proyecto ejecutivo
+      - Subir presupuesto o cronograma (PDF / Excel)
+    ai_hints:
+      - presupuesto obra vivienda unifamiliar
+      - cronograma construcción casa
+
+  - number: 8
+    slug: construccion
+    title: Construcción o Ejecución
+    summary: Desarrollo de la obra con supervisión y control de calidad.
+    tasks:
+      - Desarrollo de la obra según proyecto ejecutivo
+      - Supervisión y control de calidad en sitio
+      - Bitácora de obra y minutas de visita
+      - Control de avance vs. cronograma
+      - Gestión de cambios y órdenes de trabajo
+      - Subir fotos de avance de obra
+    ai_hints:
+      - supervisión obra vivienda
+      - control calidad construcción
+
+  - number: 9
+    slug: entrega_evaluacion
+    title: Entrega y Evaluación
+    summary: Revisión final, entrega al cliente y cierre del proyecto.
+    tasks:
+      - Revisión final (punch list)
+      - Entrega al cliente con documentación completa
+      - Evaluación del resultado vs. objetivos iniciales
+      - Acta de entrega-recepción firmada
+      - Archivo del proyecto y lecciones aprendidas
+      - Cierre administrativo del proyecto
+    ai_hints:
+      - entrega obra vivienda checklist
+      - cierre proyecto construcción

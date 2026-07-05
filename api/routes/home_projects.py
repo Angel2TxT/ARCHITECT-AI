@@ -1,0 +1,468 @@
+"""API — proyectos casa hogar (9 etapas)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from api.deps import get_current_user
+from db.database import get_db
+from db.models import Analysis, User
+from services.home_project_service import (
+    accept_project_invite,
+    add_section_comment,
+    add_stage_document,
+    advance_to_next_stage,
+    assist_stage,
+    catalog_payload,
+    create_home_project,
+    create_section,
+    delete_home_project,
+    delete_section,
+    delete_section_comment,
+    delete_stage_document,
+    get_home_project,
+    get_stage_document,
+    invite_project_member,
+    list_home_projects,
+    list_project_events,
+    list_section_comments,
+    project_payload,
+    remove_project_member,
+    update_home_project,
+    update_section,
+    update_stage,
+)
+
+router = APIRouter(prefix="/api/home-projects", tags=["home-projects"])
+
+
+class HomeProjectCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=160)
+    client_name: str = Field(default="", max_length=120)
+    location: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=4000)
+    metadata: dict[str, Any] | None = None
+
+
+class HomeProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=160)
+    client_name: str | None = Field(default=None, max_length=120)
+    location: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    status: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class StageUpdate(BaseModel):
+    status: str | None = None
+    notes: str | None = None
+    checklist: list[dict[str, Any]] | None = None
+    analysis_id: int | None = None
+    reopen_reason: str | None = Field(default=None, max_length=4000)
+
+
+class SectionCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    description: str = Field(default="", max_length=4000)
+
+
+class SectionUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    status: str | None = None
+    sort_order: int | None = None
+    assigned_to_user_id: int | None = None
+    review_comment: str | None = Field(default=None, max_length=4000)
+    reopen_reason: str | None = Field(default=None, max_length=4000)
+
+
+class SectionCommentCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+
+
+class InviteMember(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    role: str = Field(default="editor", pattern="^(editor|viewer)$")
+
+
+class AcceptInvite(BaseModel):
+    token: str = Field(min_length=8, max_length=64)
+
+
+class StageAssistRequest(BaseModel):
+    question: str = Field(default="", max_length=2000)
+
+
+def _payload(db: Session, project, user_id: int) -> dict:
+    return project_payload(project, db, user_id=user_id)
+
+
+@router.get("/catalog")
+def get_stage_catalog():
+    return {"stages": catalog_payload()}
+
+
+@router.get("/analyses-picker")
+def analyses_picker(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 30,
+):
+    rows = (
+        db.query(Analysis)
+        .filter(Analysis.user_id == user.id)
+        .order_by(Analysis.created_at.desc())
+        .limit(min(limit, 50))
+        .all()
+    )
+    return [
+        {
+            "id": a.id,
+            "filename": a.original_filename,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "counts": a.counts_json or {},
+            "chat_id": a.chat_id,
+        }
+        for a in rows
+    ]
+
+
+@router.get("")
+def list_projects(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    rows = list_home_projects(db, user)
+    return [_payload(db, p, user.id) for p in rows]
+
+
+@router.get("/{project_id}/events")
+def get_project_events(
+    project_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 50,
+    offset: int = 0,
+):
+    return list_project_events(db, user, project_id, limit=limit, offset=offset)
+
+
+@router.get("/{project_id}/sections/{section_id}/comments")
+def get_section_comments(
+    project_id: str,
+    section_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 50,
+    offset: int = 0,
+):
+    return list_section_comments(
+        db, user, project_id, section_id, limit=limit, offset=offset
+    )
+
+
+@router.post("")
+def create_project(
+    body: HomeProjectCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = create_home_project(
+        db,
+        user,
+        name=body.name,
+        client_name=body.client_name,
+        location=body.location,
+        description=body.description,
+        metadata=body.metadata,
+    )
+    project = get_home_project(db, user.id, project.id)
+    return _payload(db, project, user.id)
+
+
+@router.post("/invites/accept")
+def accept_invite(
+    body: AcceptInvite,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = accept_project_invite(db, user, body.token)
+    return _payload(db, project, user.id)
+
+
+@router.get("/{project_id}")
+def get_project(
+    project_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.patch("/{project_id}")
+def patch_project(
+    project_id: str,
+    body: HomeProjectUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = update_home_project(
+        db,
+        user,
+        project_id,
+        name=body.name,
+        client_name=body.client_name,
+        location=body.location,
+        description=body.description,
+        status=body.status,
+        metadata=body.metadata,
+    )
+    project = get_home_project(db, user.id, project.id)
+    return _payload(db, project, user.id)
+
+
+@router.delete("/{project_id}")
+def remove_project(
+    project_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    delete_home_project(db, user.id, project_id)
+    return {"ok": True}
+
+
+@router.post("/{project_id}/members/invite")
+def invite_member(
+    project_id: str,
+    body: InviteMember,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return invite_project_member(
+        db, user, project_id, email=body.email, role=body.role
+    )
+
+
+@router.delete("/{project_id}/members/{member_user_id}")
+def delete_member(
+    project_id: str,
+    member_user_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    remove_project_member(db, user, project_id, member_user_id)
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.post("/{project_id}/stages/{stage_number}/sections")
+def add_section(
+    project_id: str,
+    stage_number: int,
+    body: SectionCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    create_section(
+        db,
+        user,
+        project_id,
+        stage_number,
+        title=body.title,
+        description=body.description,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.patch("/{project_id}/sections/{section_id}")
+def patch_section(
+    project_id: str,
+    section_id: int,
+    body: SectionUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    update_section(
+        db,
+        user,
+        project_id,
+        section_id,
+        title=body.title,
+        description=body.description,
+        status=body.status,
+        sort_order=body.sort_order,
+        assigned_to_user_id=body.assigned_to_user_id
+        if "assigned_to_user_id" in body.model_fields_set and body.assigned_to_user_id is not None
+        else None,
+        clear_assignment="assigned_to_user_id" in body.model_fields_set
+        and body.assigned_to_user_id is None,
+        review_comment=body.review_comment,
+        reopen_reason=body.reopen_reason,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.post("/{project_id}/sections/{section_id}/comments")
+def add_section_comment_route(
+    project_id: str,
+    section_id: int,
+    body: SectionCommentCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    add_section_comment(
+        db, user, project_id, section_id, body=body.body
+    )
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.delete("/{project_id}/sections/{section_id}/comments/{comment_id}")
+def remove_section_comment(
+    project_id: str,
+    section_id: int,
+    comment_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    delete_section_comment(db, user, project_id, section_id, comment_id)
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.delete("/{project_id}/sections/{section_id}")
+def remove_section(
+    project_id: str,
+    section_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    delete_section(db, user, project_id, section_id)
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.patch("/{project_id}/stages/{stage_number}")
+def patch_stage(
+    project_id: str,
+    stage_number: int,
+    body: StageUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    update_stage(
+        db,
+        user,
+        project_id,
+        stage_number,
+        status=body.status,
+        notes=body.notes,
+        checklist=body.checklist,
+        analysis_id=body.analysis_id,
+        reopen_reason=body.reopen_reason,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.post("/{project_id}/stages/{stage_number}/assist")
+def stage_assist(
+    project_id: str,
+    stage_number: int,
+    body: StageAssistRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return assist_stage(
+        db,
+        user,
+        project_id,
+        stage_number,
+        question=body.question,
+    )
+
+
+@router.post("/{project_id}/stages/{stage_number}/documents")
+async def upload_stage_document(
+    project_id: str,
+    stage_number: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    file: UploadFile = File(...),
+    section_id: int | None = Form(default=None),
+):
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Archivo vacío")
+    doc = add_stage_document(
+        db,
+        user,
+        project_id,
+        stage_number,
+        filename=file.filename or "documento",
+        content=content,
+        mime_type=file.content_type or "",
+        section_id=section_id,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return {
+        "document": {
+            "id": doc.id,
+            "filename": doc.original_filename,
+            "file_size": doc.file_size,
+            "mime_type": doc.mime_type,
+            "section_id": doc.section_id,
+            "download_url": f"/api/home-projects/{project_id}/documents/{doc.id}/file",
+        },
+        "project": _payload(db, project, user.id),
+    }
+
+
+@router.get("/{project_id}/documents/{document_id}/file")
+def download_document(
+    project_id: str,
+    document_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    doc = get_stage_document(db, user, project_id, document_id)
+    path = Path(doc.stored_path)
+    if not path.is_file():
+        raise HTTPException(404, "Archivo no encontrado en disco")
+    return FileResponse(
+        path,
+        filename=doc.original_filename,
+        media_type=doc.mime_type or "application/octet-stream",
+    )
+
+
+@router.delete("/{project_id}/documents/{document_id}")
+def remove_document(
+    project_id: str,
+    document_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    delete_stage_document(db, user, project_id, document_id)
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.post("/{project_id}/advance")
+def advance_project(
+    project_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = advance_to_next_stage(db, user, project_id)
+    project = get_home_project(db, user.id, project.id)
+    return _payload(db, project, user.id)

@@ -72,7 +72,12 @@ def seed_plans(db: Session) -> None:
         existing = db.query(Plan).filter(Plan.slug == data["slug"]).first()
         if existing:
             for key, val in data.items():
-                setattr(existing, key, val)
+                if key == "features":
+                    merged = dict(existing.features or {})
+                    merged.update(val or {})
+                    setattr(existing, key, merged)
+                else:
+                    setattr(existing, key, val)
         else:
             db.add(Plan(**data))
     db.commit()

@@ -37,6 +37,20 @@ class LoginRequest(BaseModel):
         return _normalize_email(v)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v: str) -> str:
+        return _normalize_email(v)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=10)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class UserOut(BaseModel):
     id: int
     email: str
@@ -56,6 +70,19 @@ class AuthResponse(BaseModel):
 
 class PlanChangeRequest(BaseModel):
     plan_slug: str
+
+
+class CheckoutStartRequest(BaseModel):
+    plan_slug: str
+    return_url: str | None = None
+
+
+class CheckoutCompleteRequest(BaseModel):
+    session_token: str
+
+
+class PortalStartRequest(BaseModel):
+    return_url: str | None = None
 
 
 class ChatCreate(BaseModel):

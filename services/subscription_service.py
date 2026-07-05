@@ -74,6 +74,10 @@ def is_admin_user(user: User) -> bool:
     return user.role == UserRole.admin or str(user.role) == UserRole.admin.value
 
 
+def is_paid_plan(plan: Plan) -> bool:
+    return (plan.price_monthly_cents or 0) > 0
+
+
 def subscription_payload(db: Session, user: User) -> dict:
     sub = ensure_subscription(db, user)
     plan = sub.plan
@@ -97,6 +101,11 @@ def subscription_payload(db: Session, user: User) -> dict:
         "status": sub.status.value,
         "period_start": sub.current_period_start.isoformat(),
         "period_end": sub.current_period_end.isoformat(),
+        "stripe_customer_id": sub.stripe_customer_id,
+        "has_active_payment": bool(
+            sub.stripe_subscription_id
+            and not str(sub.stripe_subscription_id).startswith("demo_sub_")
+        ),
         "usage": {
             "period_key": usage.period_key,
             "analyses_used": used,
@@ -159,16 +168,90 @@ def record_analysis_usage(db: Session, user_id: int) -> None:
     db.commit()
 
 
-def change_plan(db: Session, user: User, plan_slug: str) -> dict:
+def change_plan(
+    db: Session,
+    user: User,
+    plan_slug: str,
+    *,
+    bypass_checkout: bool = False,
+    payment_ref: str | None = None,
+    stripe_customer_id: str | None = None,
+) -> dict:
     plan = db.query(Plan).filter(Plan.slug == plan_slug, Plan.is_public.is_(True)).first()
     if not plan:
         raise HTTPException(404, "Plan no encontrado")
     sub = ensure_subscription(db, user)
+
+    if (
+        not bypass_checkout
+        and not is_admin_user(user)
+        and is_paid_plan(plan)
+    ):
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "message": "Este plan requiere completar el pago en la pasarela.",
+                "code": "checkout_required",
+                "plan_slug": plan_slug,
+            },
+        )
+
     start, end = _period_bounds()
     sub.plan_id = plan.id
     sub.status = SubscriptionStatus.active
     sub.current_period_start = start
     sub.current_period_end = end
     sub.canceled_at = None
+
+    if stripe_customer_id:
+        sub.stripe_customer_id = stripe_customer_id
+    elif not sub.stripe_customer_id:
+        sub.stripe_customer_id = f"demo_cus_{user.id}"
+
+    if payment_ref is not None:
+        sub.stripe_subscription_id = payment_ref
+    elif not is_paid_plan(plan):
+        sub.stripe_subscription_id = None
+
     db.commit()
     return subscription_payload(db, user)
+
+
+def user_usage_history(db: Session, user: User, *, months: int = 6) -> list[dict]:
+    """Uso mensual de análisis (últimos N meses) para gráfica en perfil."""
+    months = max(1, min(months, 12))
+    sub = ensure_subscription(db, user)
+    plan = sub.plan
+    limit = plan.analyses_limit_monthly if plan else 0
+    unlimited = is_admin_user(user)
+
+    now = datetime.utcnow()
+    keys: list[str] = []
+    y, m = now.year, now.month
+    for _ in range(months):
+        keys.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m < 1:
+            m = 12
+            y -= 1
+    keys.reverse()
+
+    rows = (
+        db.query(UsageRecord.period_key, UsageRecord.analyses_count)
+        .filter(UsageRecord.user_id == user.id, UsageRecord.period_key.in_(keys))
+        .all()
+    )
+    used_map = {k: int(v or 0) for k, v in rows}
+
+    labels = ("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")
+
+    return [
+        {
+            "period_key": key,
+            "label": labels[int(key.split("-")[1]) - 1],
+            "analyses_used": used_map.get(key, 0),
+            "analyses_limit": None if unlimited else limit,
+            "is_current": key == period_key(now),
+        }
+        for key in keys
+    ]

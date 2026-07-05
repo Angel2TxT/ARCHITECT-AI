@@ -15,24 +15,18 @@ function setSession(data) {
 
 async function applySelectedPlan(accessToken) {
   const planSlug = localStorage.getItem(SELECTED_PLAN_KEY);
-  if (!planSlug || planSlug === "free") return;
+  if (!planSlug || planSlug === "free") return false;
+  if (!window.ArchitectBilling) return false;
 
   try {
-    const res = await fetch("/api/billing/change-plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ plan_slug: planSlug }),
+    const result = await window.ArchitectBilling.requestPlanChange(planSlug, {
+      token: accessToken,
+      returnUrl: "/legacy-app",
     });
-    if (res.ok) {
-      const subscription = await res.json();
-      localStorage.setItem(SUB_KEY, JSON.stringify(subscription));
-      localStorage.removeItem(SELECTED_PLAN_KEY);
-    }
+    localStorage.removeItem(SELECTED_PLAN_KEY);
+    return result?.status === "redirecting";
   } catch {
-    // El registro no depende del cambio de plan; se puede cambiar dentro de la app.
+    return false;
   }
 }
 
@@ -68,8 +62,11 @@ async function apiFetch(url, options = {}) {
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
     clearSession();
-    if (!window.location.pathname.includes("login")) {
-      window.location.href = "/login";
+    const loginUrl = "/login";
+    if (window.top !== window.self) {
+      window.top.location.href = loginUrl;
+    } else if (!window.location.pathname.includes("login")) {
+      window.location.href = loginUrl;
     }
     throw new Error("Sesión expirada");
   }
@@ -164,8 +161,95 @@ function logout() {
 if (document.getElementById("loginForm")) {
   if (getToken()) {
     showAppLoader("Ya tienes sesión activa…");
-    window.location.href = "/app";
+    const pendingInvite = sessionStorage.getItem("pending_invite");
+    if (pendingInvite) {
+      window.location.href = `/legacy-app?invite=${encodeURIComponent(pendingInvite)}`;
+    } else if (sessionStorage.getItem("open_home_projects") === "1") {
+      window.location.href = "/legacy-app?home-projects=1";
+    } else {
+      window.location.href = "/legacy-app";
+    }
   }
+
+  async function finishOAuthFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("oauth_error");
+    const accessToken = params.get("access_token");
+    if (!oauthError && !accessToken) return false;
+
+    if (oauthError) {
+      const err = document.getElementById("loginError");
+      if (err) {
+        err.textContent = decodeURIComponent(oauthError);
+        err.classList.remove("hidden");
+      }
+      window.history.replaceState({}, "", "/login");
+      return true;
+    }
+
+    document.body.dataset.authBusy = "1";
+    showAppLoader("Completando acceso con Google…");
+    try {
+      localStorage.setItem(TOKEN_KEY, accessToken);
+      const me = await refreshMe();
+      if (!me) throw new Error("Sesión inválida");
+      const checkoutRedirect = await applySelectedPlan(accessToken);
+      if (checkoutRedirect) return true;
+      window.history.replaceState({}, "", "/login");
+      window.location.href = "/app";
+    } catch {
+      clearSession();
+      const err = document.getElementById("loginError");
+      if (err) {
+        err.textContent = "No se pudo completar el acceso con Google";
+        err.classList.remove("hidden");
+      }
+      delete document.body.dataset.authBusy;
+      hideAppLoader();
+      window.history.replaceState({}, "", "/login");
+    }
+    return true;
+  }
+
+  finishOAuthFromUrl();
+
+  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite");
+  if (inviteFromUrl) sessionStorage.setItem("pending_invite", inviteFromUrl);
+
+  function postAuthRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+    if (next && next.startsWith("/")) {
+      window.location.href = next;
+      return;
+    }
+    const pendingInvite = sessionStorage.getItem("pending_invite");
+    if (pendingInvite) {
+      window.location.href = `/legacy-app?invite=${encodeURIComponent(pendingInvite)}`;
+      return;
+    }
+    if (sessionStorage.getItem("open_home_projects") === "1") {
+      window.location.href = "/legacy-app?home-projects=1";
+      return;
+    }
+    window.location.href = "/legacy-app";
+  }
+
+  fetch("/api/auth/google/enabled")
+    .then((r) => r.json())
+    .then((data) => {
+      if (!data.enabled) return;
+      document.getElementById("googleLoginWrap")?.classList.remove("hidden");
+      document.getElementById("googleRegisterWrap")?.classList.remove("hidden");
+    })
+    .catch(() => {});
+
+  document.getElementById("btnGoogleLogin")?.addEventListener("click", () => {
+    window.location.href = "/api/auth/google";
+  });
+  document.getElementById("btnGoogleRegister")?.addEventListener("click", () => {
+    window.location.href = "/api/auth/google";
+  });
 
   document.getElementById("loginForm").onsubmit = async (e) => {
     e.preventDefault();
@@ -194,8 +278,10 @@ if (document.getElementById("loginForm")) {
         return;
       }
       setSession(data);
+      const checkoutRedirect = await applySelectedPlan(data.access_token);
+      if (checkoutRedirect) return;
       showAppLoader("Entrando al estudio…");
-      window.location.href = "/app";
+      postAuthRedirect();
     } catch {
       err.textContent = "No se pudo conectar con el servidor.";
       err.classList.remove("hidden");
@@ -233,9 +319,10 @@ if (document.getElementById("loginForm")) {
         return;
       }
       setSession(data);
-      await applySelectedPlan(data.access_token);
+      const checkoutRedirect = await applySelectedPlan(data.access_token);
+      if (checkoutRedirect) return;
       showAppLoader("Preparando tu espacio…");
-      window.location.href = "/app";
+      postAuthRedirect();
     } catch {
       err.textContent = "No se pudo conectar con el servidor.";
       err.classList.remove("hidden");
@@ -246,6 +333,268 @@ if (document.getElementById("loginForm")) {
   };
 
   initLoginPageBootLoader();
+  initAuthPageUi();
+}
+
+function initAuthPageUi() {
+  if (!document.getElementById("loginForm")) return;
+
+  document.querySelectorAll(".auth-toggle-pw").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      btn.setAttribute("aria-label", reveal ? "Ocultar contraseña" : "Mostrar contraseña");
+      const icon = btn.querySelector(".material-symbols-outlined");
+      if (icon) icon.textContent = reveal ? "visibility_off" : "visibility";
+    });
+  });
+
+  initAuthTabs();
+  initForgotResetViews();
+
+  fetch("/api/health")
+    .then((r) => r.json())
+    .then((h) => {
+      if (h.ok) return;
+      const el = document.getElementById("dbStatus");
+      if (!el) return;
+      el.classList.remove("hidden");
+      el.textContent =
+        "MySQL no conectado. Enciende el servicio, crea la base plano_ia y ejecuta: python scripts/init_db.py";
+    })
+    .catch(() => {});
+}
+
+function setAuthView(mode) {
+  const main = document.getElementById("authMainViews");
+  const forgot = document.getElementById("authForgotView");
+  const reset = document.getElementById("authResetView");
+  const title = document.getElementById("authViewTitle");
+  const subtitle = document.getElementById("authViewSubtitle");
+  const tabs = document.getElementById("authTabs");
+
+  main?.classList.toggle("hidden", mode !== "main");
+  forgot?.classList.toggle("hidden", mode !== "forgot");
+  reset?.classList.toggle("hidden", mode !== "reset");
+  tabs?.classList.toggle("hidden", mode !== "main");
+
+  if (mode === "forgot") {
+    if (title) title.textContent = "Recuperar contraseña";
+    if (subtitle) subtitle.textContent = "Te enviaremos un enlace seguro a tu correo";
+  } else if (mode === "reset") {
+    if (title) title.textContent = "Nueva contraseña";
+    if (subtitle) subtitle.textContent = "El enlace expira en 1 hora";
+  } else {
+    if (title) title.textContent = "Accede a tu cuenta";
+    if (subtitle) subtitle.textContent = "Revisa planos con IA y normativa de referencia";
+  }
+}
+
+function initForgotResetViews() {
+  const params = new URLSearchParams(window.location.search);
+  const resetToken = params.get("reset");
+
+  document.getElementById("btnForgotPassword")?.addEventListener("click", () => {
+    document.getElementById("forgotError")?.classList.add("hidden");
+    document.getElementById("forgotSuccess")?.classList.add("hidden");
+    const loginEmail = document.getElementById("loginEmail")?.value?.trim();
+    const forgotEmail = document.getElementById("forgotEmail");
+    if (forgotEmail && loginEmail) forgotEmail.value = loginEmail;
+    setAuthView("forgot");
+  });
+
+  document.getElementById("btnBackFromForgot")?.addEventListener("click", () => setAuthView("main"));
+  document.getElementById("btnBackFromReset")?.addEventListener("click", () => {
+    window.history.replaceState({}, "", "/login");
+    setAuthView("main");
+  });
+
+  document.getElementById("forgotForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const err = document.getElementById("forgotError");
+    const ok = document.getElementById("forgotSuccess");
+    err?.classList.add("hidden");
+    ok?.classList.add("hidden");
+    setAuthFormLoading(form, true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: document.getElementById("forgotEmail").value.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        err.textContent = formatApiError(data, "No se pudo enviar el enlace");
+        err.classList.remove("hidden");
+        return;
+      }
+      ok.textContent = data.message || "Revisa tu bandeja de entrada y spam.";
+      ok.classList.remove("hidden");
+    } catch {
+      err.textContent = "No se pudo conectar con el servidor.";
+      err.classList.remove("hidden");
+    } finally {
+      setAuthFormLoading(form, false);
+    }
+  });
+
+  document.getElementById("resetForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const err = document.getElementById("resetError");
+    const ok = document.getElementById("resetSuccess");
+    const token = form.dataset.token || "";
+    const p1 = document.getElementById("resetPassword").value;
+    const p2 = document.getElementById("resetPassword2").value;
+    err?.classList.add("hidden");
+    ok?.classList.add("hidden");
+    if (p1 !== p2) {
+      err.textContent = "Las contraseñas no coinciden";
+      err.classList.remove("hidden");
+      return;
+    }
+    setAuthFormLoading(form, true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password: p1 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        err.textContent = formatApiError(data, "No se pudo actualizar la contraseña");
+        err.classList.remove("hidden");
+        return;
+      }
+      ok.textContent = data.message || "Contraseña actualizada.";
+      ok.classList.remove("hidden");
+      document.getElementById("resetSubmitBtn").disabled = true;
+      window.setTimeout(() => {
+        window.history.replaceState({}, "", "/login");
+        setAuthView("main");
+      }, 1800);
+    } catch {
+      err.textContent = "No se pudo conectar con el servidor.";
+      err.classList.remove("hidden");
+    } finally {
+      setAuthFormLoading(form, false);
+    }
+  });
+
+  if (resetToken) {
+    initResetFromToken(resetToken);
+  }
+}
+
+async function initResetFromToken(token) {
+  setAuthView("reset");
+  const form = document.getElementById("resetForm");
+  const err = document.getElementById("resetError");
+  const intro = document.getElementById("resetIntro");
+  if (form) form.dataset.token = token;
+  try {
+    const res = await fetch(`/api/auth/reset-password/validate?token=${encodeURIComponent(token)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(formatApiError(data, "Enlace inválido o expirado"));
+    if (intro) intro.textContent = `Nueva contraseña para ${data.email}`;
+  } catch (e) {
+    if (err) {
+      err.textContent = e.message || "Enlace inválido o expirado";
+      err.classList.remove("hidden");
+    }
+    document.getElementById("resetSubmitBtn")?.setAttribute("disabled", "disabled");
+  }
+}
+
+function initAuthTabs() {
+  const tabsEl = document.getElementById("authTabs");
+  const indicator = document.getElementById("authTabIndicator");
+  const panelsEl = document.getElementById("authPanels");
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+  if (!tabsEl || !indicator || !panelsEl || !loginForm || !registerForm) return;
+
+  let currentTab = "login";
+  let animating = false;
+
+  function syncIndicator(tab) {
+    indicator.classList.toggle("auth-tab-indicator--register", tab === "register");
+  }
+
+  function panelHeight(el) {
+    return el.offsetHeight;
+  }
+
+  function setPanelsHeight(px) {
+    panelsEl.style.height = px ? px + "px" : "";
+  }
+
+  function hidePanel(panel) {
+    panel.classList.remove(
+      "auth-panel--active",
+      "auth-panel--exit-left",
+      "auth-panel--exit-right",
+      "auth-panel--enter-left",
+      "auth-panel--enter-right"
+    );
+    panel.hidden = true;
+  }
+
+  function switchTab(tab) {
+    if (tab === currentTab || animating) return;
+    const toRegister = tab === "register";
+    const outgoing = toRegister ? loginForm : registerForm;
+    const incoming = toRegister ? registerForm : loginForm;
+
+    animating = true;
+    document.querySelectorAll(".auth-tab").forEach((b) => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    syncIndicator(tab);
+    panelsEl.dataset.tab = tab;
+    document.getElementById("loginError")?.classList.add("hidden");
+    document.getElementById("regError")?.classList.add("hidden");
+
+    outgoing.classList.remove("auth-panel--active");
+    outgoing.classList.add(toRegister ? "auth-panel--exit-left" : "auth-panel--exit-right");
+
+    incoming.hidden = false;
+    incoming.classList.add(
+      "auth-panel--active",
+      toRegister ? "auth-panel--enter-right" : "auth-panel--enter-left"
+    );
+    setPanelsHeight(panelHeight(incoming));
+
+    requestAnimationFrame(() => {
+      incoming.classList.remove("auth-panel--enter-right", "auth-panel--enter-left");
+    });
+
+    window.setTimeout(() => {
+      hidePanel(outgoing);
+      currentTab = tab;
+      setPanelsHeight(panelHeight(incoming));
+      animating = false;
+    }, 380);
+  }
+
+  syncIndicator("login");
+  setPanelsHeight(panelHeight(loginForm));
+  window.addEventListener("resize", () => {
+    const active = currentTab === "login" ? loginForm : registerForm;
+    if (!active.hidden) setPanelsHeight(panelHeight(active));
+  });
+
+  document.querySelectorAll(".auth-tab").forEach((btn) => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
+
+  if (window.location.hash === "#register") switchTab("register");
+  if (new URLSearchParams(window.location.search).get("tab") === "register") switchTab("register");
 }
 
 function isLoggedIn() {

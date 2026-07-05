@@ -16,6 +16,8 @@ bcrypt>=4.1.0
 python-jose[cryptography]>=3.3.0
 pydantic[email]>=2.0.0
 email-validator>=2.0.0
+fpdf2>=2.8.0
+stripe>=11.0.0
 
 cryptography>=41.0.0
 ezdxf>=1.4.0

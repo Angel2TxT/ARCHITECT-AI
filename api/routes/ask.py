@@ -13,6 +13,7 @@ from api.deps import get_current_user
 from db.database import get_db
 from db.models import Chat, Message, User
 from services.qa_service import answer_construction_question
+from services.architect_ai_service import architect_ai_status
 from services.web_search_service import web_search_enabled
 
 router = APIRouter(tags=["ask"])
@@ -23,10 +24,14 @@ def ask_status():
     from services.knowledge_service import knowledge_stats
 
     k = knowledge_stats()
+    pages = k.get("pages", 0)
+    catalog = k.get("catalog") or []
     return {
-        "knowledge_ready": k.get("pages", 0) > 0,
-        "knowledge_pages": k.get("pages", 0),
+        "knowledge_ready": pages > 0,
+        "knowledge_pages": pages,
         "web_search_enabled": web_search_enabled(),
+        "document_catalog": catalog,
+        **architect_ai_status(knowledge_pages=pages, catalog=catalog),
     }
 
 
@@ -39,7 +44,7 @@ async def ask_construction(
 ):
     q = (message or "").strip()
     if len(q) < 3:
-        raise HTTPException(400, "Escribe una pregunta sobre construcción o arquitectura.")
+        raise HTTPException(400, "Escribe tu pregunta (mínimo 3 caracteres).")
 
     result = answer_construction_question(q)
 
@@ -77,6 +82,7 @@ async def ask_construction(
         "web_sources": result.get("web_sources"),
         "thresholds": result.get("thresholds"),
         "web_search_used": result.get("web_search_used"),
+        "assistant_mode": result.get("assistant_mode"),
     }
     db.add(
         Message(

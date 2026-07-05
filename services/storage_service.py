@@ -13,6 +13,34 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 UPLOADS_ROOT = ROOT / "data" / "uploads"
 
+ALLOWED_PROJECT_DOC_EXT = {
+    ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
+    ".dxf", ".dwg", ".doc", ".docx", ".xls", ".xlsx",
+}
+MAX_PROJECT_DOC_MB = 25
+
+
+def project_doc_dir(user_id: int, project_id: str) -> Path:
+    d = UPLOADS_ROOT / str(user_id) / "projects" / project_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def save_project_document(
+    user_id: int,
+    project_id: str,
+    doc_id: int,
+    content: bytes,
+    filename: str,
+) -> Path:
+    ext = Path(filename or "documento.bin").suffix.lower() or ".bin"
+    if ext not in ALLOWED_PROJECT_DOC_EXT:
+        raise ValueError(f"Extensión no permitida: {ext}")
+    safe_name = Path(filename or "documento").name.replace("..", "_")
+    dest = project_doc_dir(user_id, project_id) / f"{doc_id}_{safe_name}"
+    dest.write_bytes(content)
+    return dest
+
 
 def analysis_dir(user_id: int, analysis_id: int) -> Path:
     d = UPLOADS_ROOT / str(user_id) / str(analysis_id)

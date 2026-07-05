@@ -23,6 +23,7 @@ load_dotenv(ROOT / ".env")
 from sqlalchemy import create_engine, text
 
 from db.database import Base, engine, session_scope
+from db.migrations import apply_pending_migrations
 from db.seed import run_seed
 
 
@@ -70,28 +71,11 @@ def ensure_database():
     print(f"  Base '{db_name}' OK")
 
 
-def _ensure_analysis_corrections_column():
-    """Migración ligera para bases ya creadas."""
-    with engine.begin() as conn:
-        r = conn.execute(
-            text(
-                "SELECT COUNT(*) FROM information_schema.COLUMNS "
-                "WHERE TABLE_SCHEMA = DATABASE() "
-                "AND TABLE_NAME = 'analyses' AND COLUMN_NAME = 'corrections_json'"
-            )
-        )
-        if r.scalar() == 0:
-            conn.execute(
-                text("ALTER TABLE analyses ADD COLUMN corrections_json JSON NULL")
-            )
-            print("  Columna analyses.corrections_json añadida.")
-
-
 def main():
     ensure_database()
     print("Creando tablas...")
     Base.metadata.create_all(bind=engine)
-    _ensure_analysis_corrections_column()
+    apply_pending_migrations()
     with session_scope() as db:
         run_seed(db)
     print("OK — tablas, planes y admin listos.")

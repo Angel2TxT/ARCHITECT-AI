@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARCHITECT</title>
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png" />
+  <link rel="apple-touch-icon" href="/static/brand/architect-icon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=81" />
+  <script>
+    (function () {
+      var KEY = "plano_ia_theme";
+      var saved = localStorage.getItem(KEY);
+      if (saved !== "light" && saved !== "dark") {
+        saved = "dark";
+        localStorage.setItem(KEY, saved);
+      }
+      var dark = saved === "dark";
+      var root = document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(dark ? "dark" : "light");
+      root.setAttribute("data-theme", dark ? "dark" : "light");
+      root.style.colorScheme = dark ? "dark" : "light";
+    })();
+  </script>
+</head>
+<body class="admin-shell-page">
+  <header class="admin-topbar">
+    <a href="/legacy-app" class="admin-back-link">
+      <span class="material-symbols-outlined">arrow_back</span>
+      Volver al workspace
+    </a>
+    <div class="admin-topbar-title">
+      <span class="material-symbols-outlined">admin_panel_settings</span>
+      <h1>Administración</h1>
+    </div>
+    <button type="button" class="btn-secondary admin-refresh-btn" id="btnAdminRefresh">
+      <span class="material-symbols-outlined">refresh</span>
+      Actualizar
+    </button>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="adminSidebar" aria-label="Apartados de administración"></aside>
+    <main class="admin-content" id="adminContent">
+      <p id="adminStatus" class="admin-status">Cargando panel…</p>
+      <p id="adminError" class="admin-error-banner hidden" role="alert"></p>
+      <div id="adminSectionRoot"></div>
+    </main>
+  </div>
+
+  <script src="/static/auth.js?v=28"></script>
+  <script src="/static/dialogs.js?v=4"></script>
+  <script src="/static/admin.js?v=6"></script>
+</body>
+</html>

@@ -1,107 +1,167 @@
 # ARCHITECT
 
-ARCHITECT es una plataforma para revisar planos de arquitectura, ingenieria civil e instalaciones. Combina FastAPI, React, procesamiento de imagen/CAD, reglas tecnicas configurables y modelos de deteccion para localizar inconsistencias, generar observaciones y apoyar la revision profesional antes de obra.
+Plataforma para revisar planos de arquitectura y responder consultas de construcción. Combina **FastAPI**, **React**, detección **YOLO**, **reglas normativas** (Chiapas), **biblioteca de manuales PDF**, billing demo, proyectos casa hogar y flujo de invitado.
 
-Documentacion util para el equipo:
+---
 
-- [Guia del equipo](docs/TEAM_SETUP.md)
-- [Sistema visual](docs/DESIGN_SYSTEM.md)
-- [Entrenamiento de planos](docs/ENTRENAMIENTO_PLANOS.md)
-- [CAD, DXF y DWG](docs/CAD_DWG.md)
+## Requisitos
 
-## Stack
+| Modo | Necesitas |
+|------|-----------|
+| **Docker (recomendado)** | Docker Desktop, Git |
+| **Local sin Docker** | Python 3.10+, Node 20+, MySQL 8 |
 
-- Frontend: React + Vite + Three.js + GSAP
-- Backend: FastAPI + Python
-- Base de datos: MySQL
-- IA/vision: YOLOv8, OpenCV, reglas tecnicas configurables
-- Contenedores: Docker Compose
+RAM recomendada: **8 GB** (Docker + modelo YOLO).
 
-## Arranque recomendado
+---
 
-Con Docker no necesitas correr `npm install` ni `pip install` manualmente. Docker instala las dependencias dentro de los contenedores:
+## Arranque rápido (Docker)
 
 ```powershell
 cd C:\UNI\ARCHITECT
-docker compose up --build
+copy .env.example .env
+docker compose up --build -d
 ```
 
-Abre:
+Espera ~1–2 min la primera vez (MySQL + dependencias). El backend ejecuta `scripts/init_db.py` automáticamente.
 
-- Frontend React: http://localhost:3000
-- Backend FastAPI: http://localhost:8000
-- Docs API: http://localhost:8000/docs
-- MySQL Docker: localhost:3307
+### URLs
 
-React usa proxy para `/api`, `/static` y `/legacy-app`, asi el login y la app comparten el mismo origen en `localhost:3000`.
+| Servicio | URL |
+|----------|-----|
+| **App principal (React)** | http://localhost:3000 |
+| **App legacy (chat/planos)** | http://localhost:3000/legacy-app o http://localhost:8000/legacy-app |
+| **Login** | http://localhost:3000/login |
+| **API + Swagger** | http://localhost:8000/docs |
+| **MySQL (desde tu PC)** | `localhost:3307` — user `architect`, pass `architect_pass`, DB `architect` |
 
-## Instalacion de dependencias
-
-Este proyecto no usa PHP, Laravel ni Composer, asi que **no se necesita**:
-
-```powershell
-composer install
-```
-
-Para desarrollo local sin Docker, instala dependencias asi:
-
-Backend Python:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-Frontend React:
-
-```powershell
-cd frontend
-npm install --cache ..\.npm-cache
-```
-
-## Flujo de analisis
+### Credenciales de desarrollo
 
 ```text
-Plano (imagen / PDF / CAD)
-      |
-YOLOv8 -> elementos del plano
-      |
-Motor de reglas -> errores, avisos y observaciones
-      |
-Correcciones del usuario -> mejora del dataset y entrenamiento
+Email:    admin@architect.local
+Password: admin123
 ```
 
-YOLO detecta elementos del plano. Los criterios tecnicos y reglas de validacion viven en `rules/`.
+(Creadas por `scripts/init_db.py` con `ADMIN_EMAIL` / `ADMIN_PASSWORD` del `.env`.)
 
-## Estructura
+---
 
-```text
-frontend/              React + Vite
-api/                   Rutas FastAPI
-core/                  Pipeline de analisis IA
-services/              Servicios de autenticacion, CAD, conocimiento, almacenamiento
-db/                    Modelos y conexion a base de datos
-rules/                 Reglas tecnicas y catalogos
-scripts/               Utilidades de entrenamiento, base de datos y Docker
-web/                   App legacy servida en /legacy-app
-docs/                  Documentacion del proyecto
+## Configuración `.env`
+
+Copia la plantilla y edita lo mínimo:
+
+```powershell
+copy .env.example .env
 ```
+
+| Variable | Uso |
+|----------|-----|
+| `APP_BASE_URL` | URL pública para correos y OAuth. Local: `http://localhost:8000`. Demo remota: URL del túnel Cloudflare. |
+| `JWT_SECRET_KEY` | Secreto para sesiones (cámbialo en producción). |
+| `BILLING_MODE=demo` | Pasarela simulada (proyecto escolar). Sin Stripe real. |
+| `WEB_SEARCH_ENABLED=true` | Búsqueda web en consultas sin plano (DuckDuckGo). |
+| `GUEST_TRIAL_*` | Límites de prueba sin cuenta (análisis, preguntas, MB). |
+| `MAIL_*` | SMTP Brevo para comprobantes PDF y recuperación de contraseña. Ver [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md). |
+| `GOOGLE_CLIENT_*` | Login con Google (opcional). Ver [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md). |
+
+Tras cambiar `.env`:
+
+```powershell
+docker compose up -d --force-recreate backend
+```
+
+---
+
+## Funcionalidades incluidas
+
+- **Revisión de planos** — PNG, JPG, PDF, DXF, DWG → YOLO + reglas normativas.
+- **IA ARCHITECT (chat sin plano)** — Responde con manuales indexados, umbrales Chiapas y web. Sin APIs de pago.
+- **Prueba sin cuenta** — Cookie de invitado con límites configurables.
+- **Planes y billing demo** — Checkout simulado, comprobantes PDF, historial en perfil.
+- **Proyectos casa hogar** — Flujo por etapas, secciones, invitaciones.
+- **Admin** — Panel de usuarios, ventas demo, comprobantes.
+- **Correo** — Tickets PDF y reset de contraseña vía Brevo (opcional).
+- **Google OAuth** — Opcional.
+
+---
+
+## Biblioteca de conocimiento (manuales PDF)
+
+Los PDF en `data/knowledge/raw/` alimentan el chat. Ya incluidos en el entorno Docker:
+
+- `Manual+Casa+1_LR.pdf` — Vivienda progresiva  
+- `las-medidas-de-una-casa.pdf` — Tablas de medidas  
+- `Neufert - parte 1.pdf` — Referencia antropométrica  
+
+### Indexar o actualizar manuales
+
+```powershell
+docker compose exec backend python scripts/ingest_knowledge_docs.py
+docker compose restart backend
+```
+
+Comprueba: `GET http://localhost:8000/api/ask/status` → `document_catalog`, `knowledge_pages`.
+
+Guías: [docs/CONOCIMIENTO_DOCUMENTOS.md](docs/CONOCIMIENTO_DOCUMENTOS.md), [docs/CONSULTAS_CONSTRUCCION.md](docs/CONSULTAS_CONSTRUCCION.md).
+
+---
+
+## Modelo YOLO (detección en planos)
+
+Sin modelo entrenado, el análisis usa el demo sintético o no detecta elementos en planos reales.
+
+```powershell
+# Demo rápido (sintético)
+docker compose exec backend python scripts/train_demo.py
+
+# Producción (planos reales, requiere dataset)
+docker compose exec backend python scripts/download_dataset.py
+docker compose exec backend python scripts/cubicasa_to_yolo.py --input data/raw/dataset
+docker compose exec backend python scripts/train.py --epochs 50 --device cpu
+```
+
+Ver [docs/ENTRENAMIENTO_PLANOS.md](docs/ENTRENAMIENTO_PLANOS.md).
+
+---
+
+## Demo pública (túnel Cloudflare)
+
+Para compartir la app sin desplegar:
+
+```powershell
+.\scripts\tunnel.ps1
+```
+
+Copia la URL `https://....trycloudflare.com`, ponla en `.env` como `APP_BASE_URL` y reinicia el backend:
+
+```powershell
+docker compose up -d --force-recreate backend
+```
+
+---
 
 ## Desarrollo local sin Docker
 
-Backend:
+### Backend
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
+# Edita DATABASE_URL → MySQL local (puerto 3306)
 python scripts/init_db.py
+python scripts/migrate.py
+python -m uvicorn api.server:app --reload --port 8000
+```
+
+Alternativa con launcher local (puerto 8080):
+
+```powershell
 python app.py
 ```
 
-Frontend:
+### Frontend
 
 ```powershell
 cd frontend
@@ -109,48 +169,118 @@ npm install --cache ..\.npm-cache
 npm run dev
 ```
 
-## Validacion
+Proxy API: `frontend/vite.config.js` → `http://localhost:8000`.
 
-Frontend:
+---
+
+## Migraciones de base de datos
+
+Si actualizas desde una versión anterior:
 
 ```powershell
+docker compose exec backend python scripts/migrate.py
+```
+
+---
+
+## Scripts útiles
+
+| Script | Descripción |
+|--------|-------------|
+| `scripts/init_db.py` | Crea tablas, seed de planes y admin |
+| `scripts/migrate.py` | Migraciones incrementales |
+| `scripts/ingest_knowledge_docs.py` | Indexa PDF de `data/knowledge/raw` |
+| `scripts/train_demo.py` | Modelo YOLO demo |
+| `scripts/tunnel.ps1` | Túnel Cloudflare → puerto 8000 |
+| `scripts/test_mail.py` | Prueba SMTP Brevo |
+| `scripts/test_receipt_email.py` | Prueba correo con PDF de comprobante |
+| `scripts/validate_billing_e2e.py` | Prueba flujo billing demo |
+
+---
+
+## Estructura del proyecto
+
+```text
+frontend/          React + Vite (app nueva, :3000)
+web/               App legacy chat/planos (/legacy-app)
+api/               Rutas FastAPI
+core/              Pipeline YOLO + análisis
+services/          Auth, billing, email, IA ARCHITECT, CAD, storage
+rules/             Normas Chiapas y motor de reglas
+db/                Modelos SQLAlchemy, seed, migraciones
+config/            Clases YOLO, etapas casa hogar
+scripts/           DB, entrenamiento, ingest, utilidades
+docs/              Documentación detallada
+data/knowledge/    PDF raw + processed (indexados)
+```
+
+---
+
+## Stack
+
+- **Frontend:** React, Vite, Three.js, Tailwind  
+- **Backend:** FastAPI, SQLAlchemy, PyMySQL  
+- **IA:** Ultralytics YOLOv8, OpenCV, reglas en `rules/`  
+- **DB:** MySQL 8  
+- **Contenedores:** Docker Compose  
+
+---
+
+## Validación
+
+```powershell
+# Frontend
 cd frontend
 npm run build
-```
 
-Backend:
+# Backend
+docker compose exec backend python -m compileall -q api core db rules services scripts
 
-```powershell
-.\.venv\Scripts\python.exe -m compileall -q api core db rules services scripts app.py
-```
-
-Docker:
-
-```powershell
+# Docker
 docker compose config
 ```
 
-Modelo 3D de bienvenida con Blender:
+---
 
-```powershell
-blender --background --python scripts/create_blender_welcome_model.py
-```
+## Documentación
 
-Ese comando genera `frontend/public/models/architect-building.glb`. Si el archivo no existe, el frontend usa un modelo procedural de Three.js como respaldo.
+| Tema | Archivo |
+|------|---------|
+| Equipo / onboarding | [docs/TEAM_SETUP.md](docs/TEAM_SETUP.md) |
+| MySQL | [docs/MYSQL_SETUP.md](docs/MYSQL_SETUP.md) |
+| Consultas IA (sin plano) | [docs/CONSULTAS_CONSTRUCCION.md](docs/CONSULTAS_CONSTRUCCION.md) |
+| Manuales PDF | [docs/CONOCIMIENTO_DOCUMENTOS.md](docs/CONOCIMIENTO_DOCUMENTOS.md) |
+| Normas Chiapas | [docs/NORMAS_CHIAPAS.md](docs/NORMAS_CHIAPAS.md) |
+| Billing demo | [docs/BILLING_DEMO.md](docs/BILLING_DEMO.md) |
+| Stripe (opcional) | [docs/STRIPE_SETUP.md](docs/STRIPE_SETUP.md) |
+| Correo Brevo | [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md) |
+| Google OAuth | [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) |
+| Proyectos casa hogar | [docs/PROYECTOS_CASA_HOGAR.md](docs/PROYECTOS_CASA_HOGAR.md) |
+| CAD / DWG | [docs/CAD_DWG.md](docs/CAD_DWG.md) |
+| Entrenamiento YOLO | [docs/ENTRENAMIENTO_PLANOS.md](docs/ENTRENAMIENTO_PLANOS.md) |
+| Diseño UI | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
 
-## Variables de entorno
+---
 
-Usa `.env.example` como base:
+## Qué no subir a Git
 
-```powershell
-copy .env.example .env
-```
+`.env`, `.venv`, `node_modules`, `data/` (PDF y procesados), `runs/`, `weights/`, `*.pt`, cachés npm.
 
-Para Docker, `docker-compose.yml` define la conexion interna de MySQL. Para desarrollo local, edita `DATABASE_URL` en `.env`.
+---
 
-## Notas
+## Solución de problemas
 
-- La app nueva vive en `frontend/`.
-- La app anterior se conserva en `web/` y se sirve en `/legacy-app`.
-- No subas `.env`, `.venv`, `node_modules`, `runs`, `datasets`, `weights` ni archivos `.pt`.
-- El repositorio se mantiene como `ARCHITECT-AI`.
+| Problema | Qué hacer |
+|----------|-----------|
+| Backend no arranca | `docker compose logs backend` — espera a que MySQL esté healthy |
+| Login 401 | Verifica que corriste `init_db.py` y credenciales admin |
+| Chat sin respuestas de manuales | `ingest_knowledge_docs.py` + reinicia backend |
+| No detecta planos | Entrena demo o modelo real (`train_demo.py` / `train.py`) |
+| Correos no llegan | Revisa `MAIL_*` y [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md) |
+| OAuth falla | `APP_BASE_URL` debe coincidir con URI autorizada en Google Console |
+
+---
+
+## Licencia / uso académico
+
+Proyecto escolar. Billing en modo **demo** por defecto (sin cobros reales). Configura Stripe solo si migras a producción comercial.
