@@ -14,7 +14,9 @@ export default defineConfig(({ mode }) => {
         "/docs": target,
         "/openapi.json": target,
         "/static": target,
-        "/legacy-app": target
+        "/legacy-app": target,
+        "/checkout": target,
+        "/checkout/success": target
       }
     }
   };

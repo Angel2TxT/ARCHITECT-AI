@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARCHITECT</title>
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      font-family: Inter, system-ui, sans-serif;
+      background: #050505;
+      color: #fafafa;
+    }
+    .card {
+      width: min(100%, 26rem);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.03);
+      text-align: center;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.35rem; }
+    p { margin: 0; color: #a1a1aa; line-height: 1.5; }
+    a {
+      display: inline-block;
+      margin-top: 1.25rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      background: #fff;
+      color: #09090b;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="successTitle">Procesando pago…</h1>
+    <p id="successMsg">Un momento.</p>
+    <a id="successLink" class="hidden" href="/legacy-app">Ir al workspace</a>
+  </div>
+  <script src="/static/checkout-success.js"></script>
+</body>
+</html>

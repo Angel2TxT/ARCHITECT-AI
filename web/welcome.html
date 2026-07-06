@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>ARCHITECT | Revisión técnica de planos</title>
+  <title>ARCHITECT</title>
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -38,10 +40,10 @@
           },
           spacing: {
             unit: "8px",
-            "margin-mobile": "20px",
-            "container-max": "1440px",
-            "margin-desktop": "64px",
-            gutter: "24px"
+            "margin-mobile": "18px",
+            "container-max": "1200px",
+            "margin-desktop": "48px",
+            gutter: "20px"
           },
           fontFamily: {
             "display-lg": ["Inter"],
@@ -52,12 +54,12 @@
             "body-md": ["Inter"]
           },
           fontSize: {
-            "display-lg": ["40px", { lineHeight: "1.08", letterSpacing: "0", fontWeight: "600" }],
-            "display-lg-mobile": ["28px", { lineHeight: "1.16", letterSpacing: "0", fontWeight: "600" }],
-            "body-lg": ["15px", { lineHeight: "1.55", letterSpacing: "0", fontWeight: "400" }],
-            "label-sm": ["12px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
-            "headline-md": ["24px", { lineHeight: "1.3", letterSpacing: "0", fontWeight: "500" }],
-            "body-md": ["15px", { lineHeight: "1.5", letterSpacing: "0", fontWeight: "400" }]
+            "display-lg": ["32px", { lineHeight: "1.12", letterSpacing: "0", fontWeight: "600" }],
+            "display-lg-mobile": ["24px", { lineHeight: "1.16", letterSpacing: "0", fontWeight: "600" }],
+            "body-lg": ["14px", { lineHeight: "1.55", letterSpacing: "0", fontWeight: "400" }],
+            "label-sm": ["11px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
+            "headline-md": ["18px", { lineHeight: "1.35", letterSpacing: "0", fontWeight: "500" }],
+            "body-md": ["14px", { lineHeight: "1.5", letterSpacing: "0", fontWeight: "400" }]
           }
         }
       }
@@ -65,7 +67,7 @@
   </script>
   <style>
     html {
-      scroll-behavior: smooth;
+      scroll-behavior: auto;
     }
     .glass {
       background: rgba(255, 255, 255, 0.7);
@@ -86,58 +88,11 @@
       background: rgba(255, 255, 255, 0.86);
       box-shadow: 0 16px 42px rgba(30, 41, 59, 0.08);
     }
-    .hero-clean {
-      min-height: min(760px, calc(100dvh - 80px));
-      display: flex;
-      align-items: center;
-      padding-top: 2.75rem;
-      padding-bottom: 3.75rem;
-    }
-    .hero-orbit {
-      position: absolute;
-      width: 13rem;
-      height: 13rem;
-      border: 1px solid rgba(0, 0, 0, 0.07);
-      border-radius: 9999px;
-      opacity: 0.55;
-      pointer-events: none;
-    }
-    .hero-orbit--one {
-      top: 18%;
-      left: 13%;
-    }
-    .hero-orbit--two {
-      right: 10%;
-      bottom: 12%;
-      width: 18rem;
-      height: 18rem;
-    }
-    .hero-scroll-cue {
-      position: absolute;
-      left: 50%;
-      bottom: 1.35rem;
-      transform: translateX(-50%);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: rgba(26, 28, 29, 0.56);
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .hero-scroll-cue::before {
-      content: "";
-      width: 0.42rem;
-      height: 0.42rem;
-      border-radius: 9999px;
-      background: currentColor;
-    }
     .model-section {
       position: relative;
       margin-top: 0;
-      padding: 4.75rem 1.25rem 4.5rem;
-      background: linear-gradient(180deg, #f9f9fb 0%, #ffffff 46%, #f1f5f7 100%);
+      padding: 3.25rem 1.25rem 3.5rem;
+      background: #050505 !important;
       overflow: hidden;
     }
     .model-section::before {
@@ -145,10 +100,10 @@
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: linear-gradient(to bottom, transparent, black 20%, black 82%, transparent);
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 4rem 4rem;
+      mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
       pointer-events: none;
     }
     .model-shell {
@@ -161,7 +116,7 @@
       align-items: center;
       gap: 0.55rem;
       margin-bottom: 0.75rem;
-      color: #5d5e63;
+      color: #a1a1aa;
       font-size: 0.74rem;
       font-weight: 800;
       letter-spacing: 0.12em;
@@ -175,47 +130,69 @@
       opacity: 0.38;
     }
     .model-title {
-      max-width: 39rem;
-      margin: 0 0 0.85rem;
-      font-size: clamp(1.85rem, 3.6vw, 3.25rem);
+      max-width: 34rem;
+      color: #fafafa;
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.45rem, 2.5vw, 2.1rem);
       line-height: 1;
       font-weight: 700;
       letter-spacing: 0;
     }
     .model-copy {
-      max-width: 35rem;
-      color: #5d5e63;
-      font-size: 0.94rem;
+      max-width: 32rem;
+      color: #a1a1aa;
+      font-size: 0.88rem;
       line-height: 1.62;
     }
     .scroll-reveal {
       opacity: 0;
-      transform: translateY(32px) scale(0.98);
+      transform: translate3d(0, 22px, 0);
       transition:
-        opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
       transition-delay: var(--reveal-delay, 0ms);
     }
+    .scroll-reveal.is-visible,
     .scroll-reveal.visible {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translate3d(0, 0, 0);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+    }
+    .model-section,
+    #features,
+    .legacy-pricing,
+    .py-12.bg-surface-container-lowest {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 380px;
+    }
+    .glass {
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .glass:hover {
+      transform: translateY(-2px);
     }
     .material-symbols-outlined {
       font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
     }
     .ai-plan-stage {
       position: relative;
-      min-height: 460px;
+      min-height: 360px;
       background:
-        radial-gradient(circle at 72% 24%, rgba(255, 174, 51, 0.18), transparent 24%),
-        radial-gradient(circle at 45% 44%, rgba(36, 128, 255, 0.16), transparent 34%),
-        linear-gradient(135deg, #ffffff, #eef2f5 62%, #ffffff);
+        radial-gradient(circle at 72% 24%, rgba(255, 255, 255, 0.06), transparent 24%),
+        radial-gradient(circle at 45% 44%, rgba(255, 255, 255, 0.04), transparent 34%),
+        linear-gradient(135deg, #0a0a0a, #141414 62%, #0a0a0a);
     }
     .ai-plan-canvas {
       display: block;
       width: 100%;
       height: 100%;
-      min-height: 460px;
+      min-height: 360px;
     }
     .ai-plan-hud {
       pointer-events: none;
@@ -227,357 +204,530 @@
       box-shadow: 0 18px 50px rgba(42, 54, 72, 0.14);
     }
     @media (max-width: 768px) {
-      .hero-clean {
-        min-height: calc(100dvh - 80px);
-        padding-top: 2.25rem;
-        padding-bottom: 4rem;
-      }
-      .hero-orbit {
-        width: 12rem;
-        height: 12rem;
-      }
-      .hero-orbit--two {
-        width: 15rem;
-        height: 15rem;
-      }
       .model-section {
-        padding: 4.5rem 1rem;
+        padding: 3rem 1rem;
       }
       .ai-plan-stage,
       .ai-plan-canvas {
-        min-height: 360px;
+        min-height: 300px;
       }
       .ai-plan-chip {
         max-width: calc(100vw - 64px);
       }
     }
-    /* Premium reference hero overrides for FastAPI fallback welcome */
+    /* Premium dark landing */
     body {
       background: #050505 !important;
       color: #ffffff !important;
     }
+
     .welcome-nav {
-      height: 92px !important;
-      background: rgba(5, 5, 5, 0.78) !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
+      height: 64px !important;
+      background: rgba(5, 5, 5, 0.82) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
       backdrop-filter: blur(18px);
+      transition: height 0.3s ease, background-color 0.3s ease;
     }
     .welcome-nav.nav-scrolled {
-      height: 78px !important;
-      background: rgba(5, 5, 5, 0.9) !important;
-      box-shadow: none !important;
+      height: 56px !important;
+      background: rgba(5, 5, 5, 0.94) !important;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28) !important;
     }
-    .welcome-nav > div {
-      max-width: none !important;
-      padding-left: clamp(28px, 3.2vw, 46px) !important;
-      padding-right: clamp(28px, 3.2vw, 46px) !important;
+    .welcome-nav-inner {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(1rem, 2.5vw, 2.5rem);
+      max-width: 68rem;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 clamp(1.1rem, 2.5vw, 2.25rem);
     }
-    .welcome-nav a[href="/"] {
-      color: #fff !important;
-      width: 290px;
-      font-size: 14px !important;
-      letter-spacing: 0.34em !important;
-      text-transform: uppercase;
-    }
-    .welcome-nav a[href="/"]::before {
-      content: "A";
-      display: inline-grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      margin-right: 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(167, 139, 250, 0.72);
-      background: linear-gradient(145deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.12));
-      color: #60a5fa;
-      font-size: 18px;
-      font-weight: 800;
-      box-shadow: 0 0 22px rgba(139, 92, 246, 0.24);
-      vertical-align: middle;
-    }
-    .welcome-nav .hidden.md\:flex {
-      position: absolute;
-      left: 50%;
-      top: 20px;
-      transform: translateX(-50%);
-      min-width: min(575px, 42vw);
-      justify-content: space-between;
-      gap: 0 !important;
-      padding: 19px 32px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.045);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    }
-    .welcome-nav .hidden.md\:flex a {
-      color: rgba(255, 255, 255, 0.72) !important;
-      border: 0 !important;
-      font-size: 12px !important;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-    .welcome-nav .flex.items-center.gap-3 {
-      width: 290px;
-      justify-content: flex-end;
-    }
-    .welcome-nav .flex.items-center.gap-3 a:first-child {
-      display: none;
-    }
-    .welcome-nav .flex.items-center.gap-3 a:last-child {
-      color: #fff !important;
-      background: rgba(255, 255, 255, 0.045) !important;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      min-height: 46px;
-      padding: 0 22px !important;
+    .welcome-nav-brand {
       display: inline-flex;
       align-items: center;
-      font-size: 12px !important;
-      letter-spacing: 0.14em;
+      gap: 0.55rem;
+      color: #fff !important;
+      font-size: 0.82rem !important;
+      font-weight: 700;
+      letter-spacing: 0.22em !important;
       text-transform: uppercase;
+      text-decoration: none;
+      white-space: nowrap;
     }
+    .welcome-nav-brand-icon {
+      display: block;
+      height: 1.85rem;
+      width: auto;
+      object-fit: contain;
+    }
+    .welcome-nav-brand-text {
+      letter-spacing: 0.22em;
+    }
+    .welcome-nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: clamp(0.85rem, 1.8vw, 1.75rem);
+      min-width: 0;
+    }
+    .welcome-nav-links a {
+      color: rgba(255, 255, 255, 0.62) !important;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s ease;
+      white-space: nowrap;
+    }
+    .welcome-nav-links a:hover,
+    .welcome-nav-links a.is-active {
+      color: #fff !important;
+    }
+    .welcome-nav-links a.is-active {
+      position: relative;
+    }
+    .welcome-nav-links a.is-active::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.45rem;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .welcome-nav-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      white-space: nowrap;
+    }
+    .welcome-nav-login {
+      color: rgba(255, 255, 255, 0.72) !important;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      padding: 0.45rem 0.7rem;
+      transition: color 0.2s ease;
+    }
+    .welcome-nav-login:hover {
+      color: #fff !important;
+    }
+    .welcome-nav-cta {
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.06) !important;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      min-height: 2.35rem;
+      padding: 0 0.95rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.72rem !important;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .welcome-nav-cta:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
     main.pt-20 {
       padding-top: 0 !important;
     }
-    .hero-clean {
-      min-height: 100svh !important;
-      display: block !important;
-      text-align: left !important;
-      padding: 136px clamp(28px, 3.2vw, 46px) 130px !important;
-      background:
-        radial-gradient(circle at 68% 44%, rgba(139, 92, 246, 0.5), transparent 26%),
-        radial-gradient(circle at 64% 45%, rgba(59, 130, 246, 0.26), transparent 28%),
-        radial-gradient(circle at 76% 54%, rgba(245, 158, 11, 0.18), transparent 24%),
-        linear-gradient(145deg, #020204 0%, #07040d 54%, #050505 100%) !important;
-      isolation: isolate;
-    }
-    .hero-clean::before {
-      content: "";
-      position: absolute;
-      inset: 92px 0 0;
-      z-index: -2;
+
+    /* —— Hero estilo Neuform (B/N) —— */
+    .nexus-hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #050505;
       background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-      background-size: 45px 45px;
-      mask-image: linear-gradient(to bottom, black, transparent 92%);
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 4rem 4rem;
+      background-position: center center;
     }
-    .hero-clean > .absolute.inset-0 {
-      display: none !important;
+    .nexus-hero-glow {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(8rem);
     }
-    #hero-text {
-      max-width: min(760px, 54vw) !important;
-      margin: 0 !important;
-      text-align: left !important;
+    .nexus-hero-glow--top {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(60vw, 42rem);
+      height: min(60vh, 32rem);
+      background: rgba(255, 255, 255, 0.06);
     }
-    #hero-text > span {
-      padding: 0 !important;
-      margin-bottom: 28px !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      background: transparent !important;
-      color: #a78bfa !important;
-      font-size: 12px !important;
-      letter-spacing: 0.44em !important;
+    .nexus-hero-glow--bottom {
+      bottom: 0;
+      right: 0;
+      width: min(40vw, 28rem);
+      height: min(40vh, 22rem);
+      background: rgba(255, 255, 255, 0.03);
     }
-    #hero-text > span::before {
-      content: "";
-      display: inline-block;
-      width: 36px;
-      height: 1px;
-      margin-right: 16px;
-      background: #8b5cf6;
-      vertical-align: middle;
+    .nexus-hero-main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: calc(64px + 2rem) clamp(1.25rem, 3vw, 3rem) 5rem;
+      width: 100%;
+      max-width: 87.5rem;
+      margin: 0 auto;
     }
-    #hero-text h1 {
-      max-width: 760px;
-      margin: 0 !important;
-      color: #fff !important;
-      font-size: clamp(58px, 7.2vw, 108px) !important;
-      line-height: 0.96 !important;
-      font-weight: 700 !important;
-      letter-spacing: -0.04em !important;
+    .nexus-hero-center {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 56rem;
+    }
+    .nexus-float-card {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.5s ease, opacity 0.25s ease;
+    }
+    .nexus-float-card:hover {
+      transform: rotate(0deg) scale(1.05) !important;
+    }
+    @media (min-width: 1024px) {
+      .nexus-float-card { display: block; }
+      .nexus-float-card--tl { left: 8%; top: 25%; transform: rotate(-2deg); }
+      .nexus-float-card--tr { right: 10%; top: 20%; transform: rotate(3deg); }
+      .nexus-float-card--bl { left: 12%; bottom: 25%; transform: rotate(2deg); }
+      .nexus-float-card--br { right: 15%; bottom: 30%; transform: rotate(-3deg); }
+    }
+    .nexus-float-shell {
+      padding: 1px;
+      border-radius: 0.85rem;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), transparent);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+    }
+    .nexus-float-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.85rem 1.1rem;
+      border-radius: 0.8rem;
+      background: rgba(5, 5, 5, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .nexus-float-icon {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #f4f4f5;
+    }
+    .nexus-float-icon .material-symbols-outlined {
+      font-size: 1.05rem;
+    }
+    .nexus-float-inner span {
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #e4e4e7;
+      white-space: nowrap;
+    }
+    .nexus-dock {
+      position: absolute;
+      left: 2.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 40;
+      display: none;
+      padding: 1px;
+      border-radius: 1rem;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), transparent);
+    }
+    @media (min-width: 1280px) {
+      .nexus-dock { display: flex; flex-direction: column; }
+    }
+    .nexus-dock-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.65rem;
+      border-radius: 0.95rem;
+      background: rgba(5, 5, 5, 0.92);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+    .nexus-dock-btn {
+      display: grid;
+      place-items: center;
+      width: 2.35rem;
+      height: 2.35rem;
+      border: 0;
+      border-radius: 0.55rem;
+      background: transparent;
+      color: #a1a1aa;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .nexus-dock-btn:hover:not(.is-active) {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e4e4e7;
+    }
+    .nexus-dock-btn.is-active {
+      background: #27272a;
+      color: #fafafa;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .nexus-dock-btn .material-symbols-outlined {
+      font-size: 1.15rem;
+    }
+    .nexus-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 1.75rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #d4d4d8;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    #hero-text h1::after {
-      content: " que frenan la obra.";
+    .nexus-badge-dot {
+      width: 0.42rem;
+      height: 0.42rem;
+      border-radius: 999px;
+      background: #fafafa;
+      animation: nexusPulse 2s ease-in-out infinite;
+    }
+    @keyframes nexusPulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    .canvas-select-box {
+      position: relative;
+      width: 100%;
+      padding: 1.25rem 1rem 1.5rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: center;
+    }
+    .draw-border-top,
+    .draw-border-right,
+    .draw-border-bottom,
+    .draw-border-left {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+    }
+    .draw-border-top,
+    .draw-border-bottom {
+      height: 1px;
+      width: 0;
+      left: 0;
+    }
+    .draw-border-top { top: 0; }
+    .draw-border-bottom { bottom: 0; right: 0; left: auto; }
+    .draw-border-right,
+    .draw-border-left {
+      width: 1px;
+      height: 0;
+    }
+    .draw-border-right { top: 0; right: 0; }
+    .draw-border-left { bottom: 0; left: 0; }
+    .canvas-handle {
+      position: absolute;
+      width: 0.42rem;
+      height: 0.42rem;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      background: #050505;
+      opacity: 0;
+      transform: scale(0);
+    }
+    .canvas-handle--tl { top: -0.2rem; left: -0.2rem; }
+    .canvas-handle--tm { top: -0.2rem; left: 50%; margin-left: -0.21rem; }
+    .canvas-handle--tr { top: -0.2rem; right: -0.2rem; }
+    .canvas-handle--ml { top: 50%; left: -0.2rem; margin-top: -0.21rem; }
+    .canvas-handle--mr { top: 50%; right: -0.2rem; margin-top: -0.21rem; }
+    .canvas-handle--bl { bottom: -0.2rem; left: -0.2rem; }
+    .canvas-handle--bm { bottom: -0.2rem; left: 50%; margin-left: -0.21rem; }
+    .canvas-handle--br { bottom: -0.2rem; right: -0.2rem; }
+    .nexus-hero-title {
+      margin: 0;
+      padding: 0.15rem 0;
+      font-size: clamp(2.75rem, 11vw, 7.5rem);
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.04em;
       color: transparent;
-      background: linear-gradient(92deg, #60a5fa 0%, #8b5cf6 55%, #a78bfa 100%);
+      background: linear-gradient(to bottom, #ffffff 0%, rgba(255, 255, 255, 0.38) 100%);
       -webkit-background-clip: text;
       background-clip: text;
     }
-    #hero-text p {
-      max-width: 650px !important;
-      margin: 28px 0 0 !important;
-      color: rgba(226, 232, 240, 0.82) !important;
-      font-size: 20px !important;
-      line-height: 1.45 !important;
+    #draw-cursor {
+      position: absolute;
+      z-index: 50;
+      width: 1.65rem;
+      height: 1.65rem;
+      color: #fafafa;
+      pointer-events: none;
+      transform: rotate(-12deg);
+      filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.25));
     }
-    #hero-text .flex {
-      justify-content: flex-start !important;
-      margin-top: 34px !important;
+    .canvas-subtitle {
+      margin: 0 auto;
+      max-width: 40rem;
+      font-size: clamp(1rem, 2.2vw, 1.35rem);
+      line-height: 1.45;
+      letter-spacing: -0.02em;
+      color: #a1a1aa;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.2rem 0.45rem;
     }
-    #hero-text a {
-      min-height: 54px;
-      padding: 0 30px !important;
+    .reveal-word-wrap {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: bottom;
+    }
+    .reveal-word {
+      display: inline-block;
+      transform: translateY(120%);
+    }
+    .reveal-word.is-emphasis {
+      color: #f4f4f5;
+      font-weight: 600;
+      position: relative;
+    }
+    .reveal-word.is-emphasis::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.12rem;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .nexus-ctas {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-top: 2.5rem;
+      width: 100%;
+      max-width: 26rem;
+      z-index: 20;
+    }
+    @media (min-width: 640px) {
+      .nexus-ctas { flex-direction: row; max-width: none; }
+    }
+    .nexus-cta-primary-wrap {
+      padding: 1px;
+      border-radius: 0.55rem;
+      background: linear-gradient(to bottom, #e4e4e7, #71717a);
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
+      width: 100%;
+    }
+    @media (min-width: 640px) {
+      .nexus-cta-primary-wrap { width: auto; }
+    }
+    .nexus-cta-primary {
       display: inline-flex;
       align-items: center;
-      border-radius: 999px !important;
-      font-size: 13px !important;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      justify-content: center;
+      gap: 0.45rem;
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0 1.75rem;
+      border-radius: 0.45rem;
+      background: #f4f4f5;
+      color: #09090b;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    #hero-text a:first-child {
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 0 28px rgba(139, 92, 246, 0.28);
+    .nexus-cta-primary:hover {
+      transform: scale(0.98);
+      box-shadow: 0 0 32px rgba(255, 255, 255, 0.14);
     }
-    #hero-text a:last-child {
-      color: #fff !important;
-      background: rgba(255, 255, 255, 0.035) !important;
+    .nexus-cta-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0 1.75rem;
+      border-radius: 0.55rem;
       border: 1px solid rgba(255, 255, 255, 0.12);
+      background: transparent;
+      color: #d4d4d8;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      transition: background 0.2s ease, color 0.2s ease;
     }
-    .legacy-hero-energy {
-      position: absolute;
-      inset: 7% 0 0 28%;
-      z-index: -1;
-      background:
-        radial-gradient(ellipse at 54% 42%, rgba(139, 92, 246, 0.64), transparent 17%),
-        radial-gradient(ellipse at 50% 48%, rgba(59, 130, 246, 0.28), transparent 27%),
-        radial-gradient(ellipse at 68% 48%, rgba(250, 204, 21, 0.2), transparent 18%),
-        linear-gradient(115deg, transparent 27%, rgba(167, 139, 250, 0.56) 29%, transparent 33%),
-        linear-gradient(63deg, transparent 51%, rgba(250, 204, 21, 0.44) 53%, transparent 56%),
-        linear-gradient(174deg, transparent 42%, rgba(96, 165, 250, 0.42) 44%, transparent 47%);
-      filter: blur(2px);
-      opacity: 0.92;
-      animation: heroPulse 5.5s ease-in-out infinite;
+    @media (min-width: 640px) {
+      .nexus-cta-ghost { width: auto; }
     }
-    .legacy-hero-energy::before,
-    .legacy-hero-energy::after {
-      content: "";
-      position: absolute;
-      width: 56%;
-      height: 40%;
-      clip-path: polygon(0 48%, 22% 42%, 27% 53%, 46% 44%, 52% 56%, 74% 47%, 100% 54%, 74% 58%, 52% 63%, 46% 52%, 27% 61%, 22% 51%);
-      filter: blur(1px) drop-shadow(0 0 18px currentColor);
+    .nexus-cta-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fafafa;
     }
-    .legacy-hero-energy::before {
-      left: 0;
-      top: 28%;
-      color: #a855f7;
-      background: linear-gradient(90deg, transparent, #8b5cf6, #d946ef, transparent);
+    .welcome-nav-cta-wrap {
+      padding: 1px;
+      border-radius: 0.55rem;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12));
     }
-    .legacy-hero-energy::after {
-      right: 2%;
-      top: 35%;
-      color: #facc15;
-      background: linear-gradient(90deg, transparent, #facc15, #fb7185, transparent);
-      transform: scaleX(-1) rotate(7deg);
+    .welcome-nav-cta-wrap .welcome-nav-cta {
+      min-height: 2.15rem !important;
+      padding: 0 0.85rem !important;
+      border-radius: 0.45rem !important;
+      border: 0 !important;
+      background: #050505 !important;
+      letter-spacing: 0.08em !important;
     }
-    .legacy-hero-shard {
-      position: absolute;
-      right: 14%;
-      top: 7%;
-      width: min(36vw, 430px);
-      aspect-ratio: 0.58;
-      z-index: 1;
-      background:
-        linear-gradient(128deg, rgba(255, 255, 255, 0.94), rgba(96, 165, 250, 0.74) 13%, rgba(8, 12, 24, 0.96) 34%, rgba(5, 5, 8, 0.98) 57%, rgba(139, 92, 246, 0.9) 73%, rgba(250, 204, 21, 0.76));
-      clip-path: polygon(48% 0, 82% 12%, 63% 42%, 96% 39%, 35% 100%, 48% 59%, 7% 63%, 39% 37%);
-      filter:
-        drop-shadow(0 0 16px rgba(139, 92, 246, 0.8))
-        drop-shadow(0 0 42px rgba(59, 130, 246, 0.3))
-        drop-shadow(0 0 60px rgba(250, 204, 21, 0.2));
-      opacity: 0.92;
-      transform: rotate(-8deg) skewY(-2deg);
-      animation: heroFloat 6.8s ease-in-out infinite;
+    .welcome-nav-cta-wrap .welcome-nav-cta:hover {
+      background: #141414 !important;
     }
-    .legacy-hero-shard::before,
-    .legacy-hero-shard::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      clip-path: inherit;
-      pointer-events: none;
-    }
-    .legacy-hero-shard::before {
-      transform: translate(-18px, 14px) scale(0.98);
-      background: linear-gradient(150deg, rgba(4, 6, 12, 0.96), rgba(59, 130, 246, 0.42), rgba(139, 92, 246, 0.52));
-      opacity: 0.62;
-      z-index: -1;
-    }
-    .legacy-hero-shard::after {
-      background:
-        linear-gradient(10deg, transparent 21%, rgba(167, 139, 250, 0.92) 22%, transparent 24%),
-        linear-gradient(88deg, transparent 46%, rgba(96, 165, 250, 0.9) 47%, transparent 49%),
-        linear-gradient(116deg, transparent 68%, rgba(250, 204, 21, 0.78) 69%, transparent 71%);
-      mix-blend-mode: screen;
-      opacity: 0.88;
-    }
-    .legacy-hero-card {
-      position: absolute;
-      right: clamp(30px, 3vw, 46px);
-      bottom: 13%;
-      width: min(286px, 26vw);
-      min-height: 124px;
-      padding: 28px 30px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 28px;
-      background: rgba(255, 255, 255, 0.055);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(24px);
-      z-index: 4;
-    }
-    .legacy-hero-card strong {
-      display: block;
-      color: #fff;
-      font-size: 34px;
-      line-height: 1;
-    }
-    .legacy-hero-card span {
-      display: block;
-      margin-top: 10px;
-      color: #94a3b8;
-      font-size: 11px;
-      font-weight: 800;
-      line-height: 1.45;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
-    .legacy-hero-stats {
-      position: absolute;
-      left: clamp(28px, 3.2vw, 46px);
-      right: clamp(28px, 3.2vw, 46px);
-      bottom: 0;
-      z-index: 4;
-      display: flex;
-      gap: clamp(54px, 9vw, 120px);
-      padding: 28px 0 22px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-    }
-    .legacy-hero-stats strong {
-      display: block;
-      color: #fff;
-      font-size: 26px;
-      line-height: 1;
-    }
-    .legacy-hero-stats span {
-      display: block;
-      margin-top: 8px;
-      color: #94a3b8;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
+
     .legacy-pricing {
       position: relative;
       isolation: isolate;
-      padding: 96px clamp(20px, 5vw, 76px) 116px;
+      padding: 3.5rem clamp(1rem, 4vw, 2.5rem) 4rem;
       overflow: hidden;
       background:
-        radial-gradient(circle at 28% 58%, rgba(139, 92, 246, 0.16), transparent 28%),
-        radial-gradient(circle at 52% 54%, rgba(59, 130, 246, 0.14), transparent 24%),
+        radial-gradient(circle at 28% 58%, rgba(255, 255, 255, 0.08), transparent 28%),
+        radial-gradient(circle at 52% 54%, rgba(255, 255, 255, 0.06), transparent 24%),
         #050505 !important;
     }
     .legacy-pricing::before {
@@ -586,43 +736,44 @@
       inset: 32% 10% 0;
       z-index: -1;
       background:
-        radial-gradient(ellipse at 34% 48%, rgba(217, 70, 239, 0.26), transparent 34%),
-        radial-gradient(ellipse at 55% 44%, rgba(59, 130, 246, 0.22), transparent 34%);
+        radial-gradient(ellipse at 34% 48%, rgba(255, 255, 255, 0.1), transparent 34%),
+        radial-gradient(ellipse at 55% 44%, rgba(255, 255, 255, 0.06), transparent 34%);
       filter: blur(26px);
       opacity: 0.84;
     }
     .legacy-pricing-intro {
-      max-width: 860px;
-      margin: 0 auto 74px;
+      max-width: 40rem;
+      margin: 0 auto 2.5rem;
       text-align: center;
     }
     .legacy-pricing-intro h2 {
-      margin: 18px 0;
+      margin: 0.75rem 0;
       color: #fff;
-      font-size: clamp(38px, 5.3vw, 66px);
-      line-height: 1.03;
+      font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+      line-height: 1.12;
     }
     .legacy-pricing-intro p {
-      max-width: 620px;
+      max-width: 32rem;
       margin: 0 auto;
       color: #94a3b8 !important;
-      font-size: 18px;
+      font-size: 0.92rem;
       line-height: 1.6;
     }
     .legacy-pricing-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
-      max-width: 1120px;
-      min-height: 560px;
+      max-width: 56rem;
+      min-height: 0;
       margin: 0 auto;
+      gap: 0.85rem;
       perspective: 1200px;
     }
     .legacy-plan {
-      min-height: 440px;
-      padding: 38px 38px 34px;
+      min-height: 0;
+      padding: 1.5rem 1.35rem 1.25rem;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 34px;
+      border-radius: 1.35rem;
       background:
         linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
         rgba(8, 8, 12, 0.82);
@@ -633,40 +784,36 @@
       transition:
         transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
         opacity 0.45s ease,
-        filter 0.45s ease,
         border-color 0.45s ease,
         box-shadow 0.45s ease,
         background 0.45s ease;
-      will-change: transform, filter, opacity;
     }
     .legacy-plan:first-child {
-      transform: translateX(44px) scale(0.92);
-      border-color: rgba(217, 70, 239, 0.42);
-      box-shadow: 0 0 70px rgba(217, 70, 239, 0.13);
+      transform: translateX(28px) scale(0.94);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 70px rgba(255, 255, 255, 0.1);
     }
     .legacy-plan:last-child {
-      transform: translateX(-44px) scale(0.92);
+      transform: translateX(-28px) scale(0.94);
       opacity: 0.78;
     }
     .legacy-pricing-grid:has(.legacy-plan:hover) .legacy-plan {
-      opacity: 0.32;
-      filter: blur(10px) brightness(0.52) saturate(0.72);
-      transform: scale(0.86);
+      opacity: 0.55;
+      transform: scale(0.94);
     }
     .legacy-pricing-grid:has(.legacy-plan:hover) .legacy-plan:hover {
       position: relative;
       z-index: 5;
       opacity: 1;
-      filter: none;
-      transform: translateX(0) scale(1.08);
-      border-color: rgba(167, 139, 250, 0.72);
+      transform: translateX(0) scale(1.04);
+      border-color: rgba(255, 255, 255, 0.18);
       background:
-        radial-gradient(circle at 28% 88%, rgba(34, 211, 238, 0.18), transparent 28%),
-        linear-gradient(145deg, rgba(43, 66, 102, 0.86), rgba(10, 14, 24, 0.96));
+        radial-gradient(circle at 28% 88%, rgba(255, 255, 255, 0.1), transparent 28%),
+        linear-gradient(145deg, rgba(38, 38, 42, 0.92), rgba(10, 10, 12, 0.96));
       box-shadow:
-        0 0 0 1px rgba(167, 139, 250, 0.28) inset,
-        0 42px 130px rgba(59, 130, 246, 0.22),
-        0 0 88px rgba(139, 92, 246, 0.18);
+        0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+        0 42px 130px rgba(255, 255, 255, 0.06),
+        0 0 88px rgba(255, 255, 255, 0.08);
     }
     .legacy-pricing-grid:has(.legacy-plan:first-child:hover) .legacy-plan.featured,
     .legacy-pricing-grid:has(.legacy-plan:last-child:hover) .legacy-plan.featured {
@@ -675,13 +822,13 @@
     .legacy-plan.featured {
       position: relative;
       z-index: 2;
-      min-height: 520px;
-      padding: 44px 46px 40px;
-      border-color: rgba(96, 165, 250, 0.44);
+      min-height: 0;
+      padding: 1.65rem 1.5rem 1.35rem;
+      border-color: rgba(255, 255, 255, 0.14);
       background:
-        radial-gradient(circle at 28% 88%, rgba(34, 211, 238, 0.16), transparent 28%),
-        linear-gradient(145deg, rgba(43, 66, 102, 0.82), rgba(10, 14, 24, 0.94));
-      box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.18) inset, 0 38px 120px rgba(59, 130, 246, 0.18);
+        radial-gradient(circle at 28% 88%, rgba(255, 255, 255, 0.08), transparent 28%),
+        linear-gradient(145deg, rgba(38, 38, 42, 0.88), rgba(10, 10, 12, 0.94));
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 38px 120px rgba(255, 255, 255, 0.06);
     }
     .legacy-plan-head {
       display: flex;
@@ -692,69 +839,69 @@
     .legacy-plan h3 {
       margin: 0;
       color: #fff;
-      font-size: clamp(24px, 2.6vw, 34px);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
     }
     .legacy-plan-badge {
       padding: 8px 12px;
-      border: 1px solid rgba(96, 165, 250, 0.36);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 999px;
-      background: rgba(59, 130, 246, 0.14);
-      color: #93c5fd;
+      background: rgba(255, 255, 255, 0.06);
+      color: #d4d4d8;
       font-size: 11px;
       font-weight: 900;
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
     .legacy-plan p {
-      min-height: 78px;
-      margin: 22px 0 0;
+      min-height: 0;
+      margin: 0.85rem 0 0;
       color: #a7b0c0 !important;
-      font-size: 15px;
+      font-size: 0.86rem;
       line-height: 1.65;
     }
     .legacy-plan-divider {
       height: 1px;
-      margin: 26px 0 28px;
+      margin: 1rem 0 1.1rem;
       background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.28), transparent);
     }
     .legacy-plan-price {
       display: flex;
       align-items: baseline;
-      gap: 8px;
-      margin-bottom: 28px;
+      gap: 6px;
+      margin-bottom: 1rem;
       color: #fff;
-      font-size: clamp(44px, 5vw, 68px);
+      font-size: clamp(1.75rem, 3vw, 2.35rem);
       font-weight: 650;
     }
     .legacy-plan-price small {
       color: #94a3b8;
-      font-size: 16px;
+      font-size: 0.8rem;
       font-weight: 700;
     }
     .legacy-plan-label {
       display: block;
-      margin-bottom: 24px;
-      color: #a78bfa;
-      font-size: 11px;
+      margin-bottom: 0.85rem;
+      color: #d4d4d4;
+      font-size: 0.62rem;
       font-weight: 900;
       letter-spacing: 0.22em;
       text-transform: uppercase;
     }
     .legacy-plan.featured .legacy-plan-label {
-      color: #7dd3fc;
+      color: #fafafa;
     }
     .legacy-plan ul {
       display: grid;
-      gap: 18px;
-      min-height: 126px;
-      margin: 0 0 30px;
+      gap: 0.65rem;
+      min-height: 0;
+      margin: 0 0 1.1rem;
       padding: 0;
       list-style: none;
     }
     .legacy-plan li {
       color: #d5dbe7;
-      font-size: 15px;
-      font-weight: 750;
+      font-size: 0.84rem;
+      font-weight: 650;
     }
     .legacy-plan li::before {
       content: "✓";
@@ -765,30 +912,30 @@
       margin-right: 13px;
       border: 1px solid currentColor;
       border-radius: 999px;
-      color: #d946ef;
-      box-shadow: 0 0 10px rgba(217, 70, 239, 0.58);
+      color: #e5e5e5;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
       font-size: 12px;
     }
     .legacy-plan.featured li::before {
-      color: #60a5fa;
-      box-shadow: 0 0 10px rgba(96, 165, 250, 0.62);
+      color: #d4d4d4;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.14);
     }
     .legacy-plan a {
       width: 100%;
-      min-height: 50px;
+      min-height: 2.35rem;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 999px;
       text-decoration: none;
-      font-size: 13px;
+      font-size: 0.68rem;
       font-weight: 800;
       letter-spacing: 0.12em;
       text-transform: uppercase;
     }
     .legacy-plan a.primary {
       color: #fff;
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      background: linear-gradient(135deg, #ffffff, #a3a3a3);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .legacy-plan a.secondary {
@@ -819,28 +966,73 @@
     p {
       color: #94a3b8 !important;
     }
-    @keyframes heroPulse {
-      0%, 100% { opacity: 0.74; transform: scale(0.98); }
-      50% { opacity: 1; transform: scale(1.04); }
+    .technical-grid {
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
     }
-    @keyframes heroFloat {
-      0%, 100% { transform: rotate(-8deg) skewY(-2deg) translate3d(0, 0, 0); }
-      50% { transform: rotate(-6deg) skewY(-2deg) translate3d(10px, -18px, 0); }
+    .welcome-section-divider {
+      height: 1px;
+      max-width: 68rem;
+      margin: 0 auto;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    }
+    .nexus-feature-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)) !important;
+      border: 1px solid rgba(255, 255, 255, 0.16) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    .nexus-feature-card p {
+      color: #d4d4d8 !important;
+    }
+    .nexus-scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 1.5rem;
+      z-index: 30;
+      transform: translateX(-50%);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .nexus-scroll-cue:hover {
+      color: rgba(255, 255, 255, 0.72);
+    }
+    .nexus-scroll-cue .material-symbols-outlined {
+      font-size: 1.25rem;
+      animation: nexusScrollBounce 2.2s ease-in-out infinite;
+    }
+    @keyframes nexusScrollBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .nexus-scroll-cue .material-symbols-outlined {
+        animation: none;
+      }
+    }
+    @media (max-width: 1024px) {
+      .welcome-nav-inner {
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+      }
+      .welcome-nav-links {
+        display: none;
+      }
+      .welcome-nav-actions {
+        justify-self: end;
+      }
     }
     @media (max-width: 900px) {
-      .welcome-nav .hidden.md\:flex {
-        display: none !important;
-      }
-      #hero-text {
-        max-width: 100% !important;
-      }
-      .legacy-hero-shard {
-        right: -18%;
-        top: 31%;
-        width: 80vw;
-        opacity: 0.34;
-      }
-      .legacy-hero-card {
+      .welcome-nav-login {
         display: none;
       }
       .legacy-pricing-grid {
@@ -873,80 +1065,169 @@
   </style>
 </head>
 <body class="bg-background text-on-surface font-body-md overflow-x-hidden">
-  <nav class="welcome-nav fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl border-b border-outline-variant/30 h-20">
-    <div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop h-full">
-      <a class="font-display-lg text-[24px] md:text-[34px] tracking-normal text-primary no-underline" href="/">ARCHITECT</a>
-      <div class="hidden md:flex items-center gap-8">
-        <a class="text-primary font-semibold border-b border-primary font-body-md text-body-md transition-all duration-300" href="#product">Inicio</a>
-        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#model-3d">Análisis visual</a>
-        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#features">Revisión de planos</a>
-        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#pricing">Planes</a>
-        <a class="text-secondary hover:text-primary transition-colors duration-300 font-body-md text-body-md" href="#structural">Criterios técnicos</a>
+  <nav class="welcome-nav fixed top-0 w-full z-50">
+    <div class="welcome-nav-inner">
+      <a class="welcome-nav-brand" href="/">
+        <img src="/static/brand/architect-icon.png?v=3" alt="" class="welcome-nav-brand-icon" width="30" height="30" />
+        <span class="welcome-nav-brand-text">ARCHITECT</span>
+      </a>
+      <div class="welcome-nav-links">
+        <a class="is-active" href="#product">Inicio</a>
+        <a href="#model-3d">Cómo funciona</a>
+        <a href="#features">Funciones</a>
+        <a href="#home-projects">Casa hogar</a>
+        <a href="#pricing">Planes</a>
       </div>
-      <div class="flex items-center gap-3 md:gap-4">
-        <a class="text-secondary font-body-md text-body-md px-3 md:px-4 py-2 hover:text-primary transition-colors no-underline" href="/login">Ingresar</a>
-        <a class="bg-primary text-on-primary font-body-md text-body-md px-4 md:px-6 py-2 rounded-full font-semibold hover:opacity-80 transition-opacity no-underline" href="/login#register">Crear cuenta</a>
+      <div class="welcome-nav-actions">
+        <a class="welcome-nav-login" href="/login">Ingresar</a>
+        <div class="welcome-nav-cta-wrap">
+          <a class="welcome-nav-cta" href="/login#register">Crear cuenta</a>
+        </div>
       </div>
     </div>
   </nav>
 
-  <main class="pt-20">
-    <section id="product" class="hero-clean relative text-center px-margin-mobile md:px-margin-desktop technical-grid overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-b from-transparent to-background/50 pointer-events-none"></div>
-      <span class="hero-orbit hero-orbit--one" aria-hidden="true"></span>
-      <span class="hero-orbit hero-orbit--two" aria-hidden="true"></span>
-      <div class="legacy-hero-energy" aria-hidden="true"></div>
-      <div class="legacy-hero-shard" aria-hidden="true"></div>
-      <div class="relative z-10 max-w-4xl mx-auto scroll-reveal visible" id="hero-text">
-        <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Revisión técnica de planos asistida por IA</span>
-        <h1 class="font-display-lg text-display-lg md:text-[54px] leading-[1.06] mb-6 tracking-normal">Detecta errores en planos</h1>
-        <p class="font-body-lg text-body-lg text-secondary max-w-[38rem] mx-auto mb-9">
-          Plataforma para revisar planos arquitectónicos, estructurales y de instalaciones, identificar errores de coordinación, señalar omisiones documentales y apoyar la validación técnica antes de enviar el proyecto a obra.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a class="bg-primary text-on-primary font-body-md text-body-md px-7 py-3 rounded-full font-semibold text-[15px] transition-transform hover:scale-105 no-underline" href="/login#register">Iniciar revisión</a>
-          <a class="glass px-7 py-3 rounded-full font-semibold text-[15px] hover:bg-white/50 transition-all no-underline text-primary" href="/login">Entrar al sistema</a>
+  <main>
+    <section id="product" class="nexus-hero" aria-label="Inicio">
+      <div class="nexus-hero-glow nexus-hero-glow--top" aria-hidden="true"></div>
+      <div class="nexus-hero-glow nexus-hero-glow--bottom" aria-hidden="true"></div>
+
+      <a href="#model-3d" class="nexus-float-card nexus-float-card--tl" aria-label="Detección YOLO en planta">
+        <div class="nexus-float-shell">
+          <div class="nexus-float-inner">
+            <div class="nexus-float-icon"><span class="material-symbols-outlined">upload_file</span></div>
+            <span>Detección YOLO en planta</span>
+          </div>
+        </div>
+      </a>
+      <a href="#structural" class="nexus-float-card nexus-float-card--tr" aria-label="Reglas tuxtla_rc">
+        <div class="nexus-float-shell">
+          <div class="nexus-float-inner">
+            <div class="nexus-float-icon"><span class="material-symbols-outlined">gavel</span></div>
+            <span>Reglas tuxtla_rc</span>
+          </div>
+        </div>
+      </a>
+      <a href="#home-projects" class="nexus-float-card nexus-float-card--bl" aria-label="9 etapas casa hogar">
+        <div class="nexus-float-shell">
+          <div class="nexus-float-inner">
+            <div class="nexus-float-icon"><span class="material-symbols-outlined">home_work</span></div>
+            <span>9 etapas casa hogar</span>
+          </div>
+        </div>
+      </a>
+      <a href="#chat-feature" class="nexus-float-card nexus-float-card--br" aria-label="Chat de construcción">
+        <div class="nexus-float-shell">
+          <div class="nexus-float-inner">
+            <div class="nexus-float-icon"><span class="material-symbols-outlined">forum</span></div>
+            <span>Chat de construcción</span>
+          </div>
+        </div>
+      </a>
+
+      <aside class="nexus-dock" aria-label="Accesos rápidos">
+        <div class="nexus-dock-inner">
+          <a href="/legacy-app" class="nexus-dock-btn" data-dock="workspace" title="Workspace"><span class="material-symbols-outlined">near_me</span></a>
+          <a href="#model-3d" class="nexus-dock-btn" data-dock="model" title="Subir plano"><span class="material-symbols-outlined">upload_file</span></a>
+          <a href="#structural" class="nexus-dock-btn" data-dock="rules" title="Reglas"><span class="material-symbols-outlined">gavel</span></a>
+          <a href="#chat-feature" class="nexus-dock-btn" data-dock="chat" title="Chat"><span class="material-symbols-outlined">chat</span></a>
+          <a href="#home-projects" class="nexus-dock-btn" data-dock="home" title="Casa hogar"><span class="material-symbols-outlined">home_work</span></a>
+        </div>
+      </aside>
+
+      <div class="nexus-hero-main">
+        <div class="nexus-hero-center">
+          <div class="nexus-badge scroll-reveal is-visible">
+            <span class="nexus-badge-dot"></span>
+            Plan gratis · 5 análisis al mes
+          </div>
+
+          <div class="canvas-select-box">
+            <span class="draw-border-top" aria-hidden="true"></span>
+            <span class="draw-border-right" aria-hidden="true"></span>
+            <span class="draw-border-bottom" aria-hidden="true"></span>
+            <span class="draw-border-left" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--tl" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--tm" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--tr" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--ml" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--mr" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--bl" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--bm" aria-hidden="true"></span>
+            <span class="canvas-handle canvas-handle--br" aria-hidden="true"></span>
+            <h1 class="nexus-hero-title">ARCHITECT</h1>
+            <div id="draw-cursor" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="#050505" stroke-width="1.5" width="100%" height="100%">
+                <path d="M4.1 4.3c-.3-.1-.6.2-.5.5l6.8 15.8c.2.4.8.4.9-.1l1.7-6.5c.1-.5.5-.8 1-1l6.5-1.6c.5-.1.6-.8.1-1L4.1 4.3Z"></path>
+              </svg>
+            </div>
+          </div>
+
+          <p class="canvas-subtitle" id="hero-subtitle">
+            <span class="reveal-word-wrap"><span class="reveal-word">Revisa</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word is-emphasis">planos</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">con</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">detección</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">asistida,</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word is-emphasis">reglas</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">locales</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">y</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word is-emphasis">proyectos</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">casa</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">hogar</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">en</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">un</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">solo</span></span>
+            <span class="reveal-word-wrap"><span class="reveal-word">workspace.</span></span>
+          </p>
+
+          <div class="nexus-ctas">
+            <div class="nexus-cta-primary-wrap">
+              <a class="nexus-cta-primary" href="/login#register">
+                Crear cuenta gratis
+                <span class="material-symbols-outlined" style="font-size:1.1rem">arrow_forward</span>
+              </a>
+            </div>
+            <a class="nexus-cta-ghost" href="#model-3d">Ver cómo funciona</a>
+          </div>
         </div>
       </div>
-      <div class="legacy-hero-card" aria-hidden="true">
-        <strong>200+</strong>
-        <span>criterios tecnicos listos para auditoria documental</span>
-      </div>
-      <div class="legacy-hero-stats" aria-hidden="true">
-        <div><strong>3</strong><span>disciplinas</span></div>
-        <div><strong>4</strong><span>frentes</span></div>
-        <div><strong>1</strong><span>reporte</span></div>
-      </div>
-      <div class="hero-scroll-cue">Desplazar</div>
+
+      <a href="#model-3d" class="nexus-scroll-cue" aria-label="Ver cómo funciona">
+        <span>Explorar</span>
+        <span class="material-symbols-outlined">expand_more</span>
+      </a>
     </section>
+
+    <div class="welcome-section-divider" aria-hidden="true"></div>
 
     <section class="model-section" id="model-3d">
       <div class="model-shell">
         <div class="mb-8 scroll-reveal">
-          <p class="model-eyebrow">Coordinación visual</p>
-          <h2 class="model-title">Lectura espacial para revisar interferencias y elementos críticos.</h2>
-          <p class="model-copy">La vista 3D representa cómo la plataforma puede apoyar la interpretación de elementos estructurales, cruces entre disciplinas, ejes, vanos y zonas que requieren revisión por parte del equipo técnico.</p>
+          <p class="model-eyebrow">Flujo de análisis</p>
+          <h2 class="model-title">Del archivo subido al plano marcado con observaciones.</h2>
+          <p class="model-copy">Convierte PDF y CAD a imagen, corre detección YOLO sobre la planta y pasa los resultados por un motor de reglas configurable. Obtienes medidas estimadas, incidencias numeradas sobre el dibujo y un chat para preguntar o profundizar en cada revisión. No sustituye la firma de un responsable de obra.</p>
         </div>
         <div class="w-full mx-auto scroll-reveal" id="hero-image">
-          <div class="glass p-4 rounded-xl shadow-2xl relative group">
-            <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/10 to-transparent rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <div class="glass p-4 rounded-xl shadow-2xl relative group">
+              <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/10 to-transparent rounded-xl blur opacity-20 pointer-events-none"></div>
             <div class="ai-plan-stage relative rounded-lg overflow-hidden border border-outline-variant/20">
             <canvas id="aiPlanCanvas" class="ai-plan-canvas" aria-label="Plano arquitectónico 3D analizado por IA"></canvas>
             <div class="ai-plan-hud absolute inset-0">
               <div class="absolute top-6 left-6 space-y-3 text-left">
-                <div class="ai-plan-chip px-4 py-2 rounded-lg flex items-center gap-3 animate-pulse">
-                  <span class="w-2 h-2 bg-error rounded-full"></span>
-                  <span class="text-label-sm font-label-sm">Alerta: posible interferencia viga-ducto</span>
+                <div class="ai-plan-chip px-4 py-2 rounded-lg flex items-center gap-3">
+                  <span class="w-2 h-2 bg-zinc-200 rounded-full"></span>
+                  <span class="text-label-sm font-label-sm">Puerta con ancho estimado bajo mínimo de acceso</span>
                 </div>
                 <div class="ai-plan-chip px-4 py-2 rounded-lg flex items-center gap-3">
-                  <span class="w-2 h-2 bg-[#19a8ff] rounded-full"></span>
-                  <span class="text-label-sm font-label-sm">Revisión pendiente: cotas, ejes y niveles</span>
+                  <span class="w-2 h-2 bg-zinc-400 rounded-full"></span>
+                  <span class="text-label-sm font-label-sm">Ventanas con anchos dispares en la misma fachada</span>
                 </div>
               </div>
               <div class="absolute bottom-6 right-6 hidden md:block">
                 <div class="ai-plan-chip px-5 py-3 rounded-xl text-left">
-                  <p class="text-label-sm font-label-sm uppercase tracking-widest text-secondary">Análisis en curso</p>
-                  <p class="text-body-md font-body-md text-primary mt-1">Estructura, arquitectura e instalaciones</p>
+                  <p class="text-label-sm font-label-sm uppercase tracking-widest text-secondary">Resultado del análisis</p>
+                  <p class="text-body-md font-body-md text-primary mt-1">Detecciones, medidas y reglas tuxtla_rc</p>
                 </div>
               </div>
             </div>
@@ -961,90 +1242,94 @@
       </div>
     </section>
 
-    <section class="py-16 bg-surface-container-lowest">
+    <div class="welcome-section-divider" aria-hidden="true"></div>
+
+    <section class="py-12 bg-surface-container-lowest">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter text-center">
-          <div class="p-6 scroll-reveal">
-            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="3" data-suffix="">3</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Disciplinas coordinadas</p>
-            <p class="mt-4 text-secondary/70">Arquitectura, estructura e instalaciones revisadas dentro del mismo flujo.</p>
+          <div class="p-5 scroll-reveal">
+            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="4" data-suffix="">4</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Formatos de entrada</p>
+            <p class="mt-4 text-secondary/70">PNG, JPG, PDF, DXF y DWG. Los CAD y PDF se rasterizan antes del análisis.</p>
           </div>
-          <div class="p-6 scroll-reveal" style="transition-delay: 100ms">
-            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="4" data-suffix="">4</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Frentes de revisión</p>
-            <p class="mt-4 text-secondary/70">Geometría, cotas, interferencias y documentación técnica del plano.</p>
+          <div class="p-5 scroll-reveal" style="transition-delay: 100ms">
+            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="1" data-suffix="">1</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Chat de construcción</p>
+            <p class="mt-4 text-secondary/70">Pregunta normativa y criterios técnicos sin subir plano, con manuales indexados en el sistema.</p>
           </div>
-          <div class="p-6 scroll-reveal" style="transition-delay: 200ms">
-            <div class="stat-number text-[42px] font-display-lg text-primary mb-1.5" data-value="1" data-suffix="">1</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Reporte centralizado</p>
-            <p class="mt-4 text-secondary/70">Hallazgos organizados para revisión, corrección y seguimiento del equipo.</p>
+          <div class="p-5 scroll-reveal" style="transition-delay: 200ms">
+            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="9" data-suffix="">9</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Etapas casa hogar</p>
+            <p class="mt-4 text-secondary/70">Gestiona vivienda unifamiliar de programación a entrega, con documentos, equipo y actividad por proyecto.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="features" class="py-20 px-margin-mobile md:px-margin-desktop">
+    <div class="welcome-section-divider" aria-hidden="true"></div>
+
+    <section id="features" class="py-14 px-margin-mobile md:px-margin-desktop">
       <div class="max-w-container-max mx-auto">
-        <div class="text-center mb-12 scroll-reveal">
-          <h2 class="font-display-lg text-display-lg mb-4 tracking-normal">Capacidades de revisión técnica</h2>
-          <p class="font-body-lg text-body-lg text-secondary max-w-xl mx-auto">Herramientas pensadas para reducir retrabajo, ordenar observaciones y mejorar la coordinación entre disciplinas antes de obra.</p>
+        <div class="text-center mb-8 scroll-reveal">
+          <h2 class="font-display-lg text-display-lg mb-3 tracking-normal">Qué puedes hacer en ARCHITECT</h2>
+          <p class="font-body-lg text-body-lg text-secondary max-w-xl mx-auto">Herramientas que ya están en el workspace: análisis de planos, reglas locales, proyectos de vivienda y seguimiento por chat.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
           <div class="md:col-span-8 group scroll-reveal">
-            <div class="glass p-7 rounded-xl h-full flex flex-col justify-between overflow-hidden relative">
+            <div class="glass p-5 rounded-xl h-full flex flex-col justify-between overflow-hidden relative">
               <div class="relative z-10">
-                <span class="material-symbols-outlined text-3xl mb-4 bg-surface-container rounded-full p-3">architecture</span>
-                <h3 class="font-headline-md text-headline-md mb-4">Detección de inconsistencias</h3>
-                <p class="font-body-md text-body-md text-secondary max-w-md">Identifica señales de planos incompletos o contradictorios: cotas faltantes, simbología inconsistente, elementos duplicados, cruces no resueltos y zonas que requieren validación técnica.</p>
+                <span class="material-symbols-outlined text-2xl mb-3 bg-surface-container rounded-full p-2.5">upload_file</span>
+                <h3 class="font-headline-md text-headline-md mb-3">Análisis de planos en el workspace</h3>
+                <p class="font-body-md text-body-md text-secondary max-w-md">Sube un archivo, obtén detecciones de puertas, ventanas y muros, un reporte de medidas y un plano anotado con incidencias numeradas. Cada análisis queda en tu historial y puedes seguir la conversación con preguntas de seguimiento.</p>
               </div>
-              <div class="mt-8 grid grid-cols-3 gap-3 opacity-60 group-hover:opacity-100 transition-opacity duration-500">
-                <div class="h-16 rounded-xl bg-surface-container border border-outline-variant/30"></div>
-                <div class="h-16 rounded-xl bg-primary/10 border border-outline-variant/30"></div>
-                <div class="h-16 rounded-xl bg-error/10 border border-outline-variant/30"></div>
+              <div class="mt-5 grid grid-cols-3 gap-2.5 opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+                <div class="h-12 rounded-lg bg-surface-container border border-outline-variant/30"></div>
+                <div class="h-12 rounded-lg bg-primary/10 border border-outline-variant/30"></div>
+                <div class="h-12 rounded-lg bg-error/10 border border-outline-variant/30"></div>
               </div>
             </div>
           </div>
 
           <div id="structural" class="md:col-span-4 scroll-reveal" style="transition-delay: 150ms">
-            <div class="glass p-7 rounded-xl h-full border border-primary/5">
-              <span class="material-symbols-outlined text-3xl mb-4 bg-surface-container rounded-full p-3">layers</span>
-              <h3 class="font-headline-md text-headline-md mb-4">Revisión estructural preliminar</h3>
-              <p class="font-body-md text-body-md text-secondary">Apoya la lectura de ejes, niveles, columnas, vigas, claros y continuidad de elementos. Funciona como filtro de revisión documental; no sustituye el cálculo ni la firma de un especialista.</p>
-              <div class="mt-8 pt-8 border-t border-outline-variant/20">
+            <div class="glass p-5 rounded-xl h-full border border-primary/5">
+              <span class="material-symbols-outlined text-2xl mb-3 bg-surface-container rounded-full p-2.5">gavel</span>
+              <h3 class="font-headline-md text-headline-md mb-3">Reglas y normativa en planta</h3>
+              <p class="font-body-md text-body-md text-secondary">El motor valida habitabilidad, anchos de puertas y ventanas, circulación interior y parámetros urbanos estimables en planta, con referencias a tuxtla_rc y CEV. Puedes ajustar umbrales y pesos del modelo en Ajustes.</p>
+              <div class="mt-5 pt-5 border-t border-outline-variant/20">
                 <ul class="space-y-4">
                   <li class="flex items-center gap-3 text-label-sm font-label-sm">
                     <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    EJES Y NIVELES
+                    PUERTAS Y VANOS
                   </li>
                   <li class="flex items-center gap-3 text-label-sm font-label-sm">
                     <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    ELEMENTOS PORTANTES
+                    HABITABILIDAD Y CIRCULACIÓN
                   </li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <div id="bim" class="md:col-span-4 scroll-reveal" style="transition-delay: 200ms">
-            <div class="glass p-7 rounded-xl h-full bg-primary text-on-primary">
-              <span class="material-symbols-outlined text-3xl mb-4 bg-white/10 rounded-full p-3">sync_alt</span>
-              <h3 class="font-headline-md text-headline-md mb-4">Coordinación de especialidades</h3>
-              <p class="font-body-md text-body-md opacity-70">Compara información entre arquitectura, estructura e instalaciones para localizar interferencias, cambios no reflejados y criterios que deben confirmarse antes de emitir planos.</p>
+          <div id="home-projects" class="md:col-span-4 scroll-reveal" style="transition-delay: 200ms">
+            <div class="glass nexus-feature-card p-5 rounded-xl h-full">
+              <span class="material-symbols-outlined text-2xl mb-3 bg-white/10 rounded-full p-2.5">home_work</span>
+              <h3 class="font-headline-md text-headline-md mb-3">Proyectos casa hogar</h3>
+              <p class="font-body-md text-body-md opacity-80">Metodología de 9 etapas para vivienda unifamiliar: apartados documentales, carga de archivos, asignación de responsables, comentarios de revisión e historial de actividad. En etapas 5 y 6 puedes vincular la revisión de planos del workspace.</p>
             </div>
           </div>
 
-          <div class="md:col-span-8 scroll-reveal" style="transition-delay: 250ms">
-            <div class="glass p-7 rounded-xl h-full flex items-center gap-8">
+          <div id="chat-feature" class="md:col-span-8 scroll-reveal" style="transition-delay: 250ms">
+            <div class="glass p-5 rounded-xl h-full flex items-center gap-6">
               <div class="hidden lg:block w-1/3">
                 <div class="aspect-square rounded-full border-4 border-dashed border-outline-variant/30 flex items-center justify-center p-8">
                   <div class="w-full h-full rounded-full bg-gradient-to-tr from-primary to-secondary/20"></div>
                 </div>
               </div>
               <div class="flex-1">
-                <h3 class="font-headline-md text-headline-md mb-4">Criterios normativos configurables</h3>
-                <p class="font-body-md text-body-md text-secondary">Permite estructurar listas de verificación por proyecto, municipio o despacho: accesibilidad, seguridad, documentación mínima, simbología, escalas, notas generales y criterios de entrega.</p>
-                <a class="mt-6 font-label-sm text-label-sm uppercase tracking-widest text-primary flex items-center gap-2 group no-underline" href="/login">
-                  Revisar criterios
+                <h3 class="font-headline-md text-headline-md mb-3">Chat, correcciones y cuentas de equipo</h3>
+                <p class="font-body-md text-body-md text-secondary">Haz preguntas de construcción sin adjuntar plano, guarda chats por proyecto, marca correcciones sobre detecciones para mejorar el modelo y administra usuarios con planes de uso mensual. Login con correo o Google.</p>
+                <a class="mt-4 font-label-sm text-label-sm uppercase tracking-widest text-primary flex items-center gap-2 group no-underline" href="/legacy-app">
+                  Ir al workspace
                   <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </a>
               </div>
@@ -1054,26 +1339,28 @@
       </div>
     </section>
 
+    <div class="welcome-section-divider" aria-hidden="true"></div>
+
     <section id="pricing" class="legacy-pricing technical-grid">
       <div class="legacy-pricing-intro scroll-reveal">
-        <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Suscripciones IA</span>
-        <h2>Planes flexibles para cada etapa de revision.</h2>
-        <p>Escoge un plan segun el volumen de planos, disciplinas y nivel de control tecnico que necesita tu equipo.</p>
+        <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Planes de uso</span>
+        <h2>Límites claros según cuántos planos revisas al mes.</h2>
+        <p>Todos empiezan en el plan Gratis (5 análisis/mes, modelo demo). Los planes de pago se activan tras una <strong>pasarela de pago simulada</strong> (proyecto escolar, sin cobro real).</p>
       </div>
       <div class="legacy-pricing-grid scroll-reveal">
         <article class="legacy-plan">
           <div class="legacy-plan-head">
             <h3>Starter</h3>
           </div>
-          <p>Para estudiantes, freelancers o revisiones puntuales de planos.</p>
+          <p>Para estudiantes y revisiones ocasionales de plantas arquitectónicas.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$99 <small>/mes</small></div>
           <span class="legacy-plan-label">Incluye</span>
           <ul>
-            <li>30 revisiones de planos al mes</li>
-            <li>Deteccion de cotas y simbologia</li>
-            <li>Modelo real habilitado</li>
-            <li>Reporte PDF con observaciones</li>
+            <li>30 análisis de planos al mes</li>
+            <li>Modelo entrenado (no demo)</li>
+            <li>Archivos hasta 10 MB</li>
+            <li>Exportar reportes</li>
           </ul>
           <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','starter')">Elegir plan</a>
         </article>
@@ -1083,15 +1370,15 @@
             <h3>Pro</h3>
             <span class="legacy-plan-badge">Popular</span>
           </div>
-          <p>Para despachos que revisan entregables de arquitectura e ingenieria cada semana.</p>
+          <p>Para despachos que revisan planos cada semana y necesitan más capacidad.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$299 <small>/mes</small></div>
-          <span class="legacy-plan-label">Mas elegido</span>
+          <span class="legacy-plan-label">Más elegido</span>
           <ul>
-            <li>150 revisiones de planos al mes</li>
-            <li>Revision arquitectonica, estructural e instalaciones</li>
-            <li>Prioridad en procesamiento de IA</li>
-            <li>API y reportes exportables</li>
+            <li>150 análisis de planos al mes</li>
+            <li>Archivos hasta 20 MB</li>
+            <li>Acceso API y exportación</li>
+            <li>Soporte prioritario</li>
           </ul>
           <a class="primary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','pro')">Elegir plan</a>
         </article>
@@ -1100,47 +1387,47 @@
           <div class="legacy-plan-head">
             <h3>Enterprise</h3>
           </div>
-          <p>Para constructoras, universidades o equipos con criterios tecnicos propios.</p>
+          <p>Para equipos con alto volumen de revisiones y archivos pesados.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$999 <small>/mes</small></div>
           <span class="legacy-plan-label">Equipo</span>
           <ul>
-            <li>Hasta 9999 revisiones mensuales</li>
-            <li>Criterios y listas de chequeo privadas</li>
-            <li>Usuarios por equipo y roles</li>
-            <li>Soporte dedicado y SLA</li>
+            <li>Hasta 9 999 análisis al mes</li>
+            <li>Archivos hasta 50 MB</li>
+            <li>API, exportación y SLA</li>
+            <li>Soporte dedicado</li>
           </ul>
           <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','enterprise')">Elegir plan</a>
         </article>
       </div>
     </section>
 
-    <section class="py-20 text-center relative overflow-hidden">
+    <section class="py-14 text-center relative overflow-hidden">
       <div class="absolute inset-0 technical-grid opacity-20 pointer-events-none"></div>
       <div class="max-w-3xl mx-auto px-margin-mobile relative z-10 scroll-reveal">
-        <h2 class="font-display-lg text-display-lg mb-8 tracking-normal">Revisa tus planos antes de emitirlos a obra.</h2>
-        <p class="font-body-lg text-body-lg text-secondary mb-12">Centraliza observaciones, documenta inconsistencias y entrega al equipo una base clara para corregir el proyecto con mayor control técnico.</p>
-        <div class="flex flex-col sm:flex-row gap-6 justify-center">
-          <a class="bg-primary text-on-primary font-body-md text-body-md px-8 py-3.5 rounded-full font-bold text-[15px] hover:opacity-90 transition-all shadow-xl no-underline" href="/login#register">Crear cuenta</a>
-          <a class="px-8 py-3.5 rounded-full font-bold text-[15px] hover:bg-surface-container transition-all border border-outline no-underline text-primary" href="/login">Iniciar sesión</a>
+        <h2 class="font-display-lg text-display-lg mb-5 tracking-normal">Empieza con 5 análisis gratis al mes.</h2>
+        <p class="font-body-lg text-body-lg text-secondary mb-8">Crea tu cuenta, sube un plano en el workspace o abre un proyecto casa hogar. Si necesitas más revisiones o el modelo entrenado, cambia de plan desde tu cuenta.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a class="bg-primary text-on-primary font-body-md text-body-md px-6 py-2.5 rounded-full font-bold text-[14px] hover:opacity-90 transition-all shadow-xl no-underline" href="/login#register">Crear cuenta gratis</a>
+          <a class="px-6 py-2.5 rounded-full font-bold text-[14px] hover:bg-surface-container transition-all border border-outline no-underline text-primary" href="/legacy-app">Abrir workspace</a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="w-full py-14 bg-surface border-t border-outline-variant/20">
+  <footer class="w-full py-10 bg-surface border-t border-outline-variant/20">
     <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop grid grid-cols-1 md:grid-cols-2 gap-gutter">
       <div>
-        <div class="font-display-lg-mobile text-display-lg-mobile text-primary mb-6">ARCHITECT</div>
-        <p class="text-secondary font-body-md text-body-md max-w-sm mb-8 opacity-60">Asistente de revisión técnica para planos de arquitectura, ingeniería civil e instalaciones. Diseñado para apoyar decisiones, no para reemplazar la validación profesional.</p>
+        <img src="/static/brand/architect-logo.png?v=3" alt="ARCHITECT" class="mb-4 h-10 w-auto max-w-[10.5rem] object-contain" />
+        <p class="text-secondary font-body-md text-body-md max-w-sm mb-6 opacity-60">Revisión asistida de planos arquitectónicos en planta, chat de construcción y gestión de proyectos de vivienda. Herramienta de apoyo técnico; no reemplaza proyecto ejecutivo firmado ni responsiva de obra.</p>
         <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary/40">© 2026 ARCHITECT. Todos los derechos reservados.</p>
       </div>
       <div class="grid grid-cols-2 gap-8">
         <div class="flex flex-col gap-4">
           <h4 class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Plataforma</h4>
-          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login">Revisión de planos</a>
-          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/login">Reportes técnicos</a>
-          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/docs">API</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/legacy-app">Workspace</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/legacy-app?home-projects=1">Casa hogar</a>
+          <a class="text-secondary hover:text-primary transition-colors duration-300 font-label-sm text-label-sm uppercase tracking-widest no-underline" href="/docs" target="_blank" rel="noopener">API (FastAPI)</a>
         </div>
         <div class="flex flex-col gap-4">
           <h4 class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Acceso</h4>
@@ -1153,139 +1440,246 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
   <script>
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const nav = document.querySelector(".welcome-nav");
+    let scrollRaf = 0;
 
-    function updateNav() {
+    function onScrollFrame() {
+      scrollRaf = 0;
       nav?.classList.toggle("nav-scrolled", window.scrollY > 16);
     }
-    updateNav();
-    window.addEventListener("scroll", updateNav, { passive: true });
+
+    function scheduleScrollWork() {
+      if (!scrollRaf) {
+        scrollRaf = requestAnimationFrame(onScrollFrame);
+      }
+    }
+
+    scheduleScrollWork();
+    window.addEventListener("scroll", scheduleScrollWork, { passive: true });
 
     document.querySelectorAll(".scroll-reveal").forEach((el, index) => {
-      el.style.setProperty("--reveal-delay", `${Math.min(index * 55, 220)}ms`);
+      el.style.setProperty("--reveal-delay", `${Math.min(index * 40, 160)}ms`);
     });
 
-    if (window.gsap && window.ScrollTrigger && !reduceMotion) {
-      gsap.registerPlugin(ScrollTrigger);
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          revealObserver.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -6% 0px", threshold: 0.12 }
+    );
 
+    document.querySelectorAll(".scroll-reveal").forEach((el) => {
+      if (el.closest(".nexus-hero-center")) return;
+      if (el.classList.contains("is-visible")) return;
+      revealObserver.observe(el);
+    });
+
+    function animateStat(el) {
+      const value = Number(el.dataset.value || 0);
+      const suffix = el.dataset.suffix || "";
+      const duration = 850;
+      const start = performance.now();
+      function frame(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const current =
+          value < 1 ? (value * eased).toFixed(1) : String(Math.round(value * eased));
+        el.textContent = `${current}${suffix}`;
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    const statObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animateStat(entry.target);
+          statObserver.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.35 }
+    );
+    document.querySelectorAll(".stat-number").forEach((el) => statObserver.observe(el));
+
+    const dockButtons = Array.from(document.querySelectorAll(".nexus-dock-btn[data-dock]"));
+    const dockSectionMap = [
+      { dock: "model", id: "model-3d" },
+      { dock: "rules", id: "structural" },
+      { dock: "chat", id: "chat-feature" },
+      { dock: "home", id: "home-projects" },
+    ];
+
+    function setActiveDock(key) {
+      dockButtons.forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.dock === key);
+      });
+    }
+
+    if (dockButtons.length && "IntersectionObserver" in window) {
+      const dockObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          if (!visible.length) return;
+          const match = dockSectionMap.find((item) => item.id === visible[0].target.id);
+          if (match) setActiveDock(match.dock);
+        },
+        { rootMargin: "-20% 0px -55% 0px", threshold: [0.12, 0.35, 0.6] }
+      );
+      dockSectionMap.forEach(({ id }) => {
+        const section = document.getElementById(id);
+        if (section) dockObserver.observe(section);
+      });
+      window.addEventListener(
+        "scroll",
+        () => {
+          if (window.scrollY < window.innerHeight * 0.35) {
+            setActiveDock("");
+          }
+        },
+        { passive: true }
+      );
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener("click", (event) => {
+        const href = anchor.getAttribute("href");
+        if (!href || href === "#") return;
+        const target = document.querySelector(href);
+        if (!target) return;
+        event.preventDefault();
+        const top = target.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+      });
+    });
+
+    const navLinks = Array.from(document.querySelectorAll(".welcome-nav-links a[href^='#']"));
+    if (navLinks.length && "IntersectionObserver" in window) {
+      const navSectionIds = navLinks
+        .map((link) => link.getAttribute("href")?.slice(1))
+        .filter(Boolean);
+      const navObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          if (!visible.length) return;
+          const id = visible[0].target.id;
+          navLinks.forEach((link) => {
+            link.classList.toggle("is-active", link.getAttribute("href") === `#${id}`);
+          });
+        },
+        { rootMargin: "-18% 0px -58% 0px", threshold: [0.15, 0.4] }
+      );
+      navSectionIds.forEach((id) => {
+        const section = document.getElementById(id);
+        if (section) navObserver.observe(section);
+      });
+    }
+
+    if (window.gsap && !reduceMotion) {
       gsap.from(".welcome-nav", {
-        y: -26,
+        y: -18,
         opacity: 0,
-        duration: 0.85,
-        ease: "power3.out"
+        duration: 0.65,
+        ease: "power2.out",
       });
 
-      gsap.from("#hero-text > *", {
-        y: 34,
+      gsap.from(".nexus-badge, .nexus-ctas", {
+        y: 16,
         opacity: 0,
-        duration: 0.9,
-        stagger: 0.12,
-        delay: 0.12,
-        ease: "power3.out"
+        duration: 0.65,
+        stagger: 0.1,
+        delay: 0.15,
+        ease: "power2.out",
       });
 
-      gsap.to(".hero-orbit--one", {
-        y: -80,
-        rotate: 22,
-        scrollTrigger: {
-          trigger: "#product",
-          start: "top top",
-          end: "bottom top",
-          scrub: 1
-        }
-      });
-
-      gsap.to(".hero-orbit--two", {
-        y: 95,
-        rotate: -18,
-        scrollTrigger: {
-          trigger: "#product",
-          start: "top top",
-          end: "bottom top",
-          scrub: 1
-        }
-      });
-
-      gsap.utils.toArray(".scroll-reveal").forEach((el) => {
-        if (el.id === "hero-text") return;
-        gsap.fromTo(el, {
-          y: 48,
-          opacity: 0,
-          scale: 0.98
-        }, {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.85,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 86%",
-            toggleActions: "play none none reverse"
-          }
-        });
-      });
-
-      gsap.utils.toArray(".stat-number").forEach((el) => {
-        const value = Number(el.dataset.value || 0);
-        const suffix = el.dataset.suffix || "";
-        const state = { value: 0 };
-        gsap.to(state, {
-          value,
-          duration: 1.4,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 86%",
-            once: true
-          },
-          onUpdate: () => {
-            const current = value < 1 ? state.value.toFixed(1) : Math.round(state.value);
-            el.textContent = `${current}${suffix}`;
-          }
-        });
-      });
-
-      document.querySelectorAll("a, .glass").forEach((el) => {
-        el.addEventListener("mouseenter", () => {
-          gsap.to(el, { y: -3, duration: 0.25, ease: "power2.out" });
-        });
-        el.addEventListener("mouseleave", () => {
-          gsap.to(el, { y: 0, duration: 0.25, ease: "power2.out" });
-        });
-      });
-
-      gsap.from(".ai-plan-chip", {
-        x: -22,
+      gsap.from(".nexus-float-card", {
+        y: 20,
         opacity: 0,
         duration: 0.7,
-        stagger: 0.12,
+        stagger: 0.08,
+        delay: 0.35,
         ease: "power2.out",
-        scrollTrigger: {
-          trigger: "#hero-image",
-          start: "top 72%"
-        }
       });
 
-      gsap.to("#hero-image", {
-        y: -34,
-        scrollTrigger: {
-          trigger: ".model-section",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1
-        }
+      gsap.to(".reveal-word", {
+        y: "0%",
+        stagger: 0.035,
+        duration: 0.75,
+        delay: 0.45,
+        ease: "power4.out",
       });
+
+      const box = document.querySelector(".canvas-select-box");
+      const cursor = document.getElementById("draw-cursor");
+      if (box && cursor) {
+        const cOffset = -4;
+        gsap.set(cursor, { left: cOffset, top: cOffset, scale: 1 });
+
+        const drawTl = gsap.timeline({ repeat: -1, repeatDelay: 0.8 });
+        drawTl
+          .to(cursor, { left: `calc(100% + ${cOffset}px)`, duration: 0.8, ease: "power2.inOut" }, "drawTop")
+          .to(".draw-border-top", { width: "100%", duration: 0.8, ease: "power2.inOut" }, "drawTop")
+          .to(cursor, { top: `calc(100% + ${cOffset}px)`, duration: 0.8, ease: "power2.inOut" }, "drawRight")
+          .to(".draw-border-right", { height: "100%", duration: 0.8, ease: "power2.inOut" }, "drawRight")
+          .to(cursor, { left: cOffset, duration: 0.8, ease: "power2.inOut" }, "drawBottom")
+          .to(".draw-border-bottom", { width: "100%", duration: 0.8, ease: "power2.inOut" }, "drawBottom")
+          .to(cursor, { top: cOffset, duration: 0.8, ease: "power2.inOut" }, "drawLeft")
+          .to(".draw-border-left", { height: "100%", duration: 0.8, ease: "power2.inOut" }, "drawLeft")
+          .to(".canvas-handle", { scale: 1, opacity: 1, duration: 0.35, stagger: 0.03, ease: "back.out(2)" })
+          .to(cursor, {
+            left: `calc(100% + ${cOffset}px)`,
+            top: `calc(100% + ${cOffset}px)`,
+            duration: 0.65,
+            ease: "power3.inOut",
+          })
+          .to(cursor, { scale: 0.82, duration: 0.1 })
+          .to(box, { scale: 1.02, transformOrigin: "top left", duration: 0.55, ease: "power2.out" }, "resize")
+          .to(cursor, { scale: 1, duration: 0.1 }, "+=0.15")
+          .to(box, { scale: 1, duration: 0.45, ease: "power3.inOut" }, "+=0.05")
+          .to(".canvas-handle", { scale: 0, opacity: 0, duration: 0.25 }, "reset")
+          .to(".draw-border-top, .draw-border-bottom", { width: 0, duration: 0.25 }, "reset")
+          .to(".draw-border-right, .draw-border-left", { height: 0, duration: 0.25 }, "reset")
+          .to(cursor, { left: cOffset, top: cOffset, duration: 0.55, ease: "power3.inOut" }, "reset");
+      }
+
+      const chips = document.querySelectorAll(".ai-plan-chip");
+      if (chips.length) {
+        const chipObserver = new IntersectionObserver(
+          (entries, observer) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              gsap.from(chips, {
+                x: -14,
+                opacity: 0,
+                duration: 0.55,
+                stagger: 0.08,
+                ease: "power2.out",
+              });
+              observer.disconnect();
+            });
+          },
+          { threshold: 0.25 }
+        );
+        const chipHost = document.querySelector("#hero-image");
+        if (chipHost) chipObserver.observe(chipHost);
+      }
     } else {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add("visible");
-        });
-      }, { threshold: 0.12 });
-      document.querySelectorAll(".scroll-reveal").forEach((el) => observer.observe(el));
+      document.querySelectorAll(".scroll-reveal").forEach((el) => {
+        el.classList.add("is-visible");
+      });
+      document.querySelectorAll(".reveal-word").forEach((el) => {
+        el.style.transform = "translateY(0)";
+      });
     }
   </script>
   <script type="module">
@@ -1300,9 +1694,9 @@
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#f8fafc";
+      ctx.fillStyle = "#141414";
       ctx.fillRect(0, 0, rect.width, rect.height);
-      ctx.strokeStyle = "rgba(30,41,59,0.08)";
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
       for (let x = 0; x < rect.width; x += 28) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -1315,7 +1709,7 @@
         ctx.lineTo(rect.width, y);
         ctx.stroke();
       }
-      ctx.strokeStyle = "#607080";
+      ctx.strokeStyle = "#a1a1aa";
       ctx.lineWidth = 6;
       ctx.strokeRect(rect.width * 0.18, rect.height * 0.22, rect.width * 0.62, rect.height * 0.5);
       ctx.beginPath();
@@ -1324,11 +1718,11 @@
       ctx.moveTo(rect.width * 0.18, rect.height * 0.48);
       ctx.lineTo(rect.width * 0.8, rect.height * 0.48);
       ctx.stroke();
-      ctx.fillStyle = "#ba1a1a";
+      ctx.fillStyle = "#fafafa";
       ctx.beginPath();
       ctx.arc(rect.width * 0.68, rect.height * 0.35, 13, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#2480ff";
+      ctx.fillStyle = "#71717a";
       ctx.beginPath();
       ctx.arc(rect.width * 0.36, rect.height * 0.62, 10, 0, Math.PI * 2);
       ctx.fill();
@@ -1355,7 +1749,7 @@
 
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 0);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1538,6 +1932,15 @@
       resize();
       window.addEventListener("resize", resize);
 
+      let sceneActive = true;
+      const stageObserver = new IntersectionObserver(
+        ([entry]) => {
+          sceneActive = entry.isIntersecting;
+        },
+        { threshold: 0.08, rootMargin: "80px 0px" }
+      );
+      stageObserver.observe(stage);
+
       if (window.gsap) {
         window.gsap.fromTo(root.rotation, { y: -0.22 }, { y: 0.16, duration: 9, repeat: -1, yoyo: true, ease: "sine.inOut" });
         window.gsap.to(root.position, { y: 0.14, duration: 3.8, repeat: -1, yoyo: true, ease: "sine.inOut" });
@@ -1553,7 +1956,8 @@
 
       function animate() {
         requestAnimationFrame(animate);
-      camera.lookAt(0, 1.55, 0);
+        if (!sceneActive) return;
+        camera.lookAt(0, 1.55, 0);
         markerA.rotation.y += 0.02;
         markerB.rotation.y -= 0.018;
         path.material.opacity = 0.65 + Math.sin(performance.now() * 0.003) * 0.25;

@@ -23,6 +23,8 @@ from services.cad_service import (
     pdf_bytes_to_png_async,
     prepare_upload_async,
 )
+from services.architect_ai_service import architect_ai_status
+from services.knowledge_service import get_document_catalog, knowledge_stats
 from services.guest_trial_service import (
     assert_guest_can_analyze,
     assert_guest_can_ask,
@@ -63,7 +65,12 @@ def guest_status(
     guest_id = get_guest_id(request, response)
     row = get_or_create_guest(db, guest_id)
     db.commit()
-    return guest_trial_payload(row)
+    pages = knowledge_stats().get("pages", 0)
+    catalog = get_document_catalog()
+    return {
+        **guest_trial_payload(row),
+        **architect_ai_status(knowledge_pages=pages, catalog=catalog),
+    }
 
 
 @router.post("/analyze")
@@ -129,7 +136,7 @@ async def guest_ask(
     guest_id = get_guest_id(request, response)
     q = (message or "").strip()
     if len(q) < 3:
-        raise HTTPException(400, "Escribe una pregunta sobre construcción o arquitectura.")
+        raise HTTPException(400, "Escribe tu pregunta (mínimo 3 caracteres).")
 
     assert_guest_can_ask(db, guest_id)
     result = answer_construction_question(q)

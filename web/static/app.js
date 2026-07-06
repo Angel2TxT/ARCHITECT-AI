@@ -19,9 +19,13 @@ const filePreviewCache = new Map();
 let modelReady = false;
 let currentToolMode = "default";
 let isGuestMode = false;
+window.getIsGuestMode = () => isGuestMode;
 let guestTrial = null;
 
 const GUEST_CHAT_ID = "guest-local";
+const SESSION_CHAT_ID = "session-ephemeral";
+/** Desactivado: no persistir ni listar chats en servidor. */
+const CHAT_PERSISTENCE_ENABLED = false;
 
 const TOOL_MODES = {
   default: "Revisión estructural · IA",
@@ -92,17 +96,14 @@ function handlePlanoFile(file, autoSend = false) {
   }
 }
 
-function showToast(msg, ms = 5200) {
-  const el = $("#toast");
-  if (!el) return;
-  el.textContent = (msg || "").replace(/\n+/g, " · ");
-  el.classList.remove("hidden");
-  el.classList.add("is-visible");
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    el.classList.add("hidden");
-    el.classList.remove("is-visible");
-  }, ms);
+function showToast(msg, optionsOrMs) {
+  if (window.PlanoToast?.show) {
+    window.PlanoToast.show(msg, optionsOrMs);
+    return;
+  }
+  if (typeof window.showToast === "function" && window.showToast !== showToast) {
+    window.showToast(msg, optionsOrMs);
+  }
 }
 
 function setToolMode(mode) {
@@ -115,9 +116,28 @@ function setNavActive(which) {
   document.querySelectorAll(".nav-item").forEach((n) => {
     const id = n.id;
     n.classList.toggle("active", which === "workspace" && id === "btnWorkspace");
+    n.classList.toggle("active", which === "home-projects" && id === "btnHomeProjects");
+    n.classList.toggle("active", which === "admin" && id === "btnAdmin");
     n.classList.toggle("active", which === "plans" && id === "btnPlans");
     n.classList.toggle("active", which === "settings" && id === "btnSettings");
   });
+}
+window.setNavActive = setNavActive;
+
+function ensureEphemeralChat() {
+  let chat = chats.find((c) => c.id === SESSION_CHAT_ID);
+  if (!chat) {
+    chat = {
+      id: SESSION_CHAT_ID,
+      title: "Sesión actual",
+      messages: [],
+      messageCount: 0,
+      updatedAt: Date.now(),
+    };
+    chats = [chat];
+  }
+  currentChatId = SESSION_CHAT_ID;
+  return chat;
 }
 
 async function loadConfig() {
@@ -157,7 +177,7 @@ async function loadConfig() {
       banner.hidden = true;
       sub.hidden = false;
       sub.textContent =
-        "Analiza tus planos arquitectónicos con la precisión de la IA. Sube un archivo o selecciona una herramienta.";
+        "Pregunta sobre construcción (medidas, normativa, etc.) o sube un plano para revisarlo.";
       const statusEl = document.getElementById("systemStatusText");
       if (statusEl) statusEl.textContent = "SYSTEM READY: plano_ia_engine_v3.0";
     }
@@ -168,7 +188,7 @@ async function loadConfig() {
 
 function getTheme() {
   const t = localStorage.getItem(THEME_KEY);
-  return t === "dark" ? "dark" : "light";
+  return t === "light" ? "light" : "dark";
 }
 
 function applyTheme(theme) {
@@ -224,6 +244,7 @@ function saveSettings() {
   }
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   syncCalibrationInputs();
+  showToast("Ajustes guardados");
 }
 
 function rememberAutoCalibration(data) {
@@ -359,6 +380,7 @@ function mapMessageFromApi(m) {
       conversionNote: c.conversion_note || null,
       detectionsList: c.detections_list || c.detections || [],
       correctionsCount: c.corrections_count || 0,
+      assistantMode: c.assistant_mode || null,
     };
   }
   const filename = c.filename || "";
@@ -379,6 +401,56 @@ function mapMessageFromApi(m) {
   };
 }
 
+let askCapabilities = null;
+
+async function loadAskCapabilities() {
+  try {
+    const res = await fetch("/api/ask/status");
+    if (!res.ok) return;
+    askCapabilities = await res.json();
+    applyAskCapabilitiesUI();
+  } catch {
+    /* offline */
+  }
+}
+
+function applyAskCapabilitiesUI() {
+  const aiOn = askCapabilities?.architect_ai_enabled !== false;
+  const hasLibrary = askCapabilities?.architect_ai_ready || (askCapabilities?.knowledge_pages || 0) > 0;
+  const input = $("#messageInput");
+  if (input) {
+    input.placeholder =
+      "Pregunta sobre arquitectura, normativa u obra — ARCHITECT responde con tu biblioteca…";
+  }
+  const hero = document.querySelector(".welcome-hero h2");
+  if (hero && !isGuestMode) {
+    hero.textContent = "¿En qué te ayudamos hoy?";
+  }
+  const welcomeSub = $("#welcomeSub");
+  const setupBanner = $("#setupBanner");
+  if (welcomeSub && (!setupBanner || setupBanner.hidden)) {
+    if (isGuestMode) {
+      welcomeSub.textContent =
+        "Prueba gratis: pregunta lo que quieras o sube un plano. ARCHITECT responde con la información que ya tiene indexada.";
+    } else if (modelReady !== false) {
+      welcomeSub.textContent = hasLibrary
+        ? "ARCHITECT responde con tus manuales, normas de Chiapas y fuentes indexadas. También puedes subir planos."
+        : "ARCHITECT usa normas de Chiapas y búsqueda web. Indexa PDF en data/knowledge/raw para ampliar respuestas.";
+    }
+  }
+  const badge = $("#assistantModeBadge");
+  if (badge) {
+    badge.hidden = !aiOn;
+    badge.textContent = hasLibrary ? "IA ARCHITECT activa" : "IA ARCHITECT (normas + web)";
+  }
+}
+
+function assistantModeLabel(mode) {
+  if (mode === "architect" || mode === "rules") return "IA ARCHITECT";
+  if (mode === "llm") return "IA conversacional";
+  return "";
+}
+
 function parseApiDetail(data, fallback) {
   if (!data) return fallback;
   const d = data.detail;
@@ -397,10 +469,21 @@ function isTrialExhaustedResponse(data, status) {
 }
 
 function showTrialEndedModal() {
+  const loginUrl = trialLoginUrl();
+  const loginLink = $("#trialLoginLink");
+  const registerLink = $("#trialRegisterLink");
+  if (loginLink) loginLink.href = loginUrl;
+  if (registerLink) registerLink.href = `${loginUrl}${loginUrl.includes("?") ? "&" : "?"}tab=register`;
   const modal = $("#trialModal");
   if (modal?.showModal) modal.showModal();
   else showToast("Tu prueba terminó. Inicia sesión o crea una cuenta en /login");
 }
+
+function trialLoginUrl() {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  return `/login?next=${next}`;
+}
+window.showTrialEndedModal = showTrialEndedModal;
 
 async function guestFetch(url, options = {}) {
   return fetch(url, { ...options, credentials: "include" });
@@ -465,10 +548,10 @@ function ensureGuestChat() {
 }
 
 function updateGuestUI() {
-  $("#guestTopbarActions")?.classList.remove("hidden");
+  $("#guestSidebarActions")?.classList.remove("hidden");
+  $("#guestSidebarActions")?.classList.add("flex");
   $("#btnLogout")?.classList.add("hidden");
   $("#usageBar")?.classList.add("hidden");
-  $("#analysisHistoryWrap")?.classList.add("hidden");
   const av = document.getElementById("userAvatar");
   if (av) av.textContent = "?";
   const nameEl = document.getElementById("userName");
@@ -478,22 +561,23 @@ function updateGuestUI() {
   const welcomeSub = document.getElementById("welcomeSub");
   if (welcomeSub) {
     welcomeSub.textContent =
-      "Prueba gratis: sube un plano o haz una pregunta. Luego crea cuenta para seguir.";
+      "Prueba gratis: pregunta lo que quieras o sube un plano. ARCHITECT responde con la información que ya tiene indexada.";
   }
 }
 
-async function initGuestApp() {
+async function initGuestApp(skipWorkspace = false) {
   isGuestMode = true;
   updateGuestUI();
   await checkBackendHealth();
-  await loadConfig();
+  await Promise.allSettled([loadConfig(), loadAskCapabilities()]);
   await loadGuestTrialStatus();
   ensureGuestChat();
-  goToWorkspace();
+  if (!skipWorkspace) goToWorkspace();
   updateSendButton();
 }
 
-async function initAuthenticatedApp() {
+async function initAuthenticatedApp(skipWorkspace = false) {
+  isGuestMode = false;
   await checkBackendHealth();
   try {
     await PlanoAuth.refreshMe();
@@ -501,12 +585,17 @@ async function initAuthenticatedApp() {
     console.warn("refreshMe:", e);
   }
   updateUserUI();
-  await loadConfig();
-  await loadChats();
-  await loadAnalysisHistory();
+  const bootTasks = [loadConfig(), loadAskCapabilities()];
+  if (CHAT_PERSISTENCE_ENABLED) {
+    bootTasks.push(loadChats(), loadAnalysisHistory());
+  } else {
+    ensureEphemeralChat();
+  }
+  await Promise.allSettled(bootTasks);
+  applyAskCapabilitiesUI();
   setAttachment(null);
   currentChatId = null;
-  goToWorkspace();
+  if (!skipWorkspace) goToWorkspace();
   updateSendButton();
   updateLayoutMode();
   measureLatency();
@@ -514,6 +603,11 @@ async function initAuthenticatedApp() {
 }
 
 async function loadChats() {
+  if (!CHAT_PERSISTENCE_ENABLED && !isGuestMode) {
+    chats = [];
+    ensureEphemeralChat();
+    return;
+  }
   if (isGuestMode) {
     chats = [];
     renderChatList();
@@ -546,6 +640,7 @@ function previewCacheKey(file) {
 
 async function ensureChat() {
   if (isGuestMode) return ensureGuestChat();
+  if (!CHAT_PERSISTENCE_ENABLED) return ensureEphemeralChat();
   const existing = getCurrentChat();
   if (existing) return existing;
   if (ensureChatInFlight) return ensureChatInFlight;
@@ -578,6 +673,17 @@ async function ensureChat() {
 }
 
 async function newChat(showNotice = true) {
+  if (!CHAT_PERSISTENCE_ENABLED && !isGuestMode) {
+    chats = [];
+    ensureEphemeralChat();
+    $("#welcome").hidden = false;
+    $("#messages").hidden = true;
+    $("#messages").innerHTML = "";
+    setAttachment(null);
+    updateLayoutMode();
+    if (showNotice) showToast("Nueva sesión");
+    return;
+  }
   if (isGuestMode) {
     chats = [];
     ensureGuestChat();
@@ -619,6 +725,14 @@ async function newChat(showNotice = true) {
 }
 
 function goToWorkspace() {
+  window.HomeProjectsUI?.close?.();
+  const url = new URL(window.location.href);
+  url.searchParams.delete("home-projects");
+  url.searchParams.delete("project");
+  const next = url.pathname + url.search;
+  if (window.location.pathname + window.location.search !== next) {
+    window.history.replaceState({}, "", next);
+  }
   setNavActive("workspace");
   $("#welcome").hidden = false;
   $("#messages").hidden = true;
@@ -632,6 +746,14 @@ function goToWorkspace() {
 
 async function persistMessage(role, text) {
   const chat = await ensureChat();
+  if (!CHAT_PERSISTENCE_ENABLED && !isGuestMode) {
+    chat.messageCount = (chat.messageCount || 0) + 1;
+    chat.updatedAt = Date.now();
+    if (role === "user") {
+      chat.title = text.slice(0, 120) || chat.title;
+    }
+    return { id: `local-${Date.now()}`, role, text };
+  }
   const res = await PlanoAuth.apiFetch(`/api/chats/${chat.id}/messages`, {
     method: "POST",
     body: JSON.stringify({ role, text }),
@@ -654,6 +776,22 @@ async function showChat(chat) {
   currentChatId = chat.id;
   const welcome = $("#welcome");
   const messages = $("#messages");
+
+  if (!CHAT_PERSISTENCE_ENABLED && !isGuestMode && chat.id === SESSION_CHAT_ID) {
+    if (!chat.messages.length) {
+      welcome.hidden = false;
+      messages.hidden = true;
+      messages.innerHTML = "";
+    } else {
+      welcome.hidden = true;
+      messages.hidden = false;
+      messages.innerHTML = "";
+      chat.messages.forEach((m) => appendMessageDOM(m, false));
+      scrollToBottom();
+    }
+    updateLayoutMode();
+    return;
+  }
 
   if (isGuestMode && chat.id === GUEST_CHAT_ID) {
     if (!chat.messages.length) {
@@ -705,6 +843,15 @@ function escapeHtml(text) {
 
 async function deleteChat(chatId, listItem) {
   if (!listItem || listItem.classList.contains("is-removing")) return;
+  if (
+    !(await PlanoDialog.confirm("¿Eliminar este chat y todo su historial?", {
+      title: "Eliminar chat",
+      variant: "danger",
+      confirmLabel: "Eliminar",
+    }))
+  ) {
+    return;
+  }
 
   listItem.classList.add("is-removing");
   listItem.style.pointerEvents = "none";
@@ -756,7 +903,9 @@ async function deleteChat(chatId, listItem) {
 }
 
 function renderChatList() {
+  if (!CHAT_PERSISTENCE_ENABLED) return;
   const list = $("#chatList");
+  if (!list) return;
   const q = ($("#searchChats").value || "").toLowerCase();
   list.innerHTML = "";
   chats
@@ -1307,6 +1456,14 @@ function appendMessageDOM(msg, scroll = true) {
     body.appendChild(block);
   }
 
+  const modeLabel = assistantModeLabel(msg.assistantMode);
+  if (msg.role === "assistant" && modeLabel) {
+    const badge = document.createElement("span");
+    badge.className = `msg-mode-badge msg-mode-badge--${msg.assistantMode === "llm" ? "llm" : "architect"}`;
+    badge.textContent = modeLabel;
+    body.appendChild(badge);
+  }
+
   if (msg.steps?.length) {
     const box = document.createElement("div");
     box.className = "msg-steps";
@@ -1707,6 +1864,7 @@ async function askConstructionQuestion(text) {
         snippet: w.snippet,
       })),
       municipality: data.municipality,
+      assistantMode: data.assistant_mode || null,
     };
     c.messages.push(assistantMsg);
     if (c.title === "Nuevo chat") c.title = text.slice(0, 80);
@@ -1760,6 +1918,36 @@ function runChipAction(prompt) {
 }
 
 function buildAssistantMessage(data) {
+  if (data.text) {
+    const detCount = data.counts?.detections ?? data.stats?.detections ?? 0;
+    const errors = data.counts?.errors ?? data.stats?.errors ?? 0;
+    const warnings = data.counts?.warnings ?? data.stats?.warnings ?? 0;
+    return {
+      role: "assistant",
+      text: data.text,
+      steps: data.steps || null,
+      imageUrl: data.image_base64
+        ? `data:image/jpeg;base64,${data.image_base64}`
+        : null,
+      stats: detCount > 0 ? { detections: detCount, errors, warnings } : data.stats || null,
+      issuesSummary: data.issues_summary || [],
+      detectionsSummary: data.detections_summary || [],
+      scaleHint: data.scale_hint || null,
+      autoCalibration: data.auto_calibration || null,
+      constructionCoverage: data.construction_coverage || null,
+      knowledgeReferences: data.knowledge_references || null,
+      verdict: data.verdict || null,
+      analysisIntent: data.analysis_intent || null,
+      customFindings: data.custom_findings || null,
+      measuresReport: data.measures_report || null,
+      analysisId: data.analysis_id || null,
+      conversionNote: data.conversion_note || null,
+      detectionsList: data.detections || data.detections_list || [],
+      correctionsCount: data.corrections_count || 0,
+      assistantMode: data.assistant_mode || null,
+    };
+  }
+
   const errors = data.counts?.errors ?? 0;
   const warnings = data.counts?.warnings ?? 0;
   const detCount = data.counts?.detections ?? 0;
@@ -1859,6 +2047,7 @@ function buildAssistantMessage(data) {
     conversionNote: data.conversion_note || null,
     detectionsList: data.detections || data.detections_list || [],
     correctionsCount: data.corrections_count || 0,
+    assistantMode: data.assistant_mode || null,
   };
 }
 
@@ -2211,7 +2400,7 @@ async function sendMessage(text) {
     const c = getCurrentChat();
     if (c) {
       c.messages.push(assistantMsg);
-      if (data.chat_id && !chats.find((x) => x.id === data.chat_id)) {
+      if (CHAT_PERSISTENCE_ENABLED && data.chat_id && !chats.find((x) => x.id === data.chat_id)) {
         chats.unshift({
           id: data.chat_id,
           title: (msgText || "Análisis").slice(0, 36),
@@ -2224,13 +2413,16 @@ async function sendMessage(text) {
     appendMessageDOM(assistantMsg);
     if (c) c.messageCount = (c.messageCount || 0) + 2;
     saveChats();
-    await loadAnalysisHistory();
-    if (!isGuestMode) showToast("Análisis guardado en tu historial");
+    if (CHAT_PERSISTENCE_ENABLED) {
+      await loadAnalysisHistory();
+      if (!isGuestMode) showToast("Análisis guardado en tu historial");
+    }
   } catch (err) {
     hideTyping();
     let text = `No pude analizar el plano: ${err.message}`;
     if (err.status === 402 || /límite|suscripción/i.test(err.message)) {
       text = `${err.message}\n\nAbre Planes para mejorar tu cuota mensual.`;
+      setTimeout(() => openPlans(), 400);
     }
     if (/modelo no encontrado/i.test(err.message)) {
       text = [
@@ -2269,7 +2461,7 @@ function setComposerDisabled(disabled) {
 }
 
 /* Eventos */
-$("#btnNewChat").onclick = () => newChat(true);
+$("#btnNewChat")?.addEventListener("click", () => newChat(true));
 
 function closeAttachPicker() {
   const menu = $("#attachPickerMenu");
@@ -2365,7 +2557,7 @@ document.querySelectorAll(".suggestion-card").forEach((card) => {
   card.onclick = () => runChipAction(card.dataset.prompt || "Analiza este plano");
 });
 
-$("#searchChats").oninput = renderChatList;
+$("#searchChats")?.addEventListener("input", renderChatList);
 
 async function loadNormsPanel() {
   const list = $("#normsThresholdsList");
@@ -2420,6 +2612,18 @@ $("#btnWorkspace")?.addEventListener("click", (e) => {
   e.preventDefault();
   goToWorkspace();
 });
+$("#btnHomeProjects")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (window.HomeProjectsUI?.open) {
+    window.HomeProjectsUI.open();
+  } else {
+    window.location.href = "/legacy-app?home-projects=1";
+  }
+});
+$("#btnAdmin")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  window.location.href = "/app/admin";
+});
 $("#btnCloseSettings").onclick = () => $("#settingsModal").close();
 $("#settingsForm").onsubmit = (e) => {
   e.preventDefault();
@@ -2440,10 +2644,16 @@ function updateSidebarToggleUI() {
   const collapsed = isSidebarCollapsed();
   const icon = document.getElementById("sidebarToggleIcon");
   const btn = $("#btnMenu");
-  if (icon) icon.textContent = collapsed ? "menu" : "menu_open";
+  const floatBtn = $("#btnMenuFloat");
+  if (icon) icon.textContent = collapsed ? "menu" : "chevron_left";
   if (btn) {
-    btn.setAttribute("aria-label", collapsed ? "Mostrar menú" : "Ocultar menú");
-    btn.title = collapsed ? "Mostrar panel lateral" : "Ocultar panel lateral";
+    btn.setAttribute("aria-label", collapsed ? "Mostrar panel" : "Minimizar panel");
+    btn.title = collapsed ? "Mostrar panel lateral" : "Minimizar panel lateral";
+  }
+  if (floatBtn) {
+    const showFloat = collapsed;
+    floatBtn.classList.toggle("hidden", !showFloat);
+    floatBtn.classList.toggle("is-visible", showFloat);
   }
 }
 
@@ -2469,12 +2679,12 @@ function toggleSidebar() {
 
 function initSidebar() {
   const saved = localStorage.getItem(SIDEBAR_KEY);
-  const mobile = isMobileLayout();
-  const collapsed = saved !== null ? saved === "1" : mobile;
+  const collapsed = saved === "1";
   setSidebarCollapsed(collapsed, false);
 }
 
-$("#btnMenu").onclick = () => toggleSidebar();
+$("#btnMenu")?.addEventListener("click", () => toggleSidebar());
+$("#btnMenuFloat")?.addEventListener("click", () => toggleSidebar());
 
 $("#sidebarBackdrop")?.addEventListener("click", () => setSidebarCollapsed(true));
 
@@ -2491,31 +2701,68 @@ initSidebar();
 document.getElementById("themeDark")?.addEventListener("click", () => applyTheme("dark"));
 document.getElementById("themeLight")?.addEventListener("click", () => applyTheme("light"));
 
+function isPlanUnlimited(sub) {
+  if (!sub) return false;
+  if (sub.is_unlimited) return true;
+  return (sub.plan?.analyses_limit_monthly ?? 0) >= 9999;
+}
+
+function formatPlanLimitText(limit) {
+  if (limit >= 9999) return "Uso alto incluido";
+  return `${limit} análisis/mes`;
+}
+
+function planFeatureLines(plan) {
+  const lines = [formatPlanLimitText(plan.analyses_limit_monthly)];
+  lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
+  lines.push(`Archivos hasta ${plan.max_file_mb} MB`);
+  const f = plan.features || {};
+  if (f.export) lines.push("Exportar reportes");
+  if (f.api) lines.push("Acceso API");
+  if (f.sla) lines.push("SLA dedicado");
+  if (f.support) lines.push(`Soporte ${f.support}`);
+  return lines;
+}
+
 function updateUsageUI(sub) {
-  const bar = document.getElementById("usageBar");
-  if (!bar || !sub) return;
-  bar.classList.remove("hidden");
+  if (!sub) return;
+  const box = document.getElementById("usageBar");
   const plan = sub.plan || {};
   const usage = sub.usage || {};
   const limit = plan.analyses_limit_monthly || 0;
   const used = usage.analyses_used || 0;
   const remaining = usage.analyses_remaining;
-  const isUnlimited = sub.is_unlimited === true;
-  document.getElementById("planLabel").textContent = plan.name || plan.slug || "Plan";
-  document.getElementById("usageLabel").textContent =
-    isUnlimited ? `${used} análisis` : `${used} / ${limit}`;
-  const pct = isUnlimited ? 8 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
+  const unlimited = isPlanUnlimited(sub);
+  const planLabel = document.getElementById("planLabel");
+  const usageLabel = document.getElementById("usageLabel");
+  if (planLabel) planLabel.textContent = plan.name || plan.slug || "Plan";
+  if (usageLabel) {
+    usageLabel.textContent = unlimited ? `${used} análisis` : `${used} / ${limit}`;
+  }
+  const pct = unlimited ? 8 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   const fill = document.getElementById("usageFill");
   if (fill) fill.style.width = `${pct}%`;
-  const badge = document.getElementById("planBadge");
-  if (badge) badge.textContent = (plan.slug || "free").toUpperCase();
+  const limitReached = !unlimited && !!usage.limit_reached;
+  if (box) {
+    box.classList.toggle("usage-box--limit", limitReached);
+    box.classList.toggle("usage-box--unlimited", unlimited);
+  }
   const plansText = document.getElementById("plansUsageText");
   if (plansText) {
-    plansText.textContent =
-      isUnlimited
-        ? `Plan ${plan.name}: uso ilimitado este mes (${used} análisis).`
-        : `Plan ${plan.name}: ${used} de ${limit} análisis este mes` +
-          (remaining != null ? ` (${remaining} restantes).` : ".");
+    plansText.textContent = unlimited
+      ? `Plan ${plan.name}: uso ilimitado este mes (${used} análisis).`
+      : `Plan ${plan.name}: ${used} de ${limit} análisis este mes` +
+        (remaining != null ? ` (${remaining} restantes).` : ".");
+  }
+  const badge = document.getElementById("planUsageBadge");
+  const badgeText = document.getElementById("planUsageBadgeText");
+  if (badge && badgeText) {
+    const showBadge = !!PlanoAuth.getToken() && !!PlanoAuth.getUser() && !isGuestMode;
+    badge.classList.toggle("hidden", !showBadge);
+    badgeText.textContent = unlimited
+      ? `${plan.name || "Plan"} · ${used} análisis`
+      : `${plan.name || "Plan"} · ${used}/${limit}`;
+    badge.classList.toggle("plan-usage-badge--limit", limitReached);
   }
 }
 
@@ -2538,6 +2785,12 @@ function updateUserUI() {
     roleEl.textContent =
       user.role === "admin" ? "Administrador" : sub?.plan?.name || "Usuario";
   }
+  const adminBtn = document.getElementById("btnAdmin");
+  if (adminBtn) {
+    const showAdmin = user.role === "admin";
+    adminBtn.classList.toggle("hidden", !showAdmin);
+    adminBtn.hidden = !showAdmin;
+  }
   if (sub) updateUsageUI(sub);
 }
 
@@ -2554,6 +2807,9 @@ async function loadPlansModal() {
     const price = p.price_monthly_cents
       ? `$${(p.price_monthly_cents / 100).toFixed(0)}/mes`
       : "Gratis";
+    const features = planFeatureLines(p)
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
     card.innerHTML = `
       <div class="flex justify-between items-start gap-2">
         <div>
@@ -2562,30 +2818,74 @@ async function loadPlansModal() {
         </div>
         <span class="text-sm font-bold">${price}</span>
       </div>
-      <p class="text-xs mt-2">${p.analyses_limit_monthly + " análisis/mes"} · ${p.allow_real_model ? "Modelo real" : "Solo demo"}</p>
+      <ul class="plan-card-features text-xs mt-2 space-y-1 opacity-75">${features}</ul>
       <button type="button" class="btn-primary mt-3 w-full text-xs py-2 plan-select-btn" data-slug="${p.slug}" ${p.slug === current ? "disabled" : ""}>
-        ${p.slug === current ? "Plan actual" : "Seleccionar"}
+        ${p.slug === current ? "Plan actual" : p.price_monthly_cents ? "Ir a pagar" : p.slug === "free" ? "Bajar a gratis" : "Seleccionar"}
       </button>`;
     grid.appendChild(card);
   });
   grid.querySelectorAll(".plan-select-btn").forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
-      const r = await PlanoAuth.apiFetch("/api/billing/change-plan", {
-        method: "POST",
-        body: JSON.stringify({ plan_slug: slug }),
-      });
-      const data = await r.json();
-      if (r.ok) {
-        localStorage.setItem("plano_ia_subscription", JSON.stringify(data));
-        updateUsageUI(data);
-        $("#plansModal").close();
-        await loadPlansModal();
-      } else {
-        alert(data.detail || "No se pudo cambiar el plan");
+      btn.disabled = true;
+      try {
+        if (!window.ArchitectBilling) throw new Error("Billing no disponible");
+        const token = PlanoAuth.getToken();
+        const result = await window.ArchitectBilling.requestPlanChange(slug, {
+          token,
+          returnUrl: "/legacy-app",
+          apiFetch: (url, opts) => PlanoAuth.apiFetch(url, opts),
+        });
+        if (result?.status === "redirecting") return;
+        const data = result.subscription || result;
+        if (data?.plan) {
+          localStorage.setItem("plano_ia_subscription", JSON.stringify(data));
+          updateUsageUI(data);
+          $("#plansModal").close();
+          await loadPlansModal();
+          showToast(data.plan?.name ? `Plan ${data.plan.name} activado` : "Plan actualizado");
+        }
+      } catch (err) {
+        PlanoDialog.alert(err.message || "No se pudo cambiar el plan", {
+          title: "Error al cambiar plan",
+          variant: "danger",
+        });
+      } finally {
+        btn.disabled = false;
       }
     };
   });
+
+  const note = document.getElementById("plansDemoNote");
+  const portalBtn = document.getElementById("btnStripePortal");
+  try {
+    const config = await window.ArchitectBilling?.fetchBillingConfig?.();
+    const sub = PlanoAuth.getSubscription();
+    if (note) {
+      note.textContent =
+        "Proyecto escolar: pasarela de pago simulada (sin cobro real). Bajar a Gratis es inmediato.";
+    }
+    if (portalBtn) {
+      const showPortal = config?.mode === "stripe" && sub?.has_active_payment;
+      portalBtn.classList.toggle("hidden", !showPortal);
+      portalBtn.onclick = async () => {
+        try {
+          await window.ArchitectBilling.openBillingPortal({
+            token: PlanoAuth.getToken(),
+            returnUrl: "/legacy-app",
+            apiFetch: (url, opts) => PlanoAuth.apiFetch(url, opts),
+          });
+        } catch (err) {
+          PlanoDialog.alert(err.message || "No se pudo abrir Stripe", {
+            title: "Portal de facturación",
+            variant: "danger",
+          });
+        }
+      };
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 const openPlans = async () => {
@@ -2598,6 +2898,8 @@ const openPlans = async () => {
   $("#plansModal").showModal();
 };
 $("#btnPlans")?.addEventListener("click", (e) => { e.preventDefault(); openPlans(); });
+$("#btnUsagePlans")?.addEventListener("click", (e) => { e.preventDefault(); openPlans(); });
+$("#btnPlanUsageBadge")?.addEventListener("click", (e) => { e.preventDefault(); openPlans(); });
 $("#planBadge")?.addEventListener("click", (e) => { e.preventDefault(); openPlans(); });
 const btnClosePlans = $("#btnClosePlans");
 if (btnClosePlans) btnClosePlans.onclick = () => $("#plansModal").close();
@@ -2626,7 +2928,7 @@ async function checkBackendHealth() {
 }
 
 async function loadAnalysisHistory() {
-  if (isGuestMode) return;
+  if (!CHAT_PERSISTENCE_ENABLED || isGuestMode) return;
   const wrap = $("#analysisHistoryWrap");
   const list = $("#analysisList");
   if (!wrap || !list) return;
@@ -2689,24 +2991,284 @@ async function loadAnalysisHistory() {
   }
 }
 
-function openAccountModal() {
+function renderUsageHistoryChart(history, sub) {
+  if (!history?.length) {
+    return `<div class="usage-history-chart mt-4 pt-4 border-t border-white/10">
+      <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-2">Uso mensual</h3>
+      <p class="text-xs opacity-60">Sin datos de uso todavía.</p>
+    </div>`;
+  }
+  const unlimited = isPlanUnlimited(sub);
+  const maxVal = Math.max(
+    1,
+    ...history.map((h) => h.analyses_used || 0),
+    ...(unlimited ? [1] : history.map((h) => h.analyses_limit || 0))
+  );
+  const bars = history
+    .map((h) => {
+      const used = h.analyses_used || 0;
+      const pct = Math.max(6, Math.round((used / maxVal) * 100));
+      const limitLine = !unlimited && h.analyses_limit
+        ? `<span class="usage-history-limit" title="Límite ${h.analyses_limit}">${h.analyses_limit}</span>`
+        : "";
+      return `<div class="usage-history-col${h.is_current ? " is-current" : ""}" title="${h.period_key}: ${used} análisis">
+        <div class="usage-history-bar-wrap">${limitLine}<div class="usage-history-bar" style="height:${pct}%"></div></div>
+        <span class="usage-history-label">${escapeHtml(h.label)}</span>
+        <span class="usage-history-value">${used}</span>
+      </div>`;
+    })
+    .join("");
+  return `<div class="usage-history-chart mt-4 pt-4 border-t border-white/10">
+    <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-1">Uso mensual</h3>
+    <p class="text-xs opacity-60 mb-3">Análisis realizados por mes${unlimited ? " (plan ilimitado)" : ""}.</p>
+    <div class="usage-history-grid">${bars}</div>
+  </div>`;
+}
+
+async function exportAllBillingReceipts() {
+  const res = await PlanoAuth.apiFetch("/api/billing/receipts/export/zip");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(typeof data.detail === "string" ? data.detail : "No se pudo exportar");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ARCHITECT-comprobantes.zip";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const RECEIPT_ALERT_KEY = "pending_receipt_alert";
+
+function showReceiptEmailAlert(receipt) {
+  if (!receipt?.id) return;
+  const el = $("#receiptEmailAlert");
+  if (!el) return;
+  $("#receiptEmailAlertTitle").textContent = "No se pudo enviar el comprobante por correo";
+  $("#receiptEmailAlertMsg").textContent = `Folio ${receipt.receipt_number}. Descárgalo aquí o revísalo en Mi cuenta.`;
+  el.classList.remove("hidden");
+  el.dataset.receiptId = String(receipt.id);
+  el.dataset.receiptNumber = receipt.receipt_number || "";
+  const dl = $("#receiptEmailAlertDownload");
+  if (dl) {
+    dl.onclick = async () => {
+      try {
+        await downloadBillingReceipt(receipt.id, receipt.receipt_number);
+      } catch (err) {
+        showToast(err.message || "Error al descargar");
+      }
+    };
+  }
+  const accountBtn = $("#receiptEmailAlertAccount");
+  if (accountBtn) accountBtn.onclick = () => openAccountModal();
+  const dismissBtn = $("#receiptEmailAlertDismiss");
+  if (dismissBtn) {
+    dismissBtn.onclick = () => {
+      el.classList.add("hidden");
+      sessionStorage.removeItem(RECEIPT_ALERT_KEY);
+    };
+  }
+}
+
+function consumePendingReceiptAlert() {
+  try {
+    const raw = sessionStorage.getItem(RECEIPT_ALERT_KEY);
+    if (!raw) return;
+    const receipt = JSON.parse(raw);
+    if (receipt?.email_status === "failed") showReceiptEmailAlert(receipt);
+    sessionStorage.removeItem(RECEIPT_ALERT_KEY);
+  } catch {
+    sessionStorage.removeItem(RECEIPT_ALERT_KEY);
+  }
+}
+
+async function downloadBillingReceipt(receiptId, receiptNumber) {
+  const res = await PlanoAuth.apiFetch(`/api/billing/receipts/${receiptId}/pdf?t=${Date.now()}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "No se pudo descargar el comprobante");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ARCHITECT-${receiptNumber || receiptId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function resendBillingReceipt(receiptId) {
+  const res = await PlanoAuth.apiFetch(`/api/billing/receipts/${receiptId}/email`, {
+    method: "POST",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data.detail === "string" ? data.detail : "No se pudo enviar el correo");
+  }
+  return data;
+}
+
+function formatReceiptDate(iso) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+function renderReceiptsSection(receipts) {
+  if (!receipts.length) {
+    return `
+      <div class="account-receipts mt-4 pt-4 border-t border-white/10">
+        <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-2">Mis comprobantes</h3>
+        <p class="text-xs opacity-60">Aún no tienes compras registradas. Al pagar un plan de pago verás aquí tu historial.</p>
+      </div>`;
+  }
+  const rows = receipts
+    .map(
+      (r) => `
+      <tr data-receipt-id="${r.id}">
+        <td><code class="text-xs">${escapeHtml(r.receipt_number)}</code></td>
+        <td>${escapeHtml(r.plan_name)}</td>
+        <td>${escapeHtml(r.amount_label || "")}</td>
+        <td class="text-xs opacity-70">${escapeHtml(formatReceiptDate(r.created_at))}</td>
+        <td class="text-xs">${r.email_sent_at ? '<span class="receipt-badge receipt-badge--sent">Enviado</span>' : '<span class="receipt-badge receipt-badge--pending">Sin correo</span>'}</td>
+        <td class="receipt-actions">
+          <button type="button" class="btn-link text-xs receipt-download-btn" data-id="${r.id}" data-number="${escapeHtml(r.receipt_number)}">PDF</button>
+          <button type="button" class="btn-link text-xs receipt-email-btn" data-id="${r.id}">Reenviar</button>
+        </td>
+      </tr>`
+    )
+    .join("");
+  return `
+    <div class="account-receipts mt-4 pt-4 border-t border-white/10">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70">Mis comprobantes</h3>
+        <button type="button" class="btn-link text-xs receipt-export-all-btn">Exportar ZIP</button>
+      </div>
+      <p class="text-xs opacity-60 mb-2">Documentos académicos de tu pasarela simulada (no factura fiscal).</p>
+      <div class="receipts-table-wrap">
+        <table class="receipts-table text-xs">
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Plan</th>
+              <th>Importe</th>
+              <th>Fecha</th>
+              <th>Correo</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function bindReceiptActions(container) {
+  container?.querySelectorAll(".receipt-export-all-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await exportAllBillingReceipts();
+        showToast("ZIP descargado");
+      } catch (err) {
+        showToast(err.message || "No se pudo exportar");
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+  container?.querySelectorAll(".receipt-download-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await downloadBillingReceipt(btn.dataset.id, btn.dataset.number);
+      } catch (err) {
+        showToast(err.message || "Error al descargar");
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+  container?.querySelectorAll(".receipt-email-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await resendBillingReceipt(btn.dataset.id);
+        showToast("Comprobante enviado a tu correo");
+        await openAccountModal();
+      } catch (err) {
+        showToast(err.message || "No se pudo reenviar");
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+}
+
+async function openAccountModal() {
   const user = PlanoAuth.getUser();
   const sub = PlanoAuth.getSubscription();
   const body = $("#accountBody");
   if (!body || !user) return;
-  const plan = sub?.plan?.name || "—";
-  const used = sub?.usage?.analyses_used ?? 0;
-  const limit = sub?.plan?.analyses_limit_monthly ?? 0;
-  const isUnlimited = sub?.is_unlimited === true;
-  const usageStr =
-    isUnlimited ? `${used} análisis este mes` : `${used} / ${limit} análisis`;
+  const plan = sub?.plan || {};
+  const usage = sub?.usage || {};
+  const used = usage.analyses_used ?? 0;
+  const limit = plan.analyses_limit_monthly ?? 0;
+  const unlimited = isPlanUnlimited(sub);
+  const usageStr = unlimited
+    ? `${used} análisis este mes (ilimitado)`
+    : `${used} / ${limit} análisis este mes`;
   body.innerHTML = `
     <p><strong>${escapeHtml(user.full_name || user.email)}</strong></p>
     <p class="opacity-60">${escapeHtml(user.email)}</p>
     <p class="mt-2">Rol: ${user.role === "admin" ? "Administrador" : "Usuario"}</p>
-    <p>Plan: ${escapeHtml(plan)} · ${usageStr}</p>
+    <p>Plan: <strong>${escapeHtml(plan.name || "—")}</strong></p>
+    <p>Uso mensual: ${usageStr}</p>
+    <p class="text-xs opacity-60 mt-1">Archivos hasta ${plan.max_file_mb || "—"} MB · ${plan.allow_real_model ? "Modelo real" : "Modelo demo"}</p>
+    <p class="text-xs opacity-50 mt-2">Periodo: ${escapeHtml(formatReceiptDate(sub?.period_start))} — ${escapeHtml(formatReceiptDate(sub?.period_end))}</p>
+    <div class="account-usage-chart-slot mt-4 pt-4 border-t border-white/10">
+      <p class="text-xs opacity-60">Cargando uso mensual…</p>
+    </div>
+    <div class="account-receipts mt-4 pt-4 border-t border-white/10">
+      <p class="text-xs opacity-60">Cargando comprobantes…</p>
+    </div>
   `;
   $("#accountModal").showModal();
+
+  try {
+    const [receiptsRes, historyRes] = await Promise.all([
+      PlanoAuth.apiFetch("/api/billing/receipts"),
+      PlanoAuth.apiFetch("/api/billing/usage-history?months=6"),
+    ]);
+    const receiptsData = await receiptsRes.json().catch(() => ({}));
+    const historyData = await historyRes.json().catch(() => ({}));
+    const receipts = receiptsRes.ok ? receiptsData.receipts || [] : [];
+    const history = historyRes.ok ? historyData.history || [] : [];
+
+    const chartSlot = body.querySelector(".account-usage-chart-slot");
+    if (chartSlot) chartSlot.outerHTML = renderUsageHistoryChart(history, sub);
+
+    const receiptsEl = body.querySelector(".account-receipts");
+    if (receiptsEl) {
+      receiptsEl.outerHTML = renderReceiptsSection(receipts);
+      bindReceiptActions(body);
+    }
+  } catch {
+    const receiptsEl = body.querySelector(".account-receipts");
+    if (receiptsEl) {
+      receiptsEl.innerHTML =
+        '<p class="text-xs opacity-60">No se pudo cargar el historial de compras.</p>';
+    }
+  }
 }
 
 function openInfoModal(title, html) {
@@ -2716,26 +3278,7 @@ function openInfoModal(title, html) {
 }
 
 function setupFooterLinks() {
-  $("#btnPrivacy")?.addEventListener("click", () =>
-    openInfoModal(
-      "Privacidad",
-      "<p>Los planos que subes se guardan en el servidor para tu historial y para mejorar el modelo de IA. No se comparten con terceros.</p><p>Puedes eliminar chats desde el panel Recientes.</p>"
-    )
-  );
-  $("#btnApi")?.addEventListener("click", () =>
-    openInfoModal(
-      "API",
-      "<p>Endpoints principales:</p><ul style='margin-top:8px;padding-left:1.2rem'><li><code>POST /api/auth/login</code></li><li><code>POST /api/analyze</code> (requiere token)</li><li><code>GET /api/chats</code></li><li><code>GET /api/analyses</code></li><li><code>GET /api/health</code></li></ul><p style='margin-top:8px'>Documentación interactiva: <a href='/docs' target='_blank'>/docs</a></p>"
-    )
-  );
-  $("#btnSupport")?.addEventListener("click", () =>
-    openInfoModal(
-      "Soporte",
-      "<p>Para problemas con el modelo, entrena <code>best.pt</code> con CubiCasa5K.</p><p>Para MySQL: revisa <code>.env</code> y ejecuta <code>python scripts/init_db.py</code>.</p><p>Diagnóstico: <code>.\\scripts\\verificar.ps1</code></p>"
-    )
-  );
-  const btnCloseInfo = $("#btnCloseInfo");
-  if (btnCloseInfo) btnCloseInfo.onclick = () => $("#infoModal").close();
+  /* Footer eliminado de la UI */
 }
 
 function setupDragDrop() {
@@ -2842,8 +3385,10 @@ async function refreshAfterPageRestore() {
     if (PlanoAuth.getToken()) {
       await PlanoAuth.refreshMe();
       updateUserUI();
-      await loadChats();
-      await loadAnalysisHistory();
+      if (CHAT_PERSISTENCE_ENABLED) {
+        await loadChats();
+        await loadAnalysisHistory();
+      }
     } else {
       await loadGuestTrialStatus();
       updateGuestUI();
@@ -2858,6 +3403,7 @@ async function refreshAfterPageRestore() {
 async function boot() {
   const loader = window.PlanoLoader;
   loader?.show(PlanoAuth.getToken() ? "Preparando tu espacio…" : "Cargando ARCHITECT…");
+  const bootGuard = window.setTimeout(() => loader?.hide(), 12000);
 
   try {
     setupImageViewer();
@@ -2881,14 +3427,68 @@ async function boot() {
     }
     $("#btnCloseTrial")?.addEventListener("click", () => $("#trialModal")?.close());
 
+    const openHomeProjects =
+      new URLSearchParams(window.location.search).get("home-projects") === "1" ||
+      sessionStorage.getItem("open_home_projects") === "1";
+
+    if (openHomeProjects) {
+      sessionStorage.removeItem("open_home_projects");
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("home-projects") !== "1") {
+        url.searchParams.set("home-projects", "1");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    }
+
     if (PlanoAuth.getToken()) {
       loader?.show("Sincronizando tu cuenta…");
-      await initAuthenticatedApp();
+      await initAuthenticatedApp(openHomeProjects);
     } else {
       loader?.show("Iniciando modo prueba…");
-      await initGuestApp();
+      await initGuestApp(openHomeProjects);
+    }
+
+    if (openHomeProjects && PlanoAuth.getToken()) {
+      window.HomeProjectsUI?.open();
+    }
+
+    if (new URLSearchParams(window.location.search).get("plan_activated") === "1") {
+      const sub = PlanoAuth.getSubscription();
+      const receiptId = new URLSearchParams(window.location.search).get("receipt_id");
+      let msg = sub?.plan?.name ? `Plan ${sub.plan.name} activado` : "Plan activado correctamente";
+      if (receiptId) msg += ". Revisa Mi cuenta para tu comprobante.";
+      showToast(msg);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("plan_activated");
+      url.searchParams.delete("receipt_id");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+    consumePendingReceiptAlert();
+    const bootParams = new URLSearchParams(window.location.search);
+    if (bootParams.get("account") === "1" && PlanoAuth.getToken()) {
+      const receiptId = bootParams.get("receipt_id");
+      await openAccountModal();
+      if (receiptId) {
+        try {
+          await downloadBillingReceipt(receiptId);
+          showToast("Comprobante descargado");
+        } catch {
+          showToast("Abre Mi cuenta para descargar tu comprobante");
+        }
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("account");
+      url.searchParams.delete("receipt_id");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+    if (new URLSearchParams(window.location.search).get("checkout_canceled") === "1") {
+      showToast("Pago cancelado. Puedes intentarlo de nuevo cuando quieras.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("checkout_canceled");
+      window.history.replaceState({}, "", url.pathname + url.search);
     }
   } finally {
+    window.clearTimeout(bootGuard);
     loader?.hide();
   }
 }

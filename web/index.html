@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="ARCHITECT — Revisión profesional de planos arquitectónicos" />
-  <title>ARCHITECT | Workspace</title>
+  <title>ARCHITECT</title>
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=42" />
+  <link rel="stylesheet" href="/static/style.css?v=81" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -92,12 +94,12 @@
 <body class="app-loading bg-white text-black overflow-hidden font-sans antialiased dark:bg-black dark:text-white">
   <div id="appLoader" class="app-loader app-loader--visible" role="status" aria-live="polite" aria-busy="true">
     <div class="app-loader-inner">
-      <p class="app-loader-brand">ARCHITECT</p>
+      <img src="/static/brand/architect-icon.png?v=3" alt="" class="app-loader-brand-img" width="52" height="52" />
       <div class="app-loader-spinner" aria-hidden="true"></div>
       <p class="app-loader-text" id="appLoaderText">Cargando…</p>
     </div>
   </div>
-  <script src="/static/loader-bootstrap.js?v=1"></script>
+  <script src="/static/loader-bootstrap.js?v=2"></script>
 
   <div class="mesh-bg" aria-hidden="true">
     <div class="mesh-pattern w-full h-full"></div>
@@ -107,35 +109,44 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar fixed left-0 top-0 z-40 flex h-full flex-col border-r px-3 py-6 backdrop-blur-xl">
       <div class="sidebar-inner flex h-full min-h-0 flex-col">
-      <div class="mb-6 px-1">
+      <div class="mb-6 flex items-start justify-between gap-2 px-1">
+        <div class="sidebar-brand min-w-0">
+        <img src="/static/brand/architect-icon.png?v=3" alt="" class="brand-mark-img" width="28" height="28" />
+        <div class="sidebar-brand-text min-w-0">
         <h1 class="text-[15px] font-semibold tracking-tight text-black dark:text-white">ARCHITECT</h1>
         <p class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-black/40 dark:text-white/40">AI Plan Review Studio</p>
+        <p class="mt-2 truncate text-[11px] text-black/45 dark:text-white/45" id="modelName">Revisión estructural · IA</p>
+        </div>
+        </div>
+        <button type="button" class="btn-sidebar-toggle shrink-0 rounded-[10px] p-2 transition-colors" id="btnMenu" aria-label="Minimizar panel" title="Minimizar panel lateral">
+          <span class="material-symbols-outlined" id="sidebarToggleIcon">chevron_left</span>
+        </button>
       </div>
 
-      <button type="button" id="btnNewChat" class="mb-3 flex w-full items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold transition-opacity hover:opacity-80">
-        <span class="material-symbols-outlined text-[20px]">add</span>
-        Nuevo chat
-      </button>
-
-      <div class="search-wrap mb-3 flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5">
-        <span class="material-symbols-outlined text-[17px]">search</span>
-        <input type="search" id="searchChats" placeholder="Buscar chats" class="w-full border-0 bg-transparent text-[13px] focus:ring-0" />
-      </div>
-
-      <div class="usage-bar mb-3 hidden rounded-[10px] border px-3 py-2 text-[11px]" id="usageBar">
-        <div class="flex justify-between font-medium">
+      <div class="usage-box mb-4 px-1" id="usageBar">
+        <button type="button" class="usage-box-btn w-full text-left" id="btnUsagePlans" title="Ver planes y uso">
+        <div class="flex justify-between text-[12px] font-medium">
           <span id="planLabel">Plan</span>
           <span id="usageLabel">0 / 5</span>
         </div>
         <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
           <div class="usage-fill h-full bg-black transition-all dark:bg-white" id="usageFill" style="width:0%"></div>
         </div>
+        </button>
       </div>
 
-      <nav class="mb-2 space-y-0.5">
+      <nav class="mb-2 space-y-0.5" aria-label="Herramientas">
         <a href="#" id="btnWorkspace" class="nav-item active flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-transform active:scale-[0.98]">
-          <span class="material-symbols-outlined text-[20px]">architecture</span>
-          <span class="text-[13px] font-medium">Workspace</span>
+          <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+          <span class="text-[13px] font-medium">Revisión IA</span>
+        </a>
+        <a href="#" id="btnHomeProjects" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">home_work</span>
+          <span class="text-sm font-medium">Casa hogar</span>
+        </a>
+        <a href="#" id="btnAdmin" class="nav-item hidden flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+          <span class="text-sm font-medium">Administración</span>
         </a>
         <a href="#" id="btnPlans" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
           <span class="material-symbols-outlined">workspace_premium</span>
@@ -147,18 +158,13 @@
         </a>
       </nav>
 
-      <div class="sidebar-section min-h-0 flex-1 overflow-hidden flex flex-col gap-2">
-        <div class="min-h-0 flex-1 flex flex-col overflow-hidden">
-          <p class="section-label mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]">Recientes</p>
-          <ul class="chat-list flex-1 overflow-y-auto pr-1" id="chatList"></ul>
-        </div>
-        <div class="analysis-history-wrap hidden shrink-0" id="analysisHistoryWrap">
-          <p class="section-label mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.1em]">Análisis</p>
-          <ul class="analysis-list max-h-28 overflow-y-auto pr-1" id="analysisList"></ul>
-        </div>
-      </div>
+      <div class="min-h-0 flex-1" aria-hidden="true"></div>
 
       <div class="sidebar-footer mt-3 border-t pt-3">
+        <div class="guest-sidebar-actions mb-2 hidden flex-col gap-2 px-1" id="guestSidebarActions">
+          <a href="/login" class="guest-auth-btn guest-auth-btn--ghost text-center">Iniciar sesión</a>
+          <a href="/login" class="guest-auth-btn text-center">Crear cuenta</a>
+        </div>
         <div class="user-pill flex w-full items-center gap-2.5 px-1">
           <button type="button" class="user-pill-main flex min-w-0 flex-1 items-center gap-2.5 text-left" id="btnAccount" title="Mi cuenta">
             <div class="avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" id="userAvatar">IA</div>
@@ -177,24 +183,38 @@
 
     <!-- Main -->
     <main class="main main-content relative flex min-h-0 flex-1 flex-col">
-      <header class="topbar flex shrink-0 items-center gap-3 border-b px-4 py-2.5 backdrop-blur-xl md:px-8">
-        <button type="button" class="btn-sidebar-toggle rounded-[10px] p-2 transition-colors" id="btnMenu" aria-label="Ocultar menú" title="Mostrar u ocultar panel">
-          <span class="material-symbols-outlined" id="sidebarToggleIcon">menu_open</span>
-        </button>
-        <div class="topbar-center flex flex-1 items-center gap-2 min-w-0">
-          <button type="button" class="model-badge rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider cursor-pointer hover:opacity-80" id="planBadge" title="Ver planes">FREE</button>
-          <span class="model-name text-[13px] font-medium truncate" id="modelName">Revisión estructural · IA</span>
-        </div>
-        <div class="topbar-guest-actions hidden shrink-0 items-center gap-2" id="guestTopbarActions">
-          <a href="/login" class="guest-auth-btn guest-auth-btn--ghost">Iniciar sesión</a>
-          <a href="/login" class="guest-auth-btn">Crear cuenta</a>
-        </div>
-      </header>
+      <button type="button" class="btn-menu-float btn-sidebar-toggle hidden rounded-[10px] p-2" id="btnMenuFloat" aria-label="Mostrar panel" title="Mostrar panel lateral">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
 
-      <div class="guest-trial-bar hidden mx-4 mt-2 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="guestTrialBar">
+      <div class="guest-trial-bar hidden mx-4 mt-3 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="guestTrialBar">
         <span class="material-symbols-outlined guest-trial-icon">science</span>
         <span id="guestTrialText">Prueba gratuita</span>
         <a href="/login" class="guest-trial-link">Registrarse</a>
+      </div>
+
+      <div class="plan-usage-badge hidden mx-4 mt-3 md:mx-8" id="planUsageBadge" role="status">
+        <button type="button" class="plan-usage-badge-btn" id="btnPlanUsageBadge" title="Ver plan y uso">
+          <span class="material-symbols-outlined plan-usage-badge-icon">workspace_premium</span>
+          <span id="planUsageBadgeText">Plan · 0/5</span>
+        </button>
+      </div>
+
+      <div class="receipt-email-alert hidden mx-4 mt-3 md:mx-8" id="receiptEmailAlert" role="alert">
+        <div class="receipt-email-alert-body">
+          <span class="material-symbols-outlined receipt-email-alert-icon">mail</span>
+          <div class="receipt-email-alert-copy">
+            <strong id="receiptEmailAlertTitle">No se pudo enviar el comprobante</strong>
+            <p id="receiptEmailAlertMsg">Descárgalo manualmente o reenvíalo desde Mi cuenta.</p>
+          </div>
+        </div>
+        <div class="receipt-email-alert-actions">
+          <button type="button" class="btn-secondary text-xs py-1.5 px-2" id="receiptEmailAlertDownload">Descargar PDF</button>
+          <button type="button" class="btn-link text-xs" id="receiptEmailAlertAccount">Mi cuenta</button>
+          <button type="button" class="receipt-email-alert-close" id="receiptEmailAlertDismiss" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
       </div>
 
       <div class="setup-banner mx-4 mt-3 hidden rounded-[10px] border border-black/15 bg-white px-4 py-2.5 text-[13px] dark:border-white/20 dark:bg-black md:mx-8" id="setupBanner">
@@ -202,19 +222,67 @@
         <span class="ml-1">Ejecuta <code class="rounded bg-black/10 px-1">python scripts/train_demo.py</code></span>
       </div>
 
-      <div class="chat-area flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-28 pt-4 md:px-margin-desktop md:pb-32" id="chatArea">
-        <!-- Welcome -->
+      <div id="homeProjectsPanel" class="home-projects-panel hidden flex min-h-0 flex-1 flex-col overflow-hidden" hidden>
+        <div class="home-projects-body flex min-h-0 flex-1 overflow-hidden">
+          <button type="button" class="home-projects-drawer-toggle" id="btnHomeProjectsDrawerToggle" aria-label="Abrir proyectos">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <button type="button" class="home-projects-drawer-backdrop" id="homeProjectsDrawerBackdrop" aria-label="Cerrar panel de proyectos"></button>
+          <aside class="home-projects-list-wrap border-r flex flex-col" id="homeProjectsListWrap">
+            <div class="home-projects-sidebar-head p-5 pt-8">
+              <h2 class="home-sidebar-title text-headline-md font-bold mb-4">Proyectos</h2>
+              <div class="home-projects-search relative">
+                <span class="material-symbols-outlined home-projects-search-icon absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">search</span>
+                <input id="homeProjectsSearch" class="home-projects-search-input w-full border-none rounded-[8px] pl-9 pr-3 py-1.5 text-sm outline-none transition-all duration-200" placeholder="Buscar..." type="text" />
+              </div>
+            </div>
+            <ul class="home-projects-list flex-1 overflow-y-auto px-3 pb-3 space-y-2" id="homeProjectsList"></ul>
+            <div class="home-projects-sidebar-foot p-4">
+              <button type="button" class="home-new-project-btn w-full py-2 px-3 rounded-[8px] border shadow-sm font-medium flex items-center justify-center gap-2 transition-colors" id="btnNewHomeProject">
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                Nuevo proyecto
+              </button>
+            </div>
+            <button type="button" class="home-switch-tab" id="btnSwitchToMainSidebar" aria-label="Volver a IA">
+              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+          </aside>
+          <section class="home-projects-detail flex min-h-0 flex-1 flex-col overflow-hidden p-0" id="homeProjectsDetail">
+            <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
+              <span class="material-symbols-outlined text-4xl mb-2">home_work</span>
+              <p class="text-sm">Selecciona un proyecto o crea uno nuevo</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="chat-area flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-24 pt-6 md:px-margin-desktop md:pb-28" id="chatArea">
         <div class="welcome flex flex-1 flex-col items-center justify-center py-6" id="welcome">
           <div class="welcome-hero mb-8 max-w-xl text-center animate-fade-up">
             <h2 class="mb-2 text-[2rem] font-semibold tracking-tight md:text-[2.35rem]">
               ¿Qué plano revisamos hoy?
             </h2>
             <p class="welcome-sub text-[15px] leading-relaxed" id="welcomeSub">
-              Pregunta sobre construcción (medidas en Ocosingo, normativa, etc.) o sube un plano para revisarlo. Las tarjetas son solo ejemplos.
+              ARCHITECT responde con tus manuales, normas de Chiapas y fuentes indexadas. También puedes subir planos.
             </p>
+            <span class="assistant-mode-badge hidden mt-3 inline-block rounded-full px-3 py-1 text-[11px] font-medium" id="assistantModeBadge"></span>
           </div>
 
-          <div class="suggestion-grid grid w-full grid-cols-1 gap-3 px-2 sm:grid-cols-3">
+          <div class="suggestion-grid grid w-full grid-cols-1 gap-3 px-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Cuáles son las medidas mínimas de puertas en Chiapas?">
+              <div class="card-icon-wrap">
+                <span class="material-symbols-outlined">gavel</span>
+              </div>
+              <h3>Normativa</h3>
+              <p>Medidas, trámites y reglamentos.</p>
+            </div>
+            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Qué materiales recomiendas para una losa en clima cálido-húmedo?">
+              <div class="card-icon-wrap">
+                <span class="material-symbols-outlined">chat</span>
+              </div>
+              <h3>Consulta general</h3>
+              <p>Materiales, procesos y dudas de obra.</p>
+            </div>
             <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Este plano está bien?">
               <div class="card-icon-wrap">
                 <span class="material-symbols-outlined">report_problem</span>
@@ -238,7 +306,7 @@
             </div>
           </div>
           <p class="welcome-examples mt-3 text-center text-[12px] text-on-surface-variant/70 px-4">
-            Ejemplos: «¿Medidas oficiales en Ocosingo?», «¿Este plano está bien?», «Ancho mínimo de puertas»
+            Ejemplos: «¿Medidas en Ocosingo?», «¿Qué es una losa maciza?», «¿Este plano está bien?»
           </p>
         </div>
 
@@ -311,27 +379,18 @@
               id="messageInput"
               rows="1"
               class="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2.5 text-[14px] focus:ring-0"
-              placeholder="Pregunta de construcción o adjunta plano y escribe qué revisar…"
+              placeholder="Pregunta sobre arquitectura, normativa u obra — ARCHITECT responde con tu biblioteca…"
               aria-label="Mensaje"
             ></textarea>
             <button type="submit" class="btn-send mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-30" id="btnSend" aria-label="Enviar" disabled>
               <span class="material-symbols-outlined">arrow_upward</span>
             </button>
           </form>
-          <p class="composer-hint mt-2 text-center text-[10px]">Imagen, PDF, DXF o DWG · arrastra o Ctrl+V</p>
+          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen, PDF, DXF o DWG · arrastra o Ctrl+V</p>
         </div>
       </div>
     </main>
   </div>
-
-  <footer class="footer-bar pointer-events-none fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between border-t border-white/20 bg-surface/40 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-inverse-surface/30 md:left-64 md:px-margin-desktop">
-    <div class="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/40">© 2024 Architectural AI Systems</div>
-    <div class="pointer-events-auto flex gap-6">
-      <button type="button" class="footer-link" id="btnPrivacy">Privacy</button>
-      <button type="button" class="footer-link" id="btnApi">API</button>
-      <button type="button" class="footer-link" id="btnSupport">Support</button>
-    </div>
-  </footer>
 
   <dialog class="modal" id="plansModal">
     <div class="modal-box glass-panel">
@@ -343,7 +402,8 @@
       </div>
       <p class="mb-4 text-sm text-black/60 dark:text-white/60" id="plansUsageText"></p>
       <div class="plans-grid space-y-3" id="plansGrid"></div>
-      <p class="mt-4 text-xs text-black/45 dark:text-white/45">Pago con Stripe próximamente. Por ahora el cambio de plan es manual (demo).</p>
+      <p class="mt-4 text-xs text-black/45 dark:text-white/45" id="plansDemoNote">Proyecto escolar: los planes de pago usan una pasarela simulada (sin cobro real). Bajar a Gratis es inmediato.</p>
+      <button type="button" class="btn-secondary mt-3 w-full text-xs py-2 hidden" id="btnStripePortal">Gestionar suscripción en Stripe</button>
     </div>
   </dialog>
 
@@ -364,10 +424,10 @@
         <div class="form-group">
           <label>Apariencia</label>
           <div class="theme-switch" role="group" aria-label="Tema">
-            <button type="button" class="theme-option active" data-theme="light" id="themeLight">Claro</button>
-            <button type="button" class="theme-option" data-theme="dark" id="themeDark">Oscuro</button>
+            <button type="button" class="theme-option" data-theme="light" id="themeLight">Claro</button>
+            <button type="button" class="theme-option active" data-theme="dark" id="themeDark">Oscuro</button>
           </div>
-          <small>Predeterminado: fondo blanco</small>
+          <small>Predeterminado: fondo negro</small>
         </div>
         <div class="form-group">
           <label class="checkbox-row">
@@ -452,12 +512,112 @@
         </button>
       </div>
       <p class="trial-modal-text text-sm leading-relaxed">
-        Ya usaste tu prueba gratuita. Para seguir analizando planos y haciendo preguntas con la IA,
-        inicia sesión o crea tu cuenta (plan gratis con más análisis al mes).
+        Ya usaste tu prueba gratuita en este navegador. Crea una cuenta gratis para seguir con:
       </p>
-      <div class="modal-actions mt-4 flex flex-col gap-2 sm:flex-row">
-        <a href="/login" class="auth-submit btn-primary text-center no-underline">Iniciar sesión</a>
-        <a href="/login" class="btn-secondary text-center py-2.5 text-sm no-underline">Crear cuenta</a>
+      <ul class="trial-modal-list text-sm leading-relaxed mt-3 space-y-1.5 pl-5 list-disc">
+        <li>Preguntas ilimitadas al asistente (con plan activo)</li>
+        <li>Más análisis de planos al mes</li>
+        <li>Historial de chats y correcciones para mejorar el modelo</li>
+      </ul>
+      <div class="modal-actions mt-5 flex flex-col gap-2 sm:flex-row">
+        <a href="/login" id="trialLoginLink" class="auth-submit btn-primary text-center no-underline">Iniciar sesión</a>
+        <a href="/login" id="trialRegisterLink" class="btn-secondary text-center py-2.5 text-sm no-underline">Crear cuenta gratis</a>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeProjectCreateModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Nuevo proyecto casa hogar</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeProjectCreate" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeProjectCreateForm" class="space-y-3">
+        <div class="form-group">
+          <label for="hpCreateName">Nombre del proyecto *</label>
+          <input type="text" id="hpCreateName" required minlength="2" maxlength="160" placeholder="Ej. Casa López — Ocosingo" />
+        </div>
+        <div class="form-group">
+          <label for="hpCreateClient">Cliente</label>
+          <input type="text" id="hpCreateClient" maxlength="120" placeholder="Nombre del cliente" />
+        </div>
+        <div class="form-group">
+          <label for="hpCreateLocation">Ubicación</label>
+          <input type="text" id="hpCreateLocation" maxlength="200" placeholder="Municipio, colonia…" />
+        </div>
+        <div class="form-group">
+          <label for="hpCreateDescription">Descripción</label>
+          <textarea id="hpCreateDescription" rows="3" maxlength="4000" placeholder="Notas iniciales del proyecto"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeProjectCreate">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear proyecto</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeSectionModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Nuevo apartado</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeSection" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeSectionForm" class="space-y-3">
+        <div class="form-group">
+          <label for="homeSectionTitle">Título *</label>
+          <input type="text" id="homeSectionTitle" required minlength="2" maxlength="200" placeholder="Ej. Memoria descriptiva, Fotos de fachada…" />
+        </div>
+        <div class="form-group">
+          <label for="homeSectionDescription">Descripción</label>
+          <textarea id="homeSectionDescription" rows="3" maxlength="4000" placeholder="Qué documentación o imágenes debe incluir este apartado"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeSection">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear apartado</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeInviteModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Invitar al proyecto</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeInvite" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeInviteForm" class="space-y-3">
+        <div class="form-group">
+          <label for="homeInviteEmail">Correo electrónico *</label>
+          <input type="email" id="homeInviteEmail" required placeholder="colaborador@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label for="homeInviteRole">Permisos</label>
+          <select id="homeInviteRole" class="w-full rounded-lg border px-3 py-2 text-sm">
+            <option value="editor">Editor — puede subir archivos y crear apartados</option>
+            <option value="viewer">Lector — solo consulta</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeInvite">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnSubmitHomeInvite">Enviar invitación</button>
+        </div>
+      </form>
+      <div id="homeInviteResult" class="home-invite-result hidden space-y-3" hidden>
+        <p class="text-sm leading-relaxed">Comparte este enlace con <strong id="homeInviteResultEmail"></strong>. Debe iniciar sesión con ese correo (válido 14 días).</p>
+        <div class="flex flex-wrap gap-2 items-stretch">
+          <input type="text" readonly id="homeInviteLink" class="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-mono" />
+          <button type="button" class="btn-primary text-xs py-2 px-3 shrink-0" id="btnCopyInviteLink">Copiar enlace</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-primary text-xs py-2 px-4" id="btnCloseInviteResult">Listo</button>
+        </div>
       </div>
     </div>
   </dialog>
@@ -475,9 +635,12 @@
   </dialog>
 
   <div class="sidebar-backdrop hidden" id="sidebarBackdrop" aria-hidden="true"></div>
-  <div class="toast hidden" id="toast" role="status"></div>
+  <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="/static/auth.js?v=20"></script>
-  <script src="/static/app.js?v=39"></script>
+  <script src="/static/auth.js?v=28"></script>
+  <script src="/static/billing.js?v=1"></script>
+  <script src="/static/dialogs.js?v=4"></script>
+  <script src="/static/home-projects.js?v=45"></script>
+  <script src="/static/app.js?v=53"></script>
 </body>
 </html>

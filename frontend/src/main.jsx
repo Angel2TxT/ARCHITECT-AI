@@ -13,12 +13,19 @@ import {
   Menu,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Moon,
   Workflow
 } from "lucide-react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import AdminPanel from "./AdminPanel.jsx";
+import WorkspaceSidebar from "./WorkspaceSidebar.jsx";
+import { requestPlanChange } from "./subscription.js";
 import "./styles.css";
 
+const DEMO_ADMIN_EMAIL = "admin@planoia.com";
+const DEMO_ADMIN_PASSWORD = "admin123";
 const TOKEN_KEY = "plano_ia_token";
 const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
@@ -59,6 +66,14 @@ function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 function formatApiError(data, fallback) {
   if (!data) return fallback;
   if (typeof data.detail === "string") return data.detail;
@@ -73,6 +88,16 @@ function navigate(path) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
+function loginRedirectTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+  if (next && next.startsWith("/")) return next;
+  if (sessionStorage.getItem("open_home_projects") === "1") {
+    return "/legacy-app?home-projects=1";
+  }
+  return "/legacy-app";
+}
+
 function selectPlan(planSlug) {
   localStorage.setItem(SELECTED_PLAN_KEY, planSlug);
   navigate("/login#register");
@@ -80,25 +105,14 @@ function selectPlan(planSlug) {
 
 async function applySelectedPlan(accessToken) {
   const planSlug = localStorage.getItem(SELECTED_PLAN_KEY);
-  if (!planSlug || planSlug === "free") return;
+  if (!planSlug || planSlug === "free") return false;
 
   try {
-    const res = await fetch("/api/billing/change-plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({ plan_slug: planSlug })
-    });
-
-    if (res.ok) {
-      const subscription = await res.json();
-      localStorage.setItem(SUB_KEY, JSON.stringify(subscription));
-      localStorage.removeItem(SELECTED_PLAN_KEY);
-    }
+    const result = await requestPlanChange(planSlug, accessToken, loginRedirectTarget());
+    localStorage.removeItem(SELECTED_PLAN_KEY);
+    return result?.status === "redirecting";
   } catch {
-    // El registro no depende del cambio de plan; el usuario puede cambiarlo dentro de la app.
+    return false;
   }
 }
 
@@ -123,9 +137,18 @@ function ThemeToggle() {
     setTheme(next);
   }
 
+  const isDark = theme === "dark";
+
   return (
-    <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label="Cambiar modo claro u oscuro">
-      {theme === "dark" ? "Claro" : "Oscuro"}
+    <button
+      className="theme-toggle"
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+      title={isDark ? "Modo claro" : "Modo oscuro"}
+    >
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      <span>{isDark ? "Claro" : "Oscuro"}</span>
     </button>
   );
 }
@@ -209,10 +232,10 @@ function StructureScene({ variant = "section" } = {}) {
     key.position.set(6, 10, 8);
     key.castShadow = true;
     scene.add(key);
-    const blueLight = new THREE.PointLight(0x1ea7ff, 5, 22);
+    const blueLight = new THREE.PointLight(0xffffff, 4, 22);
     blueLight.position.set(-2.6, 2.7, 2.1);
     scene.add(blueLight);
-    const warmLight = new THREE.PointLight(0xffa33a, 4.5, 18);
+    const warmLight = new THREE.PointLight(0xd4d4d4, 3.5, 18);
     warmLight.position.set(3.4, 3.4, -2);
     scene.add(warmLight);
 
@@ -226,7 +249,7 @@ function StructureScene({ variant = "section" } = {}) {
     const steel = new THREE.MeshStandardMaterial({ color: 0x59636d, roughness: 0.18, metalness: 0.72 });
     const darkSteel = new THREE.MeshStandardMaterial({ color: 0x25313b, roughness: 0.16, metalness: 0.82 });
     const glass = new THREE.MeshPhysicalMaterial({
-      color: 0xc8ecff,
+      color: 0xe5e5e5,
       transparent: true,
       opacity: 0.23,
       roughness: 0.02,
@@ -234,9 +257,9 @@ function StructureScene({ variant = "section" } = {}) {
       thickness: 0.3,
       depthWrite: false
     });
-    const blue = new THREE.MeshBasicMaterial({ color: 0x19a8ff, transparent: true, opacity: 0.82 });
-    const amber = new THREE.MeshBasicMaterial({ color: 0xffa63d, transparent: true, opacity: 0.9 });
-    const red = new THREE.MeshStandardMaterial({ color: 0xc52222, emissive: 0x8f1010, emissiveIntensity: 1.1 });
+    const accent = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.82 });
+    const accentSoft = new THREE.MeshBasicMaterial({ color: 0xa3a3a3, transparent: true, opacity: 0.9 });
+    const markerDark = new THREE.MeshStandardMaterial({ color: 0x404040, emissive: 0x171717, emissiveIntensity: 1.1 });
     const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x111820, transparent: true, opacity: 0.16 });
 
     function addMesh(geometry, material, position, group = building) {
@@ -316,21 +339,21 @@ function StructureScene({ variant = "section" } = {}) {
         new THREE.Vector3(0, 1.72, 2.35),
         new THREE.Vector3(3.85, 1.72, 2.35)
       ],
-      blue
+      accent
     );
-    line([new THREE.Vector3(-3.85, 3.24, -2.35), new THREE.Vector3(3.85, 3.24, -2.35)], blue);
-    line([new THREE.Vector3(3.85, 0.12, -2.35), new THREE.Vector3(3.85, 3.35, -2.35)], amber);
-    line([new THREE.Vector3(3.85, 1.68, -2.35), new THREE.Vector3(3.85, 1.68, 2.35)], amber);
+    line([new THREE.Vector3(-3.85, 3.24, -2.35), new THREE.Vector3(3.85, 3.24, -2.35)], accent);
+    line([new THREE.Vector3(3.85, 0.12, -2.35), new THREE.Vector3(3.85, 3.35, -2.35)], accentSoft);
+    line([new THREE.Vector3(3.85, 1.68, -2.35), new THREE.Vector3(3.85, 1.68, 2.35)], accentSoft);
 
-    const markerA = marker(3.85, 1.7, -2.35, red);
-    const markerB = marker(0, 1.7, 2.35, blue);
+    const markerA = marker(3.85, 1.7, -2.35, markerDark);
+    const markerB = marker(0, 1.7, 2.35, accent);
 
     const scanPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(8.6, 5.3),
       new THREE.MeshBasicMaterial({
-        color: 0x39b8ff,
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.08,
+        opacity: 0.06,
         side: THREE.DoubleSide,
         depthWrite: false
       })
@@ -363,10 +386,8 @@ function StructureScene({ variant = "section" } = {}) {
         });
         building.add(model);
 
-        const markerMaterial = red;
-        const blueMarkerMaterial = blue;
-        const markerA = marker(3.85, 1.7, -2.35, markerMaterial);
-        const markerB = marker(0, 1.7, 2.35, blueMarkerMaterial);
+        const markerA = marker(3.85, 1.7, -2.35, markerDark);
+        const markerB = marker(0, 1.7, 2.35, accent);
         const scanPath = line(
           [
             new THREE.Vector3(-3.85, 1.72, -2.35),
@@ -374,14 +395,14 @@ function StructureScene({ variant = "section" } = {}) {
             new THREE.Vector3(0, 1.72, 2.35),
             new THREE.Vector3(3.85, 1.72, 2.35)
           ],
-          blue
+          accent
         );
         const scanPlane = new THREE.Mesh(
           new THREE.PlaneGeometry(8.6, 5.3),
           new THREE.MeshBasicMaterial({
-            color: 0x39b8ff,
+            color: 0xffffff,
             transparent: true,
-            opacity: 0.08,
+            opacity: 0.06,
             side: THREE.DoubleSide,
             depthWrite: false
           })
@@ -463,8 +484,8 @@ function StructureScene({ variant = "section" } = {}) {
 function HeroBolt() {
   return (
     <div className="hero-bolt-scene" aria-hidden="true">
-      <div className="hero-lightning hero-lightning--violet" />
-      <div className="hero-lightning hero-lightning--gold" />
+      <div className="hero-lightning hero-lightning--primary" />
+      <div className="hero-lightning hero-lightning--secondary" />
       <div className="hero-bolt">
         <span className="bolt-face bolt-face-main" />
         <span className="bolt-face bolt-face-left" />
@@ -481,7 +502,7 @@ const subscriptionPlans = [
   {
     slug: "starter",
     name: "Starter",
-    tone: "violet",
+    tone: "mono",
     price: "$99",
     period: "/mes",
     description: "Para estudiantes, freelancers o revisiones puntuales de planos.",
@@ -496,7 +517,7 @@ const subscriptionPlans = [
   {
     slug: "pro",
     name: "Pro",
-    tone: "blue",
+    tone: "mono",
     price: "$299",
     period: "/mes",
     description: "Para despachos que revisan entregables de arquitectura e ingenieria cada semana.",
@@ -512,7 +533,7 @@ const subscriptionPlans = [
   {
     slug: "enterprise",
     name: "Enterprise",
-    tone: "slate",
+    tone: "mono",
     price: "$999",
     period: "/mes",
     description: "Para constructoras, universidades o equipos con criterios tecnicos propios.",
@@ -528,6 +549,7 @@ const subscriptionPlans = [
 
 function Welcome() {
   useRevealAnimations();
+  const [pricingPlans, setPricingPlans] = useState(null);
 
   useEffect(() => {
     const onScroll = () => document.body.classList.toggle("nav-scrolled", window.scrollY > 14);
@@ -536,11 +558,48 @@ function Welcome() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/billing/plans")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((plans) => {
+        if (!plans?.length) return;
+        setPricingPlans(
+          plans
+            .filter((p) => p.slug !== "free")
+            .map((p) => ({
+              slug: p.slug,
+              name: p.name,
+              tone: "mono",
+              price: p.price_monthly_cents
+                ? `$${(p.price_monthly_cents / 100).toFixed(0)}`
+                : "Gratis",
+              period: p.price_monthly_cents ? "/mes" : "",
+              description: p.description || "",
+              label: p.slug === "pro" ? "Mas elegido" : p.slug === "enterprise" ? "Equipo" : "Incluye",
+              popular: p.slug === "pro",
+              features: [
+                p.analyses_limit_monthly >= 9999
+                  ? "Uso alto incluido"
+                  : `${p.analyses_limit_monthly} revisiones de planos al mes`,
+                p.allow_real_model ? "Modelo real habilitado" : "Modelo demo",
+                `Archivos hasta ${p.max_file_mb} MB`,
+                ...(p.features?.export ? ["Reportes exportables"] : []),
+                ...(p.features?.api ? ["Acceso API"] : []),
+                ...(p.features?.sla ? ["SLA dedicado"] : [])
+              ]
+            }))
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  const plansToShow = pricingPlans || subscriptionPlans;
+
   return (
     <main className="welcome-page">
       <nav className="site-nav">
         <a href="/" className="brand" onClick={(event) => { event.preventDefault(); navigate("/"); }}>
-          <span className="brand-mark">A</span>
+          <img src="/static/brand/architect-icon.png?v=3" alt="" className="brand-mark-img" width="42" height="42" />
           <span>
             ARCHITECT
             <small>STUDIO</small>
@@ -668,7 +727,7 @@ function Welcome() {
           <p>Escoge un plan segun el volumen de planos, disciplinas y nivel de control tecnico que necesita tu equipo.</p>
         </div>
         <div className="pricing-stage reveal">
-          {subscriptionPlans.map((plan) => (
+          {plansToShow.map((plan) => (
             <article className={`pricing-card pricing-card--${plan.tone}${plan.popular ? " pricing-card--featured" : ""}`} key={plan.name}>
               <div className="pricing-card-head">
                 <h3>{plan.name}</h3>
@@ -724,10 +783,54 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [googleEnabled, setGoogleEnabled] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
-    if (getToken()) navigate("/app");
+    if (getToken()) window.location.replace(loginRedirectTarget());
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("oauth_error");
+    const accessToken = params.get("access_token");
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      window.history.replaceState({}, "", "/login");
+      return;
+    }
+    if (!accessToken) return;
+
+    async function finishOAuth() {
+      setBusy(true);
+      try {
+        localStorage.setItem(TOKEN_KEY, accessToken);
+        const res = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(formatApiError(data, "Sesión inválida"));
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        localStorage.setItem(SUB_KEY, JSON.stringify(data.subscription));
+        const checkoutRedirect = await applySelectedPlan(accessToken);
+        if (checkoutRedirect) return;
+        window.history.replaceState({}, "", "/login");
+        window.location.replace(loginRedirectTarget());
+      } catch (err) {
+        clearSession();
+        setError(err.message || "No se pudo completar el acceso con Google");
+        window.history.replaceState({}, "", "/login");
+        setBusy(false);
+      }
+    }
+    finishOAuth();
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/google/enabled")
+      .then((r) => r.json())
+      .then((d) => setGoogleEnabled(!!d.enabled))
+      .catch(() => setGoogleEnabled(false));
   }, []);
 
   useEffect(() => {
@@ -815,14 +918,17 @@ function Login() {
         return;
       }
       setSession(data);
-      if (mode === "register") {
-        await applySelectedPlan(data.access_token);
-      }
-      navigate("/app");
+      const checkoutRedirect = await applySelectedPlan(data.access_token);
+      if (checkoutRedirect) return;
+      window.location.replace(loginRedirectTarget());
     } catch {
       setError("No se pudo conectar con el servidor.");
       setBusy(false);
     }
+  }
+
+  function startGoogle() {
+    window.location.href = "/api/auth/google";
   }
 
   return (
@@ -859,7 +965,14 @@ function Login() {
           )}
           <label className="auth-animated-field">
             Correo electronico
-            <input name="email" type="email" autoComplete="email" required placeholder="tu@correo.com" />
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="tu@correo.com"
+              defaultValue={mode === "login" ? DEMO_ADMIN_EMAIL : ""}
+            />
           </label>
           <label className="auth-animated-field">
             Contrasena
@@ -871,6 +984,7 @@ function Login() {
                 minLength={mode === "register" ? 8 : undefined}
                 required
                 placeholder={mode === "register" ? "Minimo 8 caracteres" : "Tu contrasena"}
+                defaultValue={mode === "login" ? DEMO_ADMIN_PASSWORD : ""}
               />
               <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label="Mostrar contrasena">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -878,12 +992,33 @@ function Login() {
             </div>
           </label>
 
+          {mode === "login" && (
+            <p className="auth-demo-hint auth-animated-field">
+              Pruebas: <code>{DEMO_ADMIN_EMAIL}</code> / <code>{DEMO_ADMIN_PASSWORD}</code>
+            </p>
+          )}
+
           {error && <p className="form-error auth-animated-field">{error}</p>}
 
           <button className="auth-submit auth-animated-field" type="submit" disabled={busy}>
             {busy ? "Procesando..." : mode === "register" ? "Crear cuenta" : "Entrar"}
             {mode === "register" ? <Sparkles size={18} /> : <LogIn size={18} />}
           </button>
+
+          {googleEnabled && (
+            <>
+              <p className="auth-divider auth-animated-field">o</p>
+              <button
+                type="button"
+                className="auth-google auth-animated-field"
+                onClick={startGoogle}
+                disabled={busy}
+              >
+                <span className="auth-google-icon" aria-hidden="true">G</span>
+                Continuar con Google
+              </button>
+            </>
+          )}
         </form>
       </section>
     </main>
@@ -891,35 +1026,127 @@ function Login() {
 }
 
 function AppShell() {
+  const path = useRoute();
+  const [user, setUser] = useState(() => getUser());
+  const [subscription, setSubscription] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(SUB_KEY) || "null");
+    } catch {
+      return null;
+    }
+  });
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("plano_ia_sidebar_collapsed") === "1"
+  );
+  const isAdmin = user?.role === "admin";
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("plano_ia_sidebar_collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
+
   useEffect(() => {
-    if (!getToken()) navigate("/login");
+    if (!getToken()) {
+      navigate("/login");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        if (!res.ok) throw new Error("session");
+        const data = await res.json();
+        if (cancelled) return;
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        localStorage.setItem(SUB_KEY, JSON.stringify(data.subscription));
+        setUser(data.user);
+        setSubscription(data.subscription);
+      } catch {
+        if (!cancelled) {
+          clearSession();
+          navigate("/login");
+        }
+      } finally {
+        if (!cancelled) setSessionReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  const isAppRoot = path === "/app" || path === "/app/";
+  const isProjects = path === "/app/projects" || path.startsWith("/app/projects/");
+  const isAdminRoute = path === "/app/admin" || path.startsWith("/app/admin/");
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (isProjects) {
+      window.location.replace("/legacy-app?home-projects=1");
+    }
+  }, [sessionReady, isProjects]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (isAppRoot) {
+      window.location.replace("/legacy-app");
+    }
+  }, [sessionReady, isAppRoot]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (isAdminRoute && !isAdmin) {
+      window.location.replace("/legacy-app");
+    }
+  }, [isAdminRoute, isAdmin, sessionReady]);
+
+  if (!sessionReady) {
+    return (
+      <main className="app-layout app-layout--loading">
+        <p>Cargando sesión…</p>
+      </main>
+    );
+  }
+
+  if (isAppRoot || isProjects) {
+    return (
+      <main className="app-layout app-layout--loading">
+        <p>{isProjects ? "Abriendo Casa hogar…" : "Redirigiendo al workspace…"}</p>
+      </main>
+    );
+  }
+
   return (
-    <main className="legacy-shell">
-      <div className="legacy-topbar">
-        <strong>ARCHITECT</strong>
-        <div>
-          <button onClick={() => navigate("/")}>Welcome</button>
-          <button
-            onClick={() => {
-              clearSession();
-              navigate("/login");
-            }}
-          >
-            Salir
-          </button>
-        </div>
+    <div className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}`}>
+      <WorkspaceSidebar
+        path={path}
+        user={user}
+        subscription={subscription}
+        onSubscriptionChange={setSubscription}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebarCollapsed}
+      />
+      <div className="workspace-main">
+        {isAdminRoute && isAdmin ? (
+          <AdminPanel />
+        ) : isProjects ? (
+          null
+        ) : null}
       </div>
-      <iframe title="ARCHITECT Workspace" src="/legacy-app" />
-    </main>
+    </div>
   );
 }
 
 function Root() {
   const path = useRoute();
   if (path === "/login") return <Login />;
-  if (path === "/app") return <AppShell />;
+  if (path === "/app" || path.startsWith("/app/")) return <AppShell />;
   return <Welcome />;
 }
 

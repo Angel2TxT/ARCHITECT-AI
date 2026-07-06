@@ -29,9 +29,10 @@
 
   window.addEventListener("pageshow", function (ev) {
     if (!document.getElementById("appLoader")) return;
+    // Solo al volver con el botón Atrás (bfcache). En carga normal pageshow
+    // también dispara y dejaba el loader encima del workspace.
+    if (!ev.persisted) return;
     armLoader(DEFAULT_TEXT);
-    if (ev.persisted) {
-      window.dispatchEvent(new CustomEvent("plano:pageshow-restore"));
-    }
+    window.dispatchEvent(new CustomEvent("plano:pageshow-restore"));
   });
 })();

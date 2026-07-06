@@ -52,6 +52,6 @@ python app.py
 
 Cada análisis se guarda en `data/uploads/{user_id}/{analysis_id}/` para historial y futuro entrenamiento.
 
-## Stripe (próximo paso)
+## Stripe (opcional, fuera de alcance escolar)
 
-Campos preparados: `stripe_customer_id`, `stripe_subscription_id` en tabla `subscriptions`.
+Campos preparados en BD (`stripe_customer_id`, `stripe_subscription_id`) para una futura integración comercial. En modo demo se guardan IDs `demo_cus_*` / `demo_sub_*`. Ver [BILLING_DEMO.md](BILLING_DEMO.md).

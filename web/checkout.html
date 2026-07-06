@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARCHITECT</title>
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --surface: #111113;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --accent: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+    }
+    .checkout-shell {
+      width: min(100%, 28rem);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .checkout-head {
+      padding: 1.25rem 1.35rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .checkout-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .checkout-badge-dot {
+      width: 0.38rem;
+      height: 0.38rem;
+      border-radius: 999px;
+      background: #fafafa;
+    }
+    h1 {
+      margin: 0.85rem 0 0.35rem;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+    .checkout-sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    .checkout-body { padding: 1.25rem 1.35rem 1.35rem; }
+    .checkout-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0.85rem;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .checkout-summary strong { font-size: 1.1rem; }
+    .checkout-summary span { color: var(--muted); font-size: 0.82rem; }
+    label {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .field { margin-bottom: 0.85rem; }
+    input {
+      width: 100%;
+      padding: 0.72rem 0.85rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+    }
+    input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .checkout-pay {
+      width: 100%;
+      margin-top: 0.35rem;
+      padding: 0.85rem 1rem;
+      border: 0;
+      border-radius: 0.75rem;
+      background: linear-gradient(135deg, #ffffff, #d4d4d8);
+      color: #09090b;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+    }
+    .checkout-pay:disabled { opacity: 0.55; cursor: wait; }
+    .checkout-cancel {
+      display: block;
+      width: 100%;
+      margin-top: 0.75rem;
+      padding: 0.55rem;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-align: center;
+    }
+    .checkout-error {
+      margin: 0 0 0.85rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      background: rgba(127, 29, 29, 0.25);
+      color: #fecaca;
+      font-size: 0.82rem;
+    }
+    .checkout-foot {
+      padding: 0.9rem 1.35rem 1.1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+    .checkout-loading {
+      padding: 2.5rem 1.35rem;
+      text-align: center;
+      color: var(--muted);
+    }
+    .hidden { display: none !important; }
+    .checkout-success {
+      padding: 1.35rem;
+      text-align: center;
+    }
+    .checkout-success-icon {
+      display: inline-block;
+      font-size: 2.5rem;
+      color: #86efac;
+      margin-bottom: 0.5rem;
+      animation: checkoutCheckPop 0.65s cubic-bezier(0.34, 1.3, 0.64, 1) 0.12s both;
+    }
+    .checkout-success-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .checkout-success-actions button,
+    .checkout-success-actions a {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+    }
+    .checkout-success-download {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+    .checkout-success-continue {
+      border: 0;
+      background: linear-gradient(135deg, #ffffff, #d4d4d8);
+      color: #09090b;
+    }
+    .checkout-receipt-meta {
+      margin: 0.75rem 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .checkout-legal-notice {
+      margin: 0 0 0.85rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: rgba(120, 53, 15, 0.22);
+      color: #fde68a;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      text-align: left;
+    }
+    .checkout-email-warn {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      background: rgba(127, 29, 29, 0.25);
+      color: #fecaca;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      text-align: left;
+    }
+    .checkout-processing {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: rgba(5, 5, 5, 0.72);
+      backdrop-filter: blur(6px);
+    }
+    .checkout-processing-card {
+      width: min(100%, 18rem);
+      padding: 1.5rem 1.25rem;
+      border-radius: 1rem;
+      border: 1px solid var(--border);
+      background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+    .checkout-processing-spinner {
+      width: 3rem;
+      height: 3rem;
+      margin: 0 auto 1rem;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.12);
+      border-top-color: #86efac;
+      animation: checkoutSpin 0.75s linear infinite;
+    }
+    .checkout-processing-card p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .checkout-processing-steps {
+      margin-top: 0.65rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      min-height: 1.1rem;
+    }
+    @keyframes checkoutSpin {
+      to { transform: rotate(360deg); }
+    }
+    #checkoutSuccess.is-revealed {
+      animation: checkoutSuccessPop 0.55s cubic-bezier(0.34, 1.15, 0.64, 1);
+    }
+    @keyframes checkoutSuccessPop {
+      from { opacity: 0; transform: scale(0.94) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes checkoutCheckPop {
+      from { opacity: 0; transform: scale(0.4); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    #checkoutConfettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="checkoutConfettiCanvas" aria-hidden="true"></canvas>
+
+  <div id="checkoutProcessing" class="checkout-processing hidden" aria-live="polite" aria-busy="true">
+    <div class="checkout-processing-card">
+      <div class="checkout-processing-spinner"></div>
+      <p id="checkoutProcessingTitle">Procesando pago…</p>
+      <p class="checkout-processing-steps" id="checkoutProcessingStep">Verificando tarjeta</p>
+    </div>
+  </div>
+
+  <div class="checkout-shell">
+    <div id="checkoutLoading" class="checkout-loading">Cargando sesión de pago…</div>
+
+    <div id="checkoutErrorOnly" class="hidden">
+      <div class="checkout-head">
+        <span class="checkout-badge"><span class="checkout-badge-dot"></span> Checkout</span>
+        <h1>No se pudo abrir el pago</h1>
+        <p class="checkout-sub" id="checkoutFatalMsg">La sesión expiró o no es válida.</p>
+      </div>
+      <div class="checkout-body">
+        <a class="checkout-cancel" href="/legacy-app" style="text-decoration:none">Volver al workspace</a>
+      </div>
+    </div>
+
+    <form id="checkoutForm" class="hidden" novalidate>
+      <div class="checkout-head">
+        <span class="checkout-badge"><span class="checkout-badge-dot"></span> Pasarela simulada</span>
+        <h1 id="checkoutTitle">Confirmar suscripción</h1>
+        <p class="checkout-sub" id="checkoutSubtitle">Proyecto escolar — simulación de pago, sin cargo real.</p>
+      </div>
+      <div class="checkout-body">
+        <div class="checkout-summary">
+          <div>
+            <strong id="planName">Plan</strong>
+            <div><span id="planEmail">cuenta@ejemplo.com</span></div>
+          </div>
+          <div style="text-align:right">
+            <strong id="planPrice">$0</strong>
+            <div><span>/ mes</span></div>
+          </div>
+        </div>
+
+        <p id="checkoutError" class="checkout-error hidden"></p>
+
+        <p class="checkout-legal-notice">
+          <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:-3px">info</span>
+          Documento académico simulado — <strong>no es factura fiscal</strong> ni comprobante de pago real.
+        </p>
+
+        <div class="field">
+          <label for="cardName">Nombre en la tarjeta</label>
+          <input id="cardName" name="cardName" autocomplete="cc-name" placeholder="Como aparece en la tarjeta" required />
+        </div>
+        <div class="field">
+          <label for="cardNumber">Número de tarjeta</label>
+          <input
+            id="cardNumber"
+            name="cardNumber"
+            type="text"
+            inputmode="numeric"
+            autocomplete="cc-number"
+            placeholder="4242 4242 4242 4242"
+            maxlength="19"
+            title="16 dígitos"
+            required
+          />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="cardExpiry">Vencimiento</label>
+            <input
+              id="cardExpiry"
+              name="cardExpiry"
+              type="text"
+              inputmode="numeric"
+              autocomplete="cc-exp"
+              placeholder="MM/AA"
+              maxlength="5"
+              pattern="(0[1-9]|1[0-2])\/[0-9]{2}"
+              title="Formato MM/AA"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="cardCvc">CVC</label>
+            <input
+              id="cardCvc"
+              name="cardCvc"
+              type="text"
+              inputmode="numeric"
+              autocomplete="cc-csc"
+              placeholder="123"
+              maxlength="4"
+              pattern="[0-9]{3,4}"
+              title="3 o 4 dígitos"
+              required
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="checkout-pay" id="checkoutPayBtn">
+          <span class="material-symbols-outlined" style="font-size:1.1rem">lock</span>
+          Pagar y activar plan
+        </button>
+        <button type="button" class="checkout-cancel" id="checkoutCancelBtn">Cancelar y volver</button>
+      </div>
+      <p class="checkout-foot">
+        Simulación para proyecto escolar ARCHITECT. No se envían datos de tarjeta a ningún procesador
+        y no se realiza ningún cargo.
+      </p>
+    </form>
+
+    <div id="checkoutSuccess" class="checkout-success hidden">
+      <div class="checkout-head">
+        <span class="checkout-badge"><span class="checkout-badge-dot"></span> Pago simulado</span>
+        <h1>¡Plan activado!</h1>
+        <p class="checkout-sub">Tu suscripción quedó registrada correctamente.</p>
+      </div>
+      <div class="checkout-body">
+        <span class="material-symbols-outlined checkout-success-icon">check_circle</span>
+        <p id="checkoutSuccessPlan" class="checkout-sub"></p>
+        <p id="checkoutReceiptMeta" class="checkout-receipt-meta"></p>
+        <div id="checkoutEmailWarn" class="checkout-email-warn hidden"></div>
+        <div class="checkout-success-actions">
+          <button type="button" class="checkout-success-download" id="checkoutDownloadBtn">Descargar comprobante PDF</button>
+          <button type="button" class="checkout-success-continue" id="checkoutContinueBtn">Ir al workspace</button>
+        </div>
+      </div>
+      <p class="checkout-foot">
+        Documento académico, no factura fiscal. Si configuraste correo (MAIL_*), también recibirás el PDF adjunto.
+      </p>
+    </div>
+  </div>
+
+  <script src="/static/checkout.js"></script>
+</body>
+</html>

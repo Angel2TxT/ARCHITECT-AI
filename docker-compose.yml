@@ -28,6 +28,23 @@ services:
       DATABASE_URL: mysql+pymysql://architect:architect_pass@mysql:3306/architect?charset=utf8mb4
       ADMIN_EMAIL: admin@architect.local
       ADMIN_PASSWORD: admin123
+      # Solo correos/OAuth/Stripe; el checkout demo usa rutas relativas (/checkout).
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8000}
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp-relay.brevo.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ARCHITECT}
+      BILLING_MODE: ${BILLING_MODE:-demo}
+      BILLING_CHECKOUT_TTL_MINUTES: ${BILLING_CHECKOUT_TTL_MINUTES:-45}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-mxn}
+      WEB_SEARCH_ENABLED: ${WEB_SEARCH_ENABLED:-true}
     ports:
       - "8000:8000"
     volumes:

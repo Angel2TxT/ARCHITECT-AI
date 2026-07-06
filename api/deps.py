@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from db.models import User, UserRole
 from services.auth_service import decode_token
+from services.subscription_service import is_admin_user
 
 security = HTTPBearer(auto_error=False)
 
@@ -47,6 +48,6 @@ def get_optional_user(
 
 
 def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
-    if user.role != UserRole.admin:
+    if not is_admin_user(user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo administradores")
     return user

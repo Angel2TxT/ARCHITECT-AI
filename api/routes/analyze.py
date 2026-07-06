@@ -190,6 +190,10 @@ async def analyze(
     return result
 
 
+def _maybe_enhance_analysis_text(text: str, data: dict) -> tuple[str, str]:
+    return text, "architect"
+
+
 def _build_assistant_content(
     data: dict, prepared=None, *, analysis_id: int | None = None
 ) -> dict:
@@ -213,6 +217,7 @@ def _build_assistant_content(
         auto = data.get("auto_calibration")
         if auto and auto.get("summary"):
             text = f"{auto['summary']}\n\n{text}"
+        text, assistant_mode = _maybe_enhance_analysis_text(text, data)
         return {
             "text": text,
             "steps": None,
@@ -236,6 +241,7 @@ def _build_assistant_content(
             "measures_report": measures_report,
             "conversion_note": data.get("conversion_note"),
             "analysis_id": analysis_id,
+            "assistant_mode": assistant_mode,
         }
 
     if conversational and verdict.get("headline"):
@@ -305,6 +311,8 @@ def _build_assistant_content(
             lines.append(f"• {title} (pág. {page}): {snip}")
         text = text + "\n".join(lines)
 
+    text, assistant_mode = _maybe_enhance_analysis_text(text, data)
+
     return {
         "text": text,
         "steps": steps,
@@ -330,6 +338,7 @@ def _build_assistant_content(
         "analysis_id": analysis_id,
         "detections_list": data.get("detections") or [],
         "corrections_count": data.get("corrections_count"),
+        "assistant_mode": assistant_mode,
     }
 
 
