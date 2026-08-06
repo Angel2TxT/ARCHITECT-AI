@@ -115,15 +115,29 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
           <div className="plans-modal-grid">
             {plans.map((plan) => {
               const isCurrent = plan.slug === currentSlug;
+              const isRecommended = !!(plan.features?.recommended || plan.slug === "pro");
               return (
                 <article
                   key={plan.slug}
-                  className={`plans-card${isCurrent ? " is-current" : ""}`}
+                  className={`plans-card${isCurrent ? " is-current" : ""}${
+                    isRecommended && !isCurrent ? " is-recommended" : ""
+                  }`}
                 >
                   <div className="plans-card-head">
                     <div>
-                      <h3>{plan.name}</h3>
+                      <div className="plans-card-title-row">
+                        <h3>{plan.name}</h3>
+                        {isCurrent ? <span className="plans-card-badge">Actual</span> : null}
+                        {isRecommended && !isCurrent ? (
+                          <span className="plans-card-badge plans-card-badge--recommended">
+                            Recomendado
+                          </span>
+                        ) : null}
+                      </div>
                       <p>{plan.description}</p>
+                      {plan.features?.ideal_for ? (
+                        <p className="plans-card-ideal">Ideal para: {plan.features.ideal_for}</p>
+                      ) : null}
                     </div>
                     <strong>{formatPlanPrice(plan.price_monthly_cents)}</strong>
                   </div>

@@ -65,6 +65,7 @@ def list_plans(db: Annotated[Session, Depends(get_db)]):
             "analyses_limit_monthly": p.analyses_limit_monthly,
             "allow_real_model": p.allow_real_model,
             "max_file_mb": p.max_file_mb,
+            "storage_gb": (p.features or {}).get("storage_gb", 1),
             "features": p.features or {},
             "requires_checkout": (p.price_monthly_cents or 0) > 0,
         }

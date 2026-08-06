@@ -342,6 +342,95 @@ def _ensure_billing_receipts_table() -> None:
         print("  Tabla billing_receipts creada.")
 
 
+def _ensure_support_role_and_tables() -> None:
+    """Rol support en users.role + tablas de tickets."""
+    collate = "utf8mb4_0900_ai_ci"
+    with engine.begin() as conn:
+        # Ampliar ENUM de rol (MySQL)
+        try:
+            conn.execute(
+                text(
+                    "ALTER TABLE users MODIFY COLUMN role "
+                    "ENUM('admin','support','user') NOT NULL DEFAULT 'user'"
+                )
+            )
+            print("  users.role incluye 'support'.")
+        except Exception as exc:
+            print(f"  Nota users.role enum: {exc}")
+
+        r = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'support_tickets'"
+            )
+        )
+        if r.scalar() == 0:
+            conn.execute(
+                text(
+                    f"""
+                    CREATE TABLE support_tickets (
+                        id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        assigned_to BIGINT NULL,
+                        subject VARCHAR(160) NOT NULL,
+                        status ENUM('open','pending','resolved','closed')
+                            NOT NULL DEFAULT 'open',
+                        priority ENUM('normal','high') NOT NULL DEFAULT 'normal',
+                        related_chat_id VARCHAR(36) NULL,
+                        related_analysis_id BIGINT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX ix_support_tickets_user_id (user_id),
+                        INDEX ix_support_tickets_assigned_to (assigned_to),
+                        INDEX ix_support_tickets_status (status),
+                        INDEX ix_support_tickets_created_at (created_at),
+                        INDEX ix_support_tickets_updated_at (updated_at),
+                        CONSTRAINT fk_st_user FOREIGN KEY (user_id)
+                            REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_st_assignee FOREIGN KEY (assigned_to)
+                            REFERENCES users(id) ON DELETE SET NULL,
+                        CONSTRAINT fk_st_analysis FOREIGN KEY (related_analysis_id)
+                            REFERENCES analyses(id) ON DELETE SET NULL
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE={collate}
+                    """
+                )
+            )
+            print("  Tabla support_tickets creada.")
+
+        r = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'support_messages'"
+            )
+        )
+        if r.scalar() == 0:
+            conn.execute(
+                text(
+                    f"""
+                    CREATE TABLE support_messages (
+                        id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        ticket_id BIGINT NOT NULL,
+                        author_id BIGINT NOT NULL,
+                        body TEXT NOT NULL,
+                        is_staff TINYINT(1) NOT NULL DEFAULT 0,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        INDEX ix_support_messages_ticket_id (ticket_id),
+                        INDEX ix_support_messages_author_id (author_id),
+                        INDEX ix_support_messages_created_at (created_at),
+                        CONSTRAINT fk_sm_ticket FOREIGN KEY (ticket_id)
+                            REFERENCES support_tickets(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_sm_author FOREIGN KEY (author_id)
+                            REFERENCES users(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE={collate}
+                    """
+                )
+            )
+            print("  Tabla support_messages creada.")
+
+
 def apply_pending_migrations() -> None:
     """Aplica ALTER TABLE pendientes sin borrar datos."""
     _ensure_analysis_corrections_column()
@@ -351,3 +440,4 @@ def apply_pending_migrations() -> None:
     _ensure_section_review_statuses()
     _ensure_home_project_events_table()
     _ensure_billing_receipts_table()
+    _ensure_support_role_and_tables()

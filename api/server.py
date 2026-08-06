@@ -39,6 +39,7 @@ from api.routes import (  # noqa: E402
     home_projects,
     knowledge,
     norms,
+    support,
 )
 from core.pipeline import find_default_weights  # noqa: E402
 from db.database import engine  # noqa: E402
@@ -50,6 +51,7 @@ from services.knowledge_service import knowledge_stats  # noqa: E402
 WEB_DIR = ROOT / "web"
 STATIC_DIR = WEB_DIR / "static"
 FRONTEND_DIST = ROOT / "frontend" / "dist"
+AVATAR_DIR = ROOT / "data" / "avatars"
 
 
 @asynccontextmanager
@@ -99,6 +101,7 @@ app.include_router(auth.router)
 app.include_router(chats.router)
 app.include_router(billing.router)
 app.include_router(admin.router)
+app.include_router(support.router)
 app.include_router(analyze.router)
 app.include_router(feedback.router)
 app.include_router(analyses.router)
@@ -257,5 +260,7 @@ def legacy_app_page():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
 if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")

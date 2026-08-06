@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,7 @@ from api.schemas import (
 from db.database import get_db
 from db.models import Plan, Subscription, SubscriptionStatus, User, UserRole
 from services.auth_service import create_access_token, hash_password, verify_password
+from services.avatar_service import delete_user_avatar, save_user_avatar
 from services.google_oauth_service import (
     app_frontend_base,
     build_google_authorize_url,
@@ -52,16 +53,21 @@ def _period_bounds(now: datetime | None = None) -> tuple[datetime, datetime]:
     return start, end
 
 
+def _user_out(user: User) -> UserOut:
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role.value,
+        avatar_url=user.avatar_url,
+    )
+
+
 def _auth_response(db: Session, user: User) -> AuthResponse:
     token = create_access_token(user.id, user.email, user.role.value)
     return AuthResponse(
         access_token=token,
-        user=UserOut(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role.value,
-        ),
+        user=_user_out(user),
         subscription=subscription_payload(db, user),
     )
 
@@ -194,14 +200,48 @@ def me(
     db: Annotated[Session, Depends(get_db)],
 ):
     return {
-        "user": UserOut(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role.value,
-        ),
+        "user": _user_out(user),
         "subscription": subscription_payload(db, user),
     }
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    file: UploadFile = File(...),
+):
+    """Sube o reemplaza la foto de perfil (JPG/PNG/WEBP, máx. 3 MB)."""
+    try:
+        url = await save_user_avatar(user.id, file)
+        # cache-bust para que el navegador recargue la imagen
+        stamped = f"{url}?v={int(datetime.utcnow().timestamp())}"
+        user.avatar_url = stamped
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {"ok": True, "avatar_url": user.avatar_url, "user": _user_out(user)}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise http_db_error(exc) from exc
+
+
+@router.delete("/me/avatar")
+def remove_avatar(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Quita la foto de perfil y vuelve a las iniciales."""
+    try:
+        delete_user_avatar(user.id)
+        user.avatar_url = None
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {"ok": True, "avatar_url": None, "user": _user_out(user)}
+    except Exception as exc:
+        raise http_db_error(exc) from exc
 
 
 @router.post("/forgot-password")

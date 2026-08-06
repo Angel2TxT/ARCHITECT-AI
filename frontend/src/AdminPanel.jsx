@@ -792,12 +792,22 @@ export default function AdminPanel() {
                 Hasta <strong>{p.max_file_mb} MB</strong> por archivo
               </li>
               <li>
+                <strong>{p.storage_gb ?? p.features?.storage_gb ?? "—"} GB</strong> documentación
+              </li>
+              <li>
                 Modelo real: <strong>{p.allow_real_model ? "Sí" : "No"}</strong>
               </li>
               <li>
                 Suscriptores: <strong>{p.subscribers ?? 0}</strong>
               </li>
             </ul>
+            {Array.isArray(p.features?.benefits) && p.features.benefits.length ? (
+              <ul className="admin-plan-benefits">
+                {p.features.benefits.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
             <code className="admin-plan-slug">{p.slug}</code>
           </article>
         ))}

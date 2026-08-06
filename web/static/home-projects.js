@@ -15,7 +15,6 @@
   let activityLoading = false;
   let projectSearchQuery = "";
   let expandedSectionId = null;
-  let isProjectsDrawerOpen = false;
   let completionOverviewMode = false;
   let lastDetailView = "stage";
 
@@ -25,6 +24,25 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function apiErrorMessage(data, fallback) {
+    if (!data) return fallback;
+    if (typeof data.detail === "string") return data.detail;
+    if (data.detail?.message) return data.detail.message;
+    return fallback;
+  }
+
+  function planCaps() {
+    const sub = window.PlanoAuth?.getSubscription?.() || null;
+    const caps = sub?.plan?.capabilities || sub?.plan?.features || {};
+    return {
+      homeProjects: caps.home_projects !== false,
+      teamInvites: !!caps.team_invites,
+      maxProjects: Number(caps.max_projects ?? 1),
+      export: !!caps.export,
+      mobileApp: !!caps.mobile_app,
+    };
   }
 
   function formatBytes(n) {
@@ -49,10 +67,10 @@
 
   function sectionStatusLabel(status) {
     const map = {
-      pending: "Sin documentación",
+      pending: "Sin docs",
       in_progress: "En revisión",
-      needs_details: "Con observaciones",
-      needs_correction: "Corrección requerida",
+      needs_details: "Observaciones",
+      needs_correction: "Corrección",
       completed: "Correcto",
     };
     return map[status] || status;
@@ -560,6 +578,18 @@
     }
   }
 
+  function setSidebarHomeMode(active) {
+    const panel = $("#sidebarHomeProjects");
+    if (!panel) return;
+    if (active) {
+      panel.classList.remove("hidden");
+      panel.removeAttribute("hidden");
+    } else {
+      panel.classList.add("hidden");
+      panel.setAttribute("hidden", "");
+    }
+  }
+
   function open() {
     const hasToken = typeof PlanoAuth?.getToken === "function" && PlanoAuth.getToken();
     if ((typeof window.getIsGuestMode === "function" && window.getIsGuestMode()) || !hasToken) {
@@ -574,7 +604,7 @@
     $("#chatArea")?.classList.add("hidden");
     $("#composerDock")?.classList.add("hidden");
     document.body.classList.add("home-projects-mode");
-    closeProjectsDrawer();
+    setSidebarHomeMode(true);
     window.setNavActive?.("home-projects");
     loadProjects();
   }
@@ -587,31 +617,11 @@
     $("#chatArea")?.classList.remove("hidden");
     $("#composerDock")?.classList.remove("hidden");
     document.body.classList.remove("home-projects-mode");
-    closeProjectsDrawer();
+    setSidebarHomeMode(false);
   }
 
   function isMobileViewport() {
     return window.matchMedia("(max-width: 900px)").matches;
-  }
-
-  function openProjectsDrawer() {
-    if (!isMobileViewport()) return;
-    const mainSidebarOpen = !document.body.classList.contains("sidebar-collapsed");
-    if (mainSidebarOpen) {
-      document.querySelector("#btnMenu")?.click();
-    }
-    isProjectsDrawerOpen = true;
-    $("#homeProjectsPanel")?.classList.add("is-drawer-open");
-  }
-
-  function closeProjectsDrawer() {
-    isProjectsDrawerOpen = false;
-    $("#homeProjectsPanel")?.classList.remove("is-drawer-open");
-  }
-
-  function toggleProjectsDrawer() {
-    if (isProjectsDrawerOpen) closeProjectsDrawer();
-    else openProjectsDrawer();
   }
 
   async function ensureAnalysesPicker() {
@@ -724,7 +734,9 @@
     syncHomeProjectsUrl(true, id);
     renderList();
     renderDetail(project || null);
-    closeProjectsDrawer();
+    if (isMobileViewport() && !document.body.classList.contains("sidebar-collapsed")) {
+      document.querySelector("#btnMenu")?.click();
+    }
   }
 
   function renderDocList(docs, projectId, editable) {
@@ -787,22 +799,20 @@
             return `
             <article class="home-section-card home-module-card ${needsAttention ? "needs-attention" : ""} ${accentCls}" data-section-id="${sec.id}">
               <header class="home-section-card-head">
-                <div class="flex-1 min-w-0">
+                <div class="home-section-card-topline">
                   <h5 class="home-section-card-title">${escapeHtml(sec.title)}</h5>
-                  ${
-                    sec.description
-                      ? `<p class="home-section-card-desc is-truncated">${escapeHtml(sec.description)}</p>`
-                      : ""
-                  }
-                  <div class="home-module-meta-row home-module-meta-stack">
-                    <span class="home-module-files">${docsCount ? `${docsCount} archivo${docsCount === 1 ? "" : "s"}` : "Subir documento"}</span>
-                    <span class="home-module-assignee">${assigneeName ? `Asignado: ${escapeHtml(assigneeName)}` : "Sin asignar"}</span>
-                    <span class="home-module-comments">${commentsCount} comentario${commentsCount === 1 ? "" : "s"}</span>
-                  </div>
-                </div>
-                <div class="home-module-right">
-                  <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
                   <button type="button" class="home-module-expand-btn" data-open-section="${sec.id}" aria-label="Abrir apartado">⋯</button>
+                </div>
+                <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
+                ${
+                  sec.description
+                    ? `<p class="home-section-card-desc is-truncated">${escapeHtml(sec.description)}</p>`
+                    : ""
+                }
+                <div class="home-module-meta-row home-module-meta-stack">
+                  <span class="home-module-files">${docsCount ? `${docsCount} archivo${docsCount === 1 ? "" : "s"}` : "Subir documento"}</span>
+                  <span class="home-module-assignee">${assigneeName ? `Asignado: ${escapeHtml(assigneeName)}` : "Sin asignar"}</span>
+                  <span class="home-module-comments">${commentsCount} comentario${commentsCount === 1 ? "" : "s"}</span>
                 </div>
               </header>
             </article>`;
@@ -812,22 +822,22 @@
 
     return `
       <div class="home-sections-block">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div>
+        <div class="home-sections-toolbar">
+          <div class="home-sections-toolbar-copy">
             <p class="home-sections-heading">Apartados documentales</p>
-            <p class="text-xs opacity-60 mt-1">${progress.done}/${progress.total} completados · ${progress.with_files} con archivos · ${progress.needs_action || 0} requieren acción · ${progress.without_docs || 0} sin docs</p>
+            <p class="home-sections-progress"><span class="hp-progress-full">${progress.done}/${progress.total} completados · ${progress.with_files} con archivos · ${progress.needs_action || 0} requieren acción · ${progress.without_docs || 0} sin docs</span><span class="hp-progress-short">${progress.done}/${progress.total} listos · ${progress.without_docs || 0} sin docs</span></p>
           </div>
           ${
             editable
-              ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnAddSection">Nuevo</button>`
+              ? `<button type="button" class="btn-primary home-sections-new-btn" id="btnAddSection">Nuevo</button>`
               : ""
           }
         </div>
-        <div class="home-section-filters flex flex-wrap gap-2 mb-3">
+        <div class="home-section-filters" role="toolbar" aria-label="Filtros de apartados">
           ${[
             ["all", `Todos (${counts.all})`],
-            ["no_docs", `Sin documentación (${counts.no_docs})`],
-            ["in_review", `En revisión (${counts.in_review})`],
+            ["no_docs", `Sin docs (${counts.no_docs})`],
+            ["in_review", `Revisión (${counts.in_review})`],
             ["corrections", `Correcciones (${counts.corrections})`],
             ["completed", `Aprobado (${counts.completed})`],
           ]
@@ -958,7 +968,9 @@
           </div>
           ${
             editable
-              ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnInviteMember">Invitar</button>`
+              ? planCaps().teamInvites
+                ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnInviteMember">Invitar</button>`
+                : `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnInviteUpgrade">Invitar (Enterprise)</button>`
               : ""
           }
         </div>
@@ -1065,38 +1077,38 @@
           : "";
       mainContent = `
         ${completionBanner}
-        <article class="glass-card home-stage-card p-4 md:p-5">
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Etapa ${stage.stage_number} de ${project.stages.length}</p>
-          <h4 class="text-xl font-semibold mt-1">${escapeHtml(stage.title)}</h4>
-          <p class="text-sm opacity-70 mt-2 leading-relaxed">${escapeHtml(stage.summary || "")}</p>
-          <p class="mt-3 text-xs font-semibold uppercase tracking-wide opacity-50">Estado: ${statusLabel(stage.status)} · ${stage.sections_progress?.done || 0}/${stage.sections_progress?.total || 0} apartados</p>
+        <article class="home-stage-card">
+          <p class="home-stage-kicker">Etapa ${stage.stage_number} de ${project.stages.length}</p>
+          <h4 class="home-stage-title">${escapeHtml(stage.title)}</h4>
+          <p class="home-stage-summary">${escapeHtml(stage.summary || "")}</p>
+          <p class="home-stage-status-line">Estado: ${statusLabel(stage.status)} · ${stage.sections_progress?.done || 0}/${stage.sections_progress?.total || 0} apartados</p>
 
-          <div class="home-section mt-5">${renderSectionsBlock(stage, project, editable)}</div>
+          <div class="home-section home-section--apartados">${renderSectionsBlock(stage, project, editable)}</div>
 
           ${
             (stage.documents || []).length
-              ? `<div class="home-section mt-5">
+              ? `<div class="home-section">
                   <p class="home-section-title">Archivos generales de etapa</p>
-                  <ul class="home-doc-list space-y-1 mb-2">${renderDocList(stage.documents, project.id, editable)}</ul>
+                  <ul class="home-doc-list">${renderDocList(stage.documents, project.id, editable)}</ul>
                 </div>`
               : ""
           }
 
-          ${stage.plan_review && editable ? `<div class="home-section mt-5">${renderAnalysisBlock(stage)}</div>` : ""}
+          ${stage.plan_review && editable ? `<div class="home-section">${renderAnalysisBlock(stage)}</div>` : ""}
 
-          <div class="home-section home-notes-section mt-5">
-            <label class="home-notes-title block">Notas de etapa</label>
-            <textarea class="home-notes-input home-notes-textarea mt-2 w-full border p-3 text-sm min-h-[88px]" id="homeStageNotes" placeholder="Añade notas, observaciones o requerimientos especiales para esta etapa del proyecto..." ${editable ? "" : "readonly"}>${escapeHtml(stage.notes || "")}</textarea>
+          <div class="home-section home-notes-section">
+            <label class="home-notes-title" for="homeStageNotes">Notas de etapa</label>
+            <textarea class="home-notes-input home-notes-textarea" id="homeStageNotes" placeholder="Añade notas, observaciones o requerimientos especiales para esta etapa..." ${editable ? "" : "readonly"}>${escapeHtml(stage.notes || "")}</textarea>
           </div>
 
           ${
             editable
-              ? `<div class="home-notes-actions flex flex-wrap gap-2 mt-5 pt-4 border-t border-black/10 dark:border-white/10">
-                  <button type="button" class="btn-secondary home-notes-btn-secondary text-xs py-2 px-4" id="btnMarkInProgress">Marcar en curso</button>
-                  <button type="button" class="btn-primary home-notes-btn-primary text-xs py-2 px-4" id="btnSaveStage">Guardar notas</button>
+              ? `<div class="home-notes-actions">
+                  <button type="button" class="btn-secondary home-notes-btn-secondary" id="btnMarkInProgress"><span class="hp-btn-full">Marcar en curso</span><span class="hp-btn-short">En curso</span></button>
+                  <button type="button" class="btn-primary home-notes-btn-primary" id="btnSaveStage"><span class="hp-btn-full">Guardar notas</span><span class="hp-btn-short">Guardar</span></button>
                   ${
                     stageReopenable && stage.status === "completed"
-                      ? `<button type="button" class="btn-secondary text-xs py-2 px-4" id="btnReopenStage">Reabrir etapa</button>`
+                      ? `<button type="button" class="btn-secondary home-notes-btn-secondary" id="btnReopenStage">Reabrir etapa</button>`
                       : ""
                   }
                 </div>`
@@ -1106,11 +1118,12 @@
     }
 
     detail.innerHTML = `
+      <div class="home-project-scroll" id="homeProjectDetailScroll">
       <header class="home-project-header mb-0">
         <div class="home-project-header-top">
           <div class="home-project-header-copy">
             <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Proyecto · ${project.my_role === "admin" ? "Administrador" : project.my_role === "owner" ? "Propietario" : project.my_role === "editor" ? "Editor" : "Lector"}</p>
-            <h3 class="home-project-title text-2xl font-semibold tracking-tight">${escapeHtml(project.name)}</h3>
+            <h3 class="home-project-title font-semibold tracking-tight">${escapeHtml(project.name)}</h3>
             <div class="home-project-header-meta">
               <p class="home-project-subtitle text-sm opacity-65">${escapeHtml(project.client_name || "Cliente no indicado")}${project.location ? " · " + escapeHtml(project.location) : ""}</p>
               ${
@@ -1121,11 +1134,11 @@
             </div>
           </div>
           <div class="flex flex-wrap gap-2 home-header-actions">
-            <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnBackToIA">Volver a IA</button>
+            <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnBackToIA"><span class="hp-btn-full">Volver a IA</span><span class="hp-btn-short">Volver</span></button>
             ${
               isCompleted
-                ? `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnCompletionOverviewHeader">Resumen de cierre</button>`
-                : `<button type="button" class="btn-secondary text-xs py-2 px-3 ${stageAdvanceable ? "" : "home-action-disabled"}" id="btnAdvanceStage" ${stageAdvanceable ? "" : "disabled"} title="${stageAdvanceable ? "Completar etapa actual" : "Solo propietario o administrador"}">Completar etapa</button>`
+                ? `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnCompletionOverviewHeader"><span class="hp-btn-full">Resumen de cierre</span><span class="hp-btn-short">Resumen</span></button>`
+                : `<button type="button" class="btn-secondary text-xs py-2 px-3 ${stageAdvanceable ? "" : "home-action-disabled"}" id="btnAdvanceStage" ${stageAdvanceable ? "" : "disabled"} title="${stageAdvanceable ? "Completar etapa actual" : "Solo propietario o administrador"}"><span class="hp-btn-full">Completar etapa</span><span class="hp-btn-short">Completar</span></button>`
             }
             <button type="button" class="btn-secondary text-xs py-2 px-3 text-red-600 dark:text-red-400 ${projectDeletable ? "" : "home-action-disabled"}" id="btnDeleteProject" ${projectDeletable ? "" : "disabled"} title="${projectDeletable ? "Eliminar proyecto" : "Solo propietario o administrador"}">Eliminar</button>
           </div>
@@ -1161,7 +1174,8 @@
           : ""
       }
 
-      <div class="home-stage-layout" id="homeProjectDetailScroll">${mainContent}</div>
+      <div class="home-stage-layout">${mainContent}</div>
+      </div>
       ${detailView === "stage" && !completionOverviewMode ? renderModuleOverlay(project, openSection, editable) : ""}`;
 
     const track = detail.querySelector("#homeStageTrack");
@@ -1172,8 +1186,14 @@
         totalStages > 1
           ? Math.max(0, Math.min(100, ((progressStage - 1) / (totalStages - 1)) * 100))
           : 0;
-      track.style.gridTemplateColumns = `repeat(${totalStages}, minmax(0, 1fr))`;
       track.style.setProperty("--hp-stage-progress", String(pct / 100));
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        track.style.display = "flex";
+        track.style.removeProperty("grid-template-columns");
+      } else {
+        track.style.display = "";
+        track.style.gridTemplateColumns = `repeat(${totalStages}, minmax(0, 1fr))`;
+      }
     }
 
     detail.querySelectorAll(".home-view-tab").forEach((btn) => {
@@ -1219,7 +1239,10 @@
     bindClick("#btnSaveStage", () => saveStage(project.id, stage.stage_number));
     bindClick("#btnMarkInProgress", () =>
       patchStage(project.id, stage.stage_number, { status: "in_progress" }));
-    bindClick("#btnBackToIA", () => close());
+    bindClick("#btnBackToIA", () => {
+      if (typeof window.goToWorkspace === "function") window.goToWorkspace();
+      else close();
+    });
     bindClick("#btnAdvanceStage", () => advanceStage(project.id));
     bindClick("#btnCompletionOverview", () => {
       completionOverviewMode = true;
@@ -1250,6 +1273,10 @@
     bindClick("#btnReopenStage", () => reopenStage(project.id, stage.stage_number));
     bindClick("#btnDeleteProject", () => deleteProject(project.id));
     bindClick("#btnInviteMember", () => openInviteModal(project.id));
+    bindClick("#btnInviteUpgrade", () => {
+      window.showToast?.("Las invitaciones de equipo están en el plan Enterprise.");
+      document.getElementById("btnPlans")?.click();
+    });
     bindClick("#btnAddSection", () => openSectionModal(project.id, stage.stage_number));
     bindClick("#homeCreateSectionCard", () => openSectionModal(project.id, stage.stage_number));
     bindClick("#btnCloseModuleOverlay", () => {
@@ -1873,6 +1900,11 @@
   }
 
   function openInviteModal(projectId) {
+    if (!planCaps().teamInvites) {
+      window.showToast?.("Las invitaciones de equipo están en el plan Enterprise.");
+      document.getElementById("btnPlans")?.click();
+      return;
+    }
     pendingInviteProjectId = projectId;
     resetInviteModal();
     const dlg = $("#homeInviteModal");
@@ -1902,7 +1934,7 @@
     );
     const data = await res.json();
     if (!res.ok) {
-      window.showToast?.(data.detail || "No se pudo invitar");
+      window.showToast?.(apiErrorMessage(data, "No se pudo invitar"));
       return;
     }
     if (data.status === "invite_created") {
@@ -1964,7 +1996,8 @@
     });
     const data = await res.json();
     if (!res.ok) {
-      window.showToast?.(data.detail || "No se pudo crear el proyecto");
+      window.showToast?.(apiErrorMessage(data, "No se pudo crear el proyecto"));
+      if (res.status === 402) document.getElementById("btnPlans")?.click();
       return;
     }
     closeCreateModal();
@@ -1995,30 +2028,14 @@
     renderList();
   });
 
-  $("#btnSwitchToMainSidebar")?.addEventListener("click", () => {
-    const isCollapsed = document.body.classList.contains("sidebar-collapsed");
-    if (!isCollapsed) {
-      window.showToast?.("El panel principal ya está abierto");
-      return;
+  $("#btnHomeBackToWorkspace")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof window.goToWorkspace === "function") {
+      window.goToWorkspace();
+    } else {
+      close();
+      window.setNavActive?.("workspace");
     }
-    closeProjectsDrawer();
-    document.querySelector("#btnMenuFloat")?.click();
-  });
-  $("#btnHomeProjectsDrawerToggle")?.addEventListener("click", toggleProjectsDrawer);
-  $("#homeProjectsDrawerBackdrop")?.addEventListener("click", closeProjectsDrawer);
-  $("#btnMenu")?.addEventListener("click", () => {
-    const isCollapsed = document.body.classList.contains("sidebar-collapsed");
-    if (isMobileViewport() && isCollapsed) {
-      closeProjectsDrawer();
-    }
-  });
-  $("#btnMenuFloat")?.addEventListener("click", () => {
-    if (isMobileViewport()) {
-      closeProjectsDrawer();
-    }
-  });
-  window.addEventListener("resize", () => {
-    if (!isMobileViewport()) closeProjectsDrawer();
   });
 
   handlePendingInvite();

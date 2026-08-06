@@ -15,6 +15,7 @@ from db.models import Chat, Message, User
 from services.qa_service import answer_construction_question
 from services.architect_ai_service import architect_ai_status
 from services.web_search_service import web_search_enabled
+from services.subscription_service import assert_can_ask
 
 router = APIRouter(tags=["ask"])
 
@@ -45,6 +46,8 @@ async def ask_construction(
     q = (message or "").strip()
     if len(q) < 3:
         raise HTTPException(400, "Escribe tu pregunta (mínimo 3 caracteres).")
+
+    assert_can_ask(db, user)
 
     result = answer_construction_question(q)
 

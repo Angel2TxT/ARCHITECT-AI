@@ -64,17 +64,30 @@ export function formatPlanPrice(cents) {
 }
 
 export function formatPlanLimit(limit) {
-  if (limit >= 9999) return "Uso alto incluido";
+  if (limit >= 9999) return "Análisis ilimitados";
   return `${limit} análisis/mes`;
 }
 
+export function formatPlanStorage(plan) {
+  const gb = Number(plan?.storage_gb ?? plan?.features?.storage_gb ?? 0);
+  if (!Number.isFinite(gb) || gb <= 0) return null;
+  return `${gb} GB de documentación`;
+}
+
 export function planFeatureLines(plan) {
+  const f = plan.features || {};
+  const custom = Array.isArray(f.benefits)
+    ? f.benefits.map((line) => String(line).trim()).filter(Boolean)
+    : [];
+  if (custom.length) return custom;
+
   const lines = [formatPlanLimit(plan.analyses_limit_monthly)];
+  const storage = formatPlanStorage(plan);
+  if (storage) lines.push(storage);
   lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
   lines.push(`Archivos hasta ${plan.max_file_mb} MB`);
-  const f = plan.features || {};
   if (f.export) lines.push("Exportar reportes");
-  if (f.api) lines.push("Acceso API");
+  if (f.mobile_app) lines.push("App móvil ARCHITECT");
   if (f.sla) lines.push("SLA dedicado");
   if (f.support) lines.push(`Soporte ${f.support}`);
   return lines;

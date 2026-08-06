@@ -25,6 +25,7 @@ from db.database import Base
 
 class UserRole(str, enum.Enum):
     admin = "admin"
+    support = "support"
     user = "user"
 
 
@@ -68,6 +69,10 @@ class User(Base):
     usage_records: Mapped[list[UsageRecord]] = relationship(back_populates="user")
     home_projects: Mapped[list[HomeProject]] = relationship(back_populates="user")
     billing_receipts: Mapped[list["BillingReceipt"]] = relationship(back_populates="user")
+    support_tickets: Mapped[list["SupportTicket"]] = relationship(
+        back_populates="user",
+        foreign_keys="SupportTicket.user_id",
+    )
 
 
 class Plan(Base):
@@ -551,3 +556,76 @@ class HomeProjectStage(Base):
 
     project: Mapped[HomeProject] = relationship(back_populates="stages")
     analysis: Mapped[Analysis | None] = relationship()
+
+
+class SupportTicketStatus(str, enum.Enum):
+    open = "open"
+    pending = "pending"
+    resolved = "resolved"
+    closed = "closed"
+
+
+class SupportTicketPriority(str, enum.Enum):
+    normal = "normal"
+    high = "high"
+
+
+class SupportTicket(Base):
+    """Ticket de soporte humano (no confundir con chats de IA)."""
+
+    __tablename__ = "support_tickets"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    assigned_to: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subject: Mapped[str] = mapped_column(String(160))
+    status: Mapped[SupportTicketStatus] = mapped_column(
+        Enum(SupportTicketStatus), default=SupportTicketStatus.open, index=True
+    )
+    priority: Mapped[SupportTicketPriority] = mapped_column(
+        Enum(SupportTicketPriority), default=SupportTicketPriority.normal
+    )
+    related_chat_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    related_analysis_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("analyses.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), index=True
+    )
+
+    user: Mapped[User] = relationship(
+        back_populates="support_tickets", foreign_keys=[user_id]
+    )
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to])
+    messages: Mapped[list["SupportMessage"]] = relationship(
+        back_populates="ticket",
+        order_by="SupportMessage.created_at",
+        cascade="all, delete-orphan",
+    )
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    author_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str] = mapped_column(Text)
+    is_staff: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+
+    ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+    author: Mapped[User] = relationship()

@@ -44,6 +44,11 @@ from services.storage_service import (
     MAX_PROJECT_DOC_MB,
     save_project_document,
 )
+from services.subscription_service import (
+    assert_can_create_home_project,
+    assert_can_invite_members,
+    assert_can_store_documentation,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 _STAGES_CACHE: list[dict[str, Any]] | None = None
@@ -308,6 +313,8 @@ def create_home_project(
     name = (name or "").strip()
     if len(name) < 2:
         raise HTTPException(400, "El nombre del proyecto es obligatorio")
+
+    assert_can_create_home_project(db, user)
 
     catalog = load_stage_catalog()
     project = HomeProject(
@@ -1518,6 +1525,7 @@ def invite_project_member(
 ) -> dict:
     project = get_home_project(db, user.id, project_id)
     _require_project_owner_or_admin(db, project, user.id)
+    assert_can_invite_members(db, user)
     email = (email or "").strip().lower()
     if not email or "@" not in email:
         raise HTTPException(400, "Correo inválido")
@@ -1711,6 +1719,10 @@ def add_stage_document(
     max_bytes = MAX_PROJECT_DOC_MB * 1024 * 1024
     if len(content) > max_bytes:
         raise HTTPException(413, f"Archivo demasiado grande (máx. {MAX_PROJECT_DOC_MB} MB)")
+
+    # La cuota de GB aplica al dueño del proyecto (quien paga el almacenamiento).
+    owner = db.query(User).filter(User.id == project.user_id).first() or user
+    assert_can_store_documentation(db, owner, additional_bytes=len(content))
 
     doc = HomeProjectDocument(
         project_id=project.id,

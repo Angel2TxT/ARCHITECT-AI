@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from db.models import (
     Analysis,
+    BillingReceipt,
     Chat,
     GuestTrial,
     HomeProject,
@@ -459,4 +460,286 @@ def export_report(report: dict[str, Any], fmt: str) -> tuple[bytes, str, str]:
             f"{slug}.pdf",
             "application/pdf",
         )
+    raise ValueError("Formato no soportado. Usa csv o pdf.")
+
+
+# ── Exportaciones por recurso (listados del panel) ──────────────────────────
+
+EXPORT_RESOURCES = {
+    "users",
+    "subscriptions",
+    "plans",
+    "analyses",
+    "home-projects",
+    "chats",
+    "activity",
+    "receipts",
+    "guest-trials",
+}
+
+
+def _rows_to_csv(title: str, headers: list[str], rows: list[list[Any]]) -> bytes:
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([title])
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return ("\ufeff" + buf.getvalue()).encode("utf-8")
+
+
+def _rows_to_pdf(title: str, headers: list[str], rows: list[list[Any]]) -> bytes:
+    try:
+        from fpdf import FPDF
+    except ImportError as exc:
+        raise RuntimeError("fpdf2 no está instalado") from exc
+
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 8, title[:80], ln=1)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.ln(2)
+
+    col_w = max(25, int(270 / max(len(headers), 1)))
+    pdf.set_font("Helvetica", "B", 8)
+    for h in headers:
+        pdf.cell(col_w, 6, _esc_html(str(h))[:28], border=1)
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 7)
+    for row in rows[:200]:
+        for cell in row:
+            pdf.cell(col_w, 5, _esc_html(str(cell if cell is not None else ""))[:28], border=1)
+        pdf.ln()
+        if pdf.get_y() > 190:
+            pdf.add_page()
+            pdf.set_font("Helvetica", "B", 8)
+            for h in headers:
+                pdf.cell(col_w, 6, _esc_html(str(h))[:28], border=1)
+            pdf.ln()
+            pdf.set_font("Helvetica", "", 7)
+
+    out = pdf.output()
+    if isinstance(out, bytearray):
+        return bytes(out)
+    if isinstance(out, bytes):
+        return out
+    return str(out).encode("latin-1")
+
+
+def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], list[list[Any]]]:
+    """Devuelve (título, headers, filas) para exportar un listado admin."""
+    resource = (resource or "").strip().lower()
+    if resource not in EXPORT_RESOURCES:
+        raise ValueError(
+            f"Recurso no válido. Usa: {', '.join(sorted(EXPORT_RESOURCES))}"
+        )
+
+    if resource == "users":
+        rows_db = db.query(User).order_by(User.created_at.desc()).limit(2000).all()
+        headers = ["ID", "Correo", "Nombre", "Rol", "Activo", "Proveedor", "Alta"]
+        rows = [
+            [
+                u.id,
+                u.email,
+                u.full_name or "",
+                u.role.value,
+                "Sí" if u.is_active else "No",
+                u.oauth_provider or "email",
+                u.created_at.isoformat() if u.created_at else "",
+            ]
+            for u in rows_db
+        ]
+        return "ARCHITECT — Usuarios", headers, rows
+
+    if resource == "plans":
+        rows_db = db.query(Plan).order_by(Plan.sort_order.asc()).all()
+        headers = [
+            "ID",
+            "Slug",
+            "Nombre",
+            "Precio_centavos",
+            "Analisis_mes",
+            "MB",
+            "Modelo_real",
+            "Publico",
+        ]
+        rows = [
+            [
+                p.id,
+                p.slug,
+                p.name,
+                p.price_monthly_cents,
+                p.analyses_limit_monthly,
+                p.max_file_mb,
+                "Sí" if p.allow_real_model else "No",
+                "Sí" if p.is_public else "No",
+            ]
+            for p in rows_db
+        ]
+        return "ARCHITECT — Planes", headers, rows
+
+    if resource == "subscriptions":
+        rows_db = (
+            db.query(Subscription)
+            .options(joinedload(Subscription.plan), joinedload(Subscription.user))
+            .order_by(Subscription.created_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Usuario", "Plan", "Estado", "Inicio_periodo", "Fin_periodo"]
+        rows = [
+            [
+                s.id,
+                s.user.email if s.user else "",
+                s.plan.name if s.plan else "",
+                s.status.value,
+                s.current_period_start.isoformat() if s.current_period_start else "",
+                s.current_period_end.isoformat() if s.current_period_end else "",
+            ]
+            for s in rows_db
+        ]
+        return "ARCHITECT — Suscripciones", headers, rows
+
+    if resource == "analyses":
+        rows_db = (
+            db.query(Analysis)
+            .options(joinedload(Analysis.user))
+            .order_by(Analysis.created_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Usuario", "Archivo", "Demo", "Entrenamiento", "Fecha"]
+        rows = [
+            [
+                a.id,
+                a.user.email if a.user else "",
+                a.original_filename or "",
+                "Sí" if a.is_demo_model else "No",
+                "Sí" if a.training_eligible else "No",
+                a.created_at.isoformat() if a.created_at else "",
+            ]
+            for a in rows_db
+        ]
+        return "ARCHITECT — Análisis", headers, rows
+
+    if resource == "home-projects":
+        rows_db = (
+            db.query(HomeProject)
+            .options(joinedload(HomeProject.user))
+            .order_by(HomeProject.updated_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Nombre", "Cliente", "Propietario", "Estado", "Etapa", "Actualizado"]
+        rows = [
+            [
+                p.id,
+                p.name,
+                p.client_name or "",
+                p.user.email if p.user else "",
+                p.status.value,
+                p.current_stage,
+                p.updated_at.isoformat() if p.updated_at else "",
+            ]
+            for p in rows_db
+        ]
+        return "ARCHITECT — Casa hogar", headers, rows
+
+    if resource == "chats":
+        rows_db = (
+            db.query(Chat)
+            .options(joinedload(Chat.user))
+            .order_by(Chat.updated_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Usuario", "Titulo", "Actualizado"]
+        rows = [
+            [
+                c.id,
+                c.user.email if c.user else "",
+                c.title or "",
+                c.updated_at.isoformat() if c.updated_at else "",
+            ]
+            for c in rows_db
+        ]
+        return "ARCHITECT — Chats", headers, rows
+
+    if resource == "activity":
+        rows_db = (
+            db.query(HomeProjectEvent)
+            .options(
+                joinedload(HomeProjectEvent.project),
+                joinedload(HomeProjectEvent.actor),
+            )
+            .order_by(HomeProjectEvent.created_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Fecha", "Proyecto", "Evento", "Actor"]
+        rows = [
+            [
+                e.id,
+                e.created_at.isoformat() if e.created_at else "",
+                e.project.name if e.project else e.project_id,
+                EVENT_LABELS.get(e.event_type.value, e.event_type.value),
+                e.actor.email if e.actor else "Sistema",
+            ]
+            for e in rows_db
+        ]
+        return "ARCHITECT — Actividad", headers, rows
+
+    if resource == "receipts":
+        rows_db = (
+            db.query(BillingReceipt)
+            .options(joinedload(BillingReceipt.user))
+            .order_by(BillingReceipt.created_at.desc())
+            .limit(2000)
+            .all()
+        )
+        headers = ["ID", "Folio", "Usuario", "Plan", "Monto_centavos", "Email_enviado", "Fecha"]
+        rows = [
+            [
+                r.id,
+                r.receipt_number or "",
+                r.user.email if r.user else "",
+                r.plan_name or r.plan_slug,
+                r.amount_cents,
+                r.email_sent_at.isoformat() if r.email_sent_at else "No",
+                r.created_at.isoformat() if r.created_at else "",
+            ]
+            for r in rows_db
+        ]
+        return "ARCHITECT — Comprobantes", headers, rows
+
+    # guest-trials
+    rows_db = (
+        db.query(GuestTrial).order_by(GuestTrial.last_seen_at.desc()).limit(2000).all()
+    )
+    headers = ["ID", "Analisis", "Preguntas", "Creado", "Ultima_visita"]
+    rows = [
+        [
+            g.id,
+            g.analyses_count,
+            g.asks_count,
+            g.created_at.isoformat() if g.created_at else "",
+            g.last_seen_at.isoformat() if g.last_seen_at else "",
+        ]
+        for g in rows_db
+    ]
+    return "ARCHITECT — Invitados", headers, rows
+
+
+def export_resource(
+    db: Session, resource: str, fmt: str
+) -> tuple[bytes, str, str]:
+    title, headers, rows = build_resource_export(db, resource)
+    slug = f"architect-{resource.replace('/', '-')}"
+    fmt = (fmt or "csv").strip().lower()
+    if fmt in ("csv", "xlsx", "excel"):
+        return _rows_to_csv(title, headers, rows), f"{slug}.csv", "text/csv; charset=utf-8"
+    if fmt == "pdf":
+        return _rows_to_pdf(title, headers, rows), f"{slug}.pdf", "application/pdf"
     raise ValueError("Formato no soportado. Usa csv o pdf.")

@@ -137,6 +137,7 @@ def checkout_session_preview(db: Session, token: str) -> dict[str, Any]:
             "price_monthly_cents": plan.price_monthly_cents,
             "analyses_limit_monthly": plan.analyses_limit_monthly,
             "max_file_mb": plan.max_file_mb,
+            "storage_gb": (plan.features or {}).get("storage_gb", 1),
             "allow_real_model": plan.allow_real_model,
         },
         "user_email": user.email,

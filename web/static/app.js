@@ -419,8 +419,10 @@ function applyAskCapabilitiesUI() {
   const hasLibrary = askCapabilities?.architect_ai_ready || (askCapabilities?.knowledge_pages || 0) > 0;
   const input = $("#messageInput");
   if (input) {
-    input.placeholder =
-      "Pregunta sobre arquitectura, normativa u obra — ARCHITECT responde con tu biblioteca…";
+    const short = window.matchMedia("(max-width: 640px)").matches;
+    input.placeholder = short
+      ? "Pregunta a ARCHITECT…"
+      : "Pregunta sobre arquitectura, normativa u obra…";
   }
   const hero = document.querySelector(".welcome-hero h2");
   if (hero && !isGuestMode) {
@@ -553,7 +555,11 @@ function updateGuestUI() {
   $("#btnLogout")?.classList.add("hidden");
   $("#usageBar")?.classList.add("hidden");
   const av = document.getElementById("userAvatar");
-  if (av) av.textContent = "?";
+  if (av) {
+    av.classList.remove("has-photo");
+    av.style.removeProperty("background-image");
+    av.textContent = "?";
+  }
   const nameEl = document.getElementById("userName");
   if (nameEl) nameEl.textContent = "Modo prueba";
   const roleEl = document.getElementById("userRole");
@@ -743,6 +749,7 @@ function goToWorkspace() {
   renderChatList();
   setToolMode("default");
 }
+window.goToWorkspace = goToWorkspace;
 
 async function persistMessage(role, text) {
   const chat = await ensureChat();
@@ -1764,7 +1771,8 @@ function resizeMessageInput() {
   const ta = $("#messageInput");
   if (!ta) return;
   ta.style.height = "auto";
-  ta.style.height = `${Math.min(ta.scrollHeight, 128)}px`;
+  const next = ta.value.trim() ? Math.min(ta.scrollHeight, 128) : 40;
+  ta.style.height = `${next}px`;
 }
 
 function updateSendButton() {
@@ -2624,6 +2632,143 @@ $("#btnAdmin")?.addEventListener("click", (e) => {
   e.preventDefault();
   window.location.href = "/app/admin";
 });
+
+let supportHelpSelectedId = null;
+
+const SUPPORT_STATUS_LABELS = {
+  open: "Abierto",
+  pending: "En espera",
+  resolved: "Resuelto",
+  closed: "Cerrado",
+};
+
+async function refreshSupportHelpList() {
+  const list = document.getElementById("supportHelpList");
+  if (!list || !PlanoAuth.getToken()) return;
+  list.innerHTML = "<p class='support-help-empty'>Cargando tus tickets…</p>";
+  try {
+    const res = await PlanoAuth.apiFetch("/api/support/tickets?limit=20");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudieron cargar tickets"));
+    const items = data.items || [];
+    if (!items.length) {
+      list.innerHTML = "<p class='support-help-empty'>Aún no tienes tickets.</p>";
+      return;
+    }
+    list.innerHTML = items
+      .map(
+        (t) => `<button type="button" class="support-help-item${supportHelpSelectedId === t.id ? " is-selected" : ""}" data-support-ticket="${t.id}">
+          <strong>${escapeHtml(t.subject)}</strong>
+          <span>${SUPPORT_STATUS_LABELS[t.status] || t.status}</span>
+        </button>`
+      )
+      .join("");
+    list.querySelectorAll("[data-support-ticket]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        supportHelpSelectedId = Number(btn.getAttribute("data-support-ticket"));
+        openSupportHelpTicket(supportHelpSelectedId);
+        refreshSupportHelpList();
+      });
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="support-help-empty">${escapeHtml(err.message || "Error")}</p>`;
+  }
+}
+
+async function openSupportHelpTicket(ticketId) {
+  const thread = document.getElementById("supportHelpThread");
+  if (!thread) return;
+  thread.innerHTML = "<p class='support-help-empty'>Cargando conversación…</p>";
+  try {
+    const res = await PlanoAuth.apiFetch(`/api/support/tickets/${ticketId}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo abrir el ticket"));
+    const msgs = data.messages || [];
+    const closed = data.status === "closed";
+    thread.innerHTML = `
+      <header class="support-help-thread-head">
+        <strong>${escapeHtml(data.subject)}</strong>
+        <span>${SUPPORT_STATUS_LABELS[data.status] || data.status}</span>
+      </header>
+      <div class="support-help-msgs">
+        ${
+          msgs
+            .map(
+              (m) => `<article class="support-help-msg${m.is_staff ? " is-staff" : ""}">
+                <header>
+                  <strong>${escapeHtml(m.author_name || (m.is_staff ? "Soporte" : "Tú"))}</strong>
+                </header>
+                <p>${escapeHtml(m.body)}</p>
+              </article>`
+            )
+            .join("") || "<p class='support-help-empty'>Sin mensajes</p>"
+        }
+      </div>
+      ${
+        closed
+          ? "<p class='support-help-empty'>Este ticket está cerrado.</p>"
+          : `<form class="support-help-reply" id="supportHelpReplyForm">
+              <textarea id="supportHelpReplyBody" rows="3" required placeholder="Escribe un seguimiento…"></textarea>
+              <button type="submit" class="btn-primary">Responder</button>
+            </form>`
+      }`;
+    document.getElementById("supportHelpReplyForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = document.getElementById("supportHelpReplyBody")?.value || "";
+      try {
+        const r = await PlanoAuth.apiFetch(`/api/support/tickets/${ticketId}/messages`, {
+          method: "POST",
+          body: JSON.stringify({ body }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(PlanoAuth.formatApiError(d, "No se pudo enviar"));
+        showToast("Mensaje enviado");
+        await openSupportHelpTicket(ticketId);
+        await refreshSupportHelpList();
+      } catch (err) {
+        showToast(err.message || "Error al responder");
+      }
+    });
+  } catch (err) {
+    thread.innerHTML = `<p class="support-help-empty">${escapeHtml(err.message || "Error")}</p>`;
+  }
+}
+
+$("#btnSupportHelp")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  const modal = document.getElementById("supportHelpModal");
+  if (modal?.showModal) modal.showModal();
+  else modal?.setAttribute("open", "");
+  refreshSupportHelpList();
+  if (supportHelpSelectedId) openSupportHelpTicket(supportHelpSelectedId);
+});
+$("#btnCloseSupportHelp")?.addEventListener("click", () => {
+  const modal = document.getElementById("supportHelpModal");
+  if (modal?.close) modal.close();
+  else modal?.removeAttribute("open");
+});
+$("#supportHelpForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const subject = document.getElementById("supportHelpSubject")?.value || "";
+  const body = document.getElementById("supportHelpBody")?.value || "";
+  try {
+    const res = await PlanoAuth.apiFetch("/api/support/tickets", {
+      method: "POST",
+      body: JSON.stringify({ subject, body }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo crear el ticket"));
+    document.getElementById("supportHelpSubject").value = "";
+    document.getElementById("supportHelpBody").value = "";
+    supportHelpSelectedId = data.id || null;
+    showToast("Ticket enviado. Soporte te responderá pronto.");
+    await refreshSupportHelpList();
+    if (supportHelpSelectedId) await openSupportHelpTicket(supportHelpSelectedId);
+  } catch (err) {
+    showToast(err.message || "Error al enviar");
+  }
+});
+
 $("#btnCloseSettings").onclick = () => $("#settingsModal").close();
 $("#settingsForm").onsubmit = (e) => {
   e.preventDefault();
@@ -2708,19 +2853,40 @@ function isPlanUnlimited(sub) {
 }
 
 function formatPlanLimitText(limit) {
-  if (limit >= 9999) return "Uso alto incluido";
+  if (limit >= 9999) return "Análisis ilimitados";
   return `${limit} análisis/mes`;
 }
 
-function planFeatureLines(plan) {
-  const lines = [formatPlanLimitText(plan.analyses_limit_monthly)];
-  lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
-  lines.push(`Archivos hasta ${plan.max_file_mb} MB`);
+function formatPlanStorageText(plan) {
+  const gb = Number(plan?.storage_gb ?? plan?.features?.storage_gb ?? 0);
+  if (!Number.isFinite(gb) || gb <= 0) return null;
+  return `${gb} GB de documentación`;
+}
+
+function planFeatureLines(plan, { compact = false } = {}) {
   const f = plan.features || {};
-  if (f.export) lines.push("Exportar reportes");
-  if (f.api) lines.push("Acceso API");
-  if (f.sla) lines.push("SLA dedicado");
-  if (f.support) lines.push(`Soporte ${f.support}`);
+  const custom = Array.isArray(f.benefits)
+    ? f.benefits.map((line) => String(line).trim()).filter(Boolean)
+    : [];
+  if (custom.length) {
+    return compact ? custom.slice(0, 5) : custom;
+  }
+
+  const lines = [formatPlanLimitText(plan.analyses_limit_monthly)];
+  const storage = formatPlanStorageText(plan);
+  if (storage) lines.push(storage);
+  lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
+  lines.push(`Hasta ${plan.max_file_mb} MB por archivo`);
+  if (!compact) {
+    if (f.export) lines.push("Exportar reportes");
+    if (f.mobile_app) lines.push("App móvil ARCHITECT");
+    if (f.sla) lines.push("SLA dedicado");
+    if (f.support) lines.push(`Soporte ${f.support}`);
+  } else if (f.support) {
+    lines.push(`Soporte ${f.support}`);
+  } else if (f.mobile_app) {
+    lines.push("App móvil");
+  }
   return lines;
 }
 
@@ -2749,10 +2915,11 @@ function updateUsageUI(sub) {
   }
   const plansText = document.getElementById("plansUsageText");
   if (plansText) {
-    plansText.textContent = unlimited
-      ? `Plan ${plan.name}: uso ilimitado este mes (${used} análisis).`
-      : `Plan ${plan.name}: ${used} de ${limit} análisis este mes` +
-        (remaining != null ? ` (${remaining} restantes).` : ".");
+    plansText.innerHTML = unlimited
+      ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso ilimitado · ${used} análisis este mes</span>`
+      : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis` +
+        (remaining != null ? ` · ${remaining} restantes` : "") +
+        `</span>`;
   }
   const badge = document.getElementById("planUsageBadge");
   const badgeText = document.getElementById("planUsageBadgeText");
@@ -2766,6 +2933,22 @@ function updateUsageUI(sub) {
   }
 }
 
+function applyAvatarElement(el, user, initials) {
+  if (!el) return;
+  const url = user?.avatar_url;
+  if (url) {
+    el.classList.add("has-photo");
+    el.style.setProperty("background-image", `url("${url}")`, "important");
+    el.textContent = "";
+    el.setAttribute("aria-label", "Foto de perfil");
+  } else {
+    el.classList.remove("has-photo");
+    el.style.removeProperty("background-image");
+    el.textContent = initials;
+    el.removeAttribute("aria-label");
+  }
+}
+
 function updateUserUI() {
   const user = PlanoAuth.getUser();
   const sub = PlanoAuth.getSubscription();
@@ -2776,22 +2959,71 @@ function updateUserUI() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const av = document.getElementById("userAvatar");
-  if (av) av.textContent = initials;
+  applyAvatarElement(document.getElementById("userAvatar"), user, initials);
   const nameEl = document.getElementById("userName");
   if (nameEl) nameEl.textContent = user.full_name || user.email;
   const roleEl = document.getElementById("userRole");
   if (roleEl) {
     roleEl.textContent =
-      user.role === "admin" ? "Administrador" : sub?.plan?.name || "Usuario";
+      user.role === "admin"
+        ? "Administrador"
+        : user.role === "support"
+          ? "Soporte"
+          : sub?.plan?.name || "Usuario";
   }
   const adminBtn = document.getElementById("btnAdmin");
   if (adminBtn) {
-    const showAdmin = user.role === "admin";
+    const showAdmin = user.role === "admin" || user.role === "support";
     adminBtn.classList.toggle("hidden", !showAdmin);
     adminBtn.hidden = !showAdmin;
+    const label = document.getElementById("btnAdminLabel");
+    if (label) label.textContent = user.role === "support" ? "Bandeja soporte" : "Administración";
+  }
+  const helpBtn = document.getElementById("btnSupportHelp");
+  if (helpBtn) {
+    const showHelp = user.role !== "support";
+    helpBtn.classList.toggle("hidden", !showHelp);
+    helpBtn.hidden = !showHelp;
   }
   if (sub) updateUsageUI(sub);
+}
+
+async function uploadProfileAvatar(file) {
+  if (!file) return;
+  if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type)) {
+    throw new Error("Usa una imagen JPG, PNG o WEBP");
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    throw new Error("La imagen supera 3 MB");
+  }
+  const form = new FormData();
+  form.append("file", file);
+  const res = await PlanoAuth.apiFetch("/api/auth/me/avatar", {
+    method: "POST",
+    body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo subir la foto"));
+  if (data.user) {
+    localStorage.setItem("plano_ia_user", JSON.stringify(data.user));
+  } else {
+    await PlanoAuth.refreshMe();
+  }
+  updateUserUI();
+  return data;
+}
+
+async function removeProfileAvatar() {
+  const res = await PlanoAuth.apiFetch("/api/auth/me/avatar", { method: "DELETE" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo quitar la foto"));
+  if (data.user) {
+    localStorage.setItem("plano_ia_user", JSON.stringify(data.user));
+  } else {
+    await PlanoAuth.refreshMe();
+  }
+  updateUserUI();
+  return data;
 }
 
 async function loadPlansModal() {
@@ -2802,25 +3034,51 @@ async function loadPlansModal() {
   const plans = await res.json();
   const current = PlanoAuth.getSubscription()?.plan?.slug;
   plans.forEach((p) => {
-    const card = document.createElement("div");
-    card.className = "plan-card rounded-xl border p-4" + (p.slug === current ? " is-current" : "");
+    const card = document.createElement("article");
+    const isCurrent = p.slug === current;
+    const isRecommended = !!(p.features?.recommended || p.slug === "pro");
+    card.className =
+      "plan-card" +
+      (isCurrent ? " is-current" : "") +
+      (isRecommended && !isCurrent ? " is-recommended" : "");
     const price = p.price_monthly_cents
-      ? `$${(p.price_monthly_cents / 100).toFixed(0)}/mes`
+      ? `$${(p.price_monthly_cents / 100).toFixed(0)}`
       : "Gratis";
-    const features = planFeatureLines(p)
+    const priceSuffix = p.price_monthly_cents ? "<small>/mes</small>" : "";
+    const features = planFeatureLines(p, { compact: true })
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
+    const ideal = p.features?.ideal_for
+      ? `<p class="plan-card-ideal">Ideal para: ${escapeHtml(p.features.ideal_for)}</p>`
+      : "";
+    const badges = [
+      isCurrent ? '<span class="plan-card-badge">Actual</span>' : "",
+      isRecommended && !isCurrent
+        ? '<span class="plan-card-badge plan-card-badge--recommended">Recomendado</span>'
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    const cta = isCurrent
+      ? "Plan actual"
+      : p.price_monthly_cents
+        ? "Elegir plan"
+        : p.slug === "free"
+          ? "Bajar a gratis"
+          : "Seleccionar";
     card.innerHTML = `
-      <div class="flex justify-between items-start gap-2">
-        <div>
-          <h3 class="font-semibold text-sm">${escapeHtml(p.name)}</h3>
-          <p class="text-xs mt-1 opacity-60">${escapeHtml(p.description || "")}</p>
+      <div class="plan-card-top">
+        <div class="plan-card-title-wrap">
+          <h3>${escapeHtml(p.name)}</h3>
+          ${badges}
         </div>
-        <span class="text-sm font-bold">${price}</span>
+        <p class="plan-card-price">${price}${priceSuffix}</p>
       </div>
-      <ul class="plan-card-features text-xs mt-2 space-y-1 opacity-75">${features}</ul>
-      <button type="button" class="btn-primary mt-3 w-full text-xs py-2 plan-select-btn" data-slug="${p.slug}" ${p.slug === current ? "disabled" : ""}>
-        ${p.slug === current ? "Plan actual" : p.price_monthly_cents ? "Ir a pagar" : p.slug === "free" ? "Bajar a gratis" : "Seleccionar"}
+      <p class="plan-card-desc">${escapeHtml(p.description || "")}</p>
+      ${ideal}
+      <ul class="plan-card-features">${features}</ul>
+      <button type="button" class="plan-select-btn${isCurrent ? " is-current" : ""}" data-slug="${p.slug}" ${isCurrent ? "disabled" : ""}>
+        ${cta}
       </button>`;
     grid.appendChild(card);
   });
@@ -2863,7 +3121,7 @@ async function loadPlansModal() {
     const sub = PlanoAuth.getSubscription();
     if (note) {
       note.textContent =
-        "Proyecto escolar: pasarela de pago simulada (sin cobro real). Bajar a Gratis es inmediato.";
+        "Proyecto escolar: pasarela simulada (sin cobro real). Bajar a Gratis es inmediato.";
     }
     if (portalBtn) {
       const showPortal = config?.mode === "stripe" && sub?.has_active_payment;
@@ -2993,36 +3251,37 @@ async function loadAnalysisHistory() {
 
 function renderUsageHistoryChart(history, sub) {
   if (!history?.length) {
-    return `<div class="usage-history-chart mt-4 pt-4 border-t border-white/10">
-      <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-2">Uso mensual</h3>
-      <p class="text-xs opacity-60">Sin datos de uso todavía.</p>
-    </div>`;
+    return `<section class="account-section">
+      <div class="account-section-head">
+        <h3>Uso mensual</h3>
+        <p>Sin datos de uso todavía.</p>
+      </div>
+    </section>`;
   }
   const unlimited = isPlanUnlimited(sub);
   const maxVal = Math.max(
     1,
     ...history.map((h) => h.analyses_used || 0),
-    ...(unlimited ? [1] : history.map((h) => h.analyses_limit || 0))
+    ...(unlimited ? [1] : history.map((h) => Math.min(h.analyses_limit || 0, 20)))
   );
   const bars = history
     .map((h) => {
       const used = h.analyses_used || 0;
-      const pct = Math.max(6, Math.round((used / maxVal) * 100));
-      const limitLine = !unlimited && h.analyses_limit
-        ? `<span class="usage-history-limit" title="Límite ${h.analyses_limit}">${h.analyses_limit}</span>`
-        : "";
+      const pct = Math.max(used > 0 ? 12 : 4, Math.round((used / maxVal) * 100));
       return `<div class="usage-history-col${h.is_current ? " is-current" : ""}" title="${h.period_key}: ${used} análisis">
-        <div class="usage-history-bar-wrap">${limitLine}<div class="usage-history-bar" style="height:${pct}%"></div></div>
+        <div class="usage-history-bar-wrap"><div class="usage-history-bar" style="height:${pct}%"></div></div>
         <span class="usage-history-label">${escapeHtml(h.label)}</span>
         <span class="usage-history-value">${used}</span>
       </div>`;
     })
     .join("");
-  return `<div class="usage-history-chart mt-4 pt-4 border-t border-white/10">
-    <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-1">Uso mensual</h3>
-    <p class="text-xs opacity-60 mb-3">Análisis realizados por mes${unlimited ? " (plan ilimitado)" : ""}.</p>
+  return `<section class="account-section">
+    <div class="account-section-head">
+      <h3>Uso mensual</h3>
+      <p>Análisis realizados por mes${unlimited ? " (plan ilimitado)" : ""}.</p>
+    </div>
     <div class="usage-history-grid">${bars}</div>
-  </div>`;
+  </section>`;
 }
 
 async function exportAllBillingReceipts() {
@@ -3123,53 +3382,77 @@ function formatReceiptDate(iso) {
   }
 }
 
-function renderReceiptsSection(receipts) {
-  if (!receipts.length) {
-    return `
-      <div class="account-receipts mt-4 pt-4 border-t border-white/10">
-        <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70 mb-2">Mis comprobantes</h3>
-        <p class="text-xs opacity-60">Aún no tienes compras registradas. Al pagar un plan de pago verás aquí tu historial.</p>
-      </div>`;
-  }
-  const rows = receipts
-    .map(
-      (r) => `
-      <tr data-receipt-id="${r.id}">
-        <td><code class="text-xs">${escapeHtml(r.receipt_number)}</code></td>
-        <td>${escapeHtml(r.plan_name)}</td>
-        <td>${escapeHtml(r.amount_label || "")}</td>
-        <td class="text-xs opacity-70">${escapeHtml(formatReceiptDate(r.created_at))}</td>
-        <td class="text-xs">${r.email_sent_at ? '<span class="receipt-badge receipt-badge--sent">Enviado</span>' : '<span class="receipt-badge receipt-badge--pending">Sin correo</span>'}</td>
-        <td class="receipt-actions">
-          <button type="button" class="btn-link text-xs receipt-download-btn" data-id="${r.id}" data-number="${escapeHtml(r.receipt_number)}">PDF</button>
-          <button type="button" class="btn-link text-xs receipt-email-btn" data-id="${r.id}">Reenviar</button>
-        </td>
-      </tr>`
-    )
-    .join("");
+const ACCOUNT_RECEIPTS_PAGE_SIZE = 4;
+let accountReceiptsExpanded = false;
+let accountReceiptsCache = [];
+
+function receiptCardHtml(r) {
+  const emailBadge = r.email_sent_at
+    ? '<span class="receipt-badge receipt-badge--sent">Enviado</span>'
+    : '<span class="receipt-badge receipt-badge--pending">Sin correo</span>';
   return `
-    <div class="account-receipts mt-4 pt-4 border-t border-white/10">
-      <div class="flex items-center justify-between gap-2 mb-2">
-        <h3 class="text-xs font-semibold uppercase tracking-wide opacity-70">Mis comprobantes</h3>
+    <article class="receipt-card" data-receipt-id="${r.id}">
+      <div class="receipt-card-top">
+        <div class="receipt-card-main">
+          <code class="receipt-card-folio">${escapeHtml(r.receipt_number)}</code>
+          <p class="receipt-card-meta">
+            <span>${escapeHtml(r.plan_name)}</span>
+            <span class="receipt-card-dot" aria-hidden="true">·</span>
+            <span>${escapeHtml(r.amount_label || "")}</span>
+          </p>
+          <p class="receipt-card-date">${escapeHtml(formatReceiptDate(r.created_at))}</p>
+        </div>
+        ${emailBadge}
+      </div>
+      <div class="receipt-card-actions">
+        <button type="button" class="btn-link text-xs receipt-download-btn" data-id="${r.id}" data-number="${escapeHtml(r.receipt_number)}">PDF</button>
+        <button type="button" class="btn-link text-xs receipt-email-btn" data-id="${r.id}">Reenviar</button>
+      </div>
+    </article>`;
+}
+
+function renderReceiptsSection(receipts, expanded = accountReceiptsExpanded) {
+  accountReceiptsCache = Array.isArray(receipts) ? receipts : [];
+  accountReceiptsExpanded = !!expanded;
+
+  if (!accountReceiptsCache.length) {
+    return `
+      <section class="account-section account-receipts">
+        <div class="account-section-head">
+          <h3>Mis comprobantes</h3>
+          <p>Aún no tienes compras registradas.</p>
+        </div>
+      </section>`;
+  }
+
+  const total = accountReceiptsCache.length;
+  const visible = accountReceiptsExpanded
+    ? accountReceiptsCache
+    : accountReceiptsCache.slice(0, ACCOUNT_RECEIPTS_PAGE_SIZE);
+  const hiddenCount = Math.max(0, total - visible.length);
+  const cards = visible.map(receiptCardHtml).join("");
+  const moreControls =
+    total > ACCOUNT_RECEIPTS_PAGE_SIZE
+      ? `<div class="receipts-more-row">
+          <span class="receipts-more-meta">Mostrando ${visible.length} de ${total}</span>
+          <button type="button" class="btn-link receipts-more-btn" id="btnToggleReceipts">
+            ${accountReceiptsExpanded ? "Ver menos" : `Ver más (${hiddenCount})`}
+          </button>
+        </div>`
+      : `<p class="receipts-more-meta">Mostrando ${total} comprobante${total === 1 ? "" : "s"}</p>`;
+
+  return `
+    <section class="account-section account-receipts">
+      <div class="account-section-head account-section-head--row">
+        <div>
+          <h3>Mis comprobantes</h3>
+          <p>Pasarela simulada · no es factura fiscal.</p>
+        </div>
         <button type="button" class="btn-link text-xs receipt-export-all-btn">Exportar ZIP</button>
       </div>
-      <p class="text-xs opacity-60 mb-2">Documentos académicos de tu pasarela simulada (no factura fiscal).</p>
-      <div class="receipts-table-wrap">
-        <table class="receipts-table text-xs">
-          <thead>
-            <tr>
-              <th>Folio</th>
-              <th>Plan</th>
-              <th>Importe</th>
-              <th>Fecha</th>
-              <th>Correo</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>`;
+      <div class="receipts-list">${cards}</div>
+      ${moreControls}
+    </section>`;
 }
 
 function bindReceiptActions(container) {
@@ -3212,13 +3495,34 @@ function bindReceiptActions(container) {
       }
     };
   });
+  const toggleBtn = container?.querySelector("#btnToggleReceipts");
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      const section = container.querySelector(".account-receipts");
+      if (!section) return;
+      section.outerHTML = renderReceiptsSection(accountReceiptsCache, !accountReceiptsExpanded);
+      bindReceiptActions(container);
+    };
+  }
 }
 
 async function openAccountModal() {
   const user = PlanoAuth.getUser();
-  const sub = PlanoAuth.getSubscription();
   const body = $("#accountBody");
   if (!body || !user) return;
+
+  let sub = PlanoAuth.getSubscription();
+  try {
+    const res = await PlanoAuth.apiFetch("/api/billing/subscription");
+    if (res.ok) {
+      const fresh = await res.json();
+      localStorage.setItem("plano_ia_subscription", JSON.stringify(fresh));
+      sub = fresh;
+    }
+  } catch {
+    /* usa cache local */
+  }
+
   const plan = sub?.plan || {};
   const usage = sub?.usage || {};
   const used = usage.analyses_used ?? 0;
@@ -3226,23 +3530,96 @@ async function openAccountModal() {
   const unlimited = isPlanUnlimited(sub);
   const usageStr = unlimited
     ? `${used} análisis este mes (ilimitado)`
-    : `${used} / ${limit} análisis este mes`;
+    : `${used} / ${limit}`;
+  const storageGb = plan.storage_gb ?? plan.features?.storage_gb;
+  const storageUsed = usage.storage_used_gb;
+  const storageStr =
+    storageGb == null
+      ? "—"
+      : storageUsed != null
+        ? `${storageUsed} / ${storageGb} GB`
+        : `${storageGb} GB`;
+  const initials = (user.full_name || user.email || "U")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   body.innerHTML = `
-    <p><strong>${escapeHtml(user.full_name || user.email)}</strong></p>
-    <p class="opacity-60">${escapeHtml(user.email)}</p>
-    <p class="mt-2">Rol: ${user.role === "admin" ? "Administrador" : "Usuario"}</p>
-    <p>Plan: <strong>${escapeHtml(plan.name || "—")}</strong></p>
-    <p>Uso mensual: ${usageStr}</p>
-    <p class="text-xs opacity-60 mt-1">Archivos hasta ${plan.max_file_mb || "—"} MB · ${plan.allow_real_model ? "Modelo real" : "Modelo demo"}</p>
-    <p class="text-xs opacity-50 mt-2">Periodo: ${escapeHtml(formatReceiptDate(sub?.period_start))} — ${escapeHtml(formatReceiptDate(sub?.period_end))}</p>
-    <div class="account-usage-chart-slot mt-4 pt-4 border-t border-white/10">
-      <p class="text-xs opacity-60">Cargando uso mensual…</p>
+    <section class="account-section account-profile">
+      <div class="account-profile-row">
+        <div class="account-avatar-wrap">
+          <div class="account-avatar${user.avatar_url ? " has-photo" : ""}" id="accountAvatarPreview" ${user.avatar_url ? `style="background-image:url('${escapeHtml(user.avatar_url)}')"` : ""}>${user.avatar_url ? "" : escapeHtml(initials)}</div>
+          <label class="account-avatar-edit" title="Cambiar foto">
+            <span class="material-symbols-outlined">photo_camera</span>
+            <input type="file" id="accountAvatarInput" accept="image/jpeg,image/png,image/webp" hidden />
+          </label>
+        </div>
+        <div class="account-profile-copy">
+          <strong class="account-profile-name">${escapeHtml(user.full_name || user.email)}</strong>
+          <span class="account-profile-email">${escapeHtml(user.email)}</span>
+          <div class="account-avatar-actions">
+            <button type="button" class="btn-link text-xs" id="btnPickAvatar">Subir foto</button>
+            ${user.avatar_url ? '<button type="button" class="btn-link text-xs account-avatar-remove" id="btnRemoveAvatar">Quitar</button>' : ""}
+          </div>
+        </div>
+      </div>
+      <div class="account-meta-grid">
+        <div class="account-meta-item">
+          <span class="account-meta-label">Rol</span>
+          <span class="account-meta-value">${user.role === "admin" ? "Administrador" : "Usuario"}</span>
+        </div>
+        <div class="account-meta-item">
+          <span class="account-meta-label">Plan</span>
+          <span class="account-meta-value">${escapeHtml(plan.name || "—")}</span>
+        </div>
+        <div class="account-meta-item">
+          <span class="account-meta-label">Uso</span>
+          <span class="account-meta-value">${usageStr}</span>
+        </div>
+        <div class="account-meta-item">
+          <span class="account-meta-label">Documentación</span>
+          <span class="account-meta-value">${escapeHtml(String(storageStr))}</span>
+        </div>
+      </div>
+      <p class="account-period">Periodo: ${escapeHtml(formatReceiptDate(sub?.period_start))} — ${escapeHtml(formatReceiptDate(sub?.period_end))}</p>
+    </section>
+    <div class="account-usage-chart-slot">
+      <p class="account-loading">Cargando uso mensual…</p>
     </div>
-    <div class="account-receipts mt-4 pt-4 border-t border-white/10">
-      <p class="text-xs opacity-60">Cargando comprobantes…</p>
+    <div class="account-receipts">
+      <p class="account-loading">Cargando comprobantes…</p>
     </div>
   `;
   $("#accountModal").showModal();
+
+  const avatarInput = body.querySelector("#accountAvatarInput");
+  const pickBtn = body.querySelector("#btnPickAvatar");
+  const removeBtn = body.querySelector("#btnRemoveAvatar");
+  pickBtn?.addEventListener("click", () => avatarInput?.click());
+  avatarInput?.addEventListener("change", async () => {
+    const file = avatarInput.files?.[0];
+    avatarInput.value = "";
+    if (!file) return;
+    try {
+      showToast("Subiendo foto…");
+      await uploadProfileAvatar(file);
+      showToast("Foto de perfil actualizada");
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "No se pudo subir la foto");
+    }
+  });
+  removeBtn?.addEventListener("click", async () => {
+    try {
+      await removeProfileAvatar();
+      showToast("Foto eliminada");
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "No se pudo quitar la foto");
+    }
+  });
 
   try {
     const [receiptsRes, historyRes] = await Promise.all([
@@ -3253,20 +3630,21 @@ async function openAccountModal() {
     const historyData = await historyRes.json().catch(() => ({}));
     const receipts = receiptsRes.ok ? receiptsData.receipts || [] : [];
     const history = historyRes.ok ? historyData.history || [] : [];
+    accountReceiptsExpanded = false;
 
     const chartSlot = body.querySelector(".account-usage-chart-slot");
     if (chartSlot) chartSlot.outerHTML = renderUsageHistoryChart(history, sub);
 
     const receiptsEl = body.querySelector(".account-receipts");
     if (receiptsEl) {
-      receiptsEl.outerHTML = renderReceiptsSection(receipts);
+      receiptsEl.outerHTML = renderReceiptsSection(receipts, false);
       bindReceiptActions(body);
     }
   } catch {
     const receiptsEl = body.querySelector(".account-receipts");
     if (receiptsEl) {
       receiptsEl.innerHTML =
-        '<p class="text-xs opacity-60">No se pudo cargar el historial de compras.</p>';
+        '<p class="account-loading">No se pudo cargar el historial de compras.</p>';
     }
   }
 }
