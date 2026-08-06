@@ -1,4 +1,4 @@
-"""Endpoints móviles para autenticación, estado y análisis de planos."""
+"""Endpoints móviles para autenticación, estado, análisis y casa hogar."""
 
 from __future__ import annotations
 
@@ -31,6 +31,8 @@ def mobile_health():
             "/api/mobile/register",
             "/api/mobile/me",
             "/api/mobile/analyze",
+            "/api/mobile/home-projects",
+            "/api/mobile/home-projects/catalog",
         ],
     }
 
