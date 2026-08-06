@@ -99,11 +99,11 @@ docker compose up -d --force-recreate backend
 
 ## Funcionalidades incluidas
 
-- **Revisión de planos** — PNG, JPG, PDF, DXF, DWG → YOLO + reglas normativas.
+- **Revisión de planos** — PNG, JPG, PDF → YOLO + reglas normativas (DXF/DWG solo en docs de Casa hogar).
 - **IA ARCHITECT (chat sin plano)** — Responde con manuales indexados, umbrales Chiapas y web. Sin APIs de pago.
 - **Prueba sin cuenta** — Cookie de invitado con límites configurables.
 - **Planes y billing demo** — Checkout simulado, comprobantes PDF, historial en perfil.
-- **Proyectos casa hogar** — Flujo por etapas, secciones, invitaciones.
+- **Proyectos casa hogar** — Flujo por etapas, secciones, invitaciones (docs: PDF, Office, DXF/DWG, imágenes).
 - **Admin** — Panel de usuarios, ventas demo, comprobantes.
 - **Correo** — Tickets PDF y reset de contraseña vía Brevo (opcional).
 - **Google OAuth** — Opcional.

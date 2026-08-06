@@ -143,11 +143,8 @@ def health():
         )
     if not weights or not weights.is_file():
         hints.append("Modelo best.pt no encontrado; entrena o configura la ruta en Ajustes.")
-    if cad.get("dxf") and not cad.get("dwg"):
-        if cad.get("backends", {}).get("ezdwg"):
-            pass
-        else:
-            hints.append('Para DWG: pip install "ezdwg[dxf,plot]"')
+    if not cad.get("pdf"):
+        hints.append("Para PDF en análisis: pip install pymupdf")
     if k.get("pages", 0) == 0:
         hints.append(
             "Sin manuales indexados; opcional: python scripts/ingest_knowledge_docs.py"

@@ -9,8 +9,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $repoRoot
 
-$out = Join-Path $PSScriptRoot "architect_current.sql"
-$tmp = "/tmp/architect_current.sql"
+$out = Join-Path $PSScriptRoot "architect.sql"
+$tmp = "/tmp/architect.sql"
 
 Write-Host "Exportando base 'architect'..."
 docker exec architect-mysql sh -c "mysqldump -uarchitect -parchitect_pass --databases architect --routines --triggers --single-transaction --default-character-set=utf8mb4 --set-gtid-purged=OFF > $tmp 2>/dev/null"

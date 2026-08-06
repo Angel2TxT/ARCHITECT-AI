@@ -10,7 +10,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=115" />
+  <link rel="stylesheet" href="/static/style.css?v=122" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -321,13 +321,13 @@
         <div class="drop-overlay-inner glass-panel">
           <span class="material-symbols-outlined">upload_file</span>
           <p>Suelta el plano aquí</p>
-          <p class="drop-overlay-sub">Imágenes · PDF · DXF · DWG</p>
+          <p class="drop-overlay-sub">Imágenes · PDF</p>
         </div>
       </div>
 
       <div class="composer-wrap composer-dock pointer-events-none fixed bottom-0 left-0 right-0 z-30" id="composerDock">
         <div class="composer-inner pointer-events-auto mx-auto max-w-2xl px-4 pb-3 pt-2">
-          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf,.dxf,.dwg" hidden />
+          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf" hidden />
 
           <div class="composer-stack mb-2">
             <div class="attachments-row flex justify-center" id="attachmentsRow" hidden>
@@ -342,7 +342,7 @@
                   <span class="attach-name block max-w-[12rem] truncate text-xs font-semibold" id="attachName"></span>
                   <span class="attach-type text-[10px] text-on-surface-variant/60" id="attachType"></span>
                 </div>
-                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5" id="btnRemoveAttach" aria-label="Quitar archivo">
+                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10" id="btnRemoveAttach" aria-label="Quitar archivo">
                   <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
@@ -351,7 +351,7 @@
 
           <form class="composer-bar glass-panel flex items-center gap-1 rounded-full p-1 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/15" id="composerForm">
             <div class="attach-picker-wrap ml-0.5 shrink-0" id="attachPickerWrap">
-              <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true">
+              <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true" title="Elegir tipo de archivo">
                 <span class="material-symbols-outlined">attach_file</span>
               </button>
               <div class="attach-picker-menu glass-panel" id="attachPickerMenu" role="menu" hidden>
@@ -364,17 +364,9 @@
                   <span class="material-symbols-outlined">picture_as_pdf</span>
                   <span class="attach-picker-label"><strong>PDF</strong><small>Plano en PDF</small></span>
                 </button>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dxf,application/dxf">
-                  <span class="material-symbols-outlined">architecture</span>
-                  <span class="attach-picker-label"><strong>DXF</strong><small>AutoCAD intercambio</small></span>
-                </button>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dwg">
-                  <span class="material-symbols-outlined">domain</span>
-                  <span class="attach-picker-label"><strong>DWG</strong><small>AutoCAD nativo</small></span>
-                </button>
                 <button type="button" class="attach-picker-item attach-picker-item--all" role="menuitem" data-attach-accept="all">
                   <span class="material-symbols-outlined">folder_open</span>
-                  <span class="attach-picker-label"><strong>Todos</strong><small>Cualquier formato soportado</small></span>
+                  <span class="attach-picker-label"><strong>Todos</strong><small>Imagen o PDF</small></span>
                 </button>
               </div>
             </div>
@@ -389,7 +381,7 @@
               <span class="material-symbols-outlined">arrow_upward</span>
             </button>
           </form>
-          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen, PDF, DXF o DWG · arrastra o Ctrl+V</p>
+          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen o PDF · arrastra o Ctrl+V</p>
         </div>
       </div>
     </main>
@@ -674,7 +666,7 @@
   <script src="/static/auth.js?v=28"></script>
   <script src="/static/billing.js?v=1"></script>
   <script src="/static/dialogs.js?v=4"></script>
-  <script src="/static/home-projects.js?v=55"></script>
-  <script src="/static/app.js?v=66"></script>
+  <script src="/static/home-projects.js?v=58"></script>
+  <script src="/static/app.js?v=69"></script>
 </body>
 </html>

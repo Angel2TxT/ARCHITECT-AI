@@ -895,7 +895,7 @@
             editable && sectionWorkable
               ? `<div class="home-section-actions flex flex-wrap gap-2 items-center">
                   <label class="home-doc-upload btn-secondary text-xs py-1.5 px-2.5 inline-flex cursor-pointer">
-                    <input type="file" class="home-section-file-input" data-section-id="${openSection.id}" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.doc,.docx,.xls,.xlsx" hidden />
+                    <input type="file" class="home-section-file-input" data-section-id="${openSection.id}" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.doc,.docx,.xls,.xlsx,.dxf,.dwg" hidden />
                     Subir archivo
                   </label>
                   <button type="button" class="btn-secondary text-xs py-1.5 px-2.5 text-red-600 home-section-delete" data-section-id="${openSection.id}" ${canDeleteSec ? "" : "hidden"}>Eliminar apartado</button>
@@ -1014,16 +1014,48 @@
       </div>`;
   }
 
+  function homeFooterMarkup() {
+    return `
+      <footer class="home-projects-footer" id="homeProjectsFooter">
+        <div class="home-projects-footer-inner">
+          <div class="home-projects-footer-brand">
+            <img src="/static/brand/architect-logo.png?v=3" alt="ARCHITECT" class="brand-logo-img brand-logo-img--footer" />
+            <p class="home-projects-footer-desc">
+              Gestión de vivienda unifamiliar por etapas, documentos y equipo. Herramienta de apoyo; no reemplaza proyecto ejecutivo firmado.
+            </p>
+            <p class="home-projects-footer-copy">© 2026 ARCHITECT</p>
+          </div>
+          <nav class="home-projects-footer-links" aria-label="Enlaces de Casa hogar">
+            <div class="home-projects-footer-col">
+              <h4>Plataforma</h4>
+              <a href="#" data-home-footer="workspace">Revisión IA</a>
+              <a href="#" data-home-footer="home" aria-current="page">Casa hogar</a>
+              <a href="/docs" target="_blank" rel="noopener" class="home-footer-link--desktop">API</a>
+            </div>
+            <div class="home-projects-footer-col">
+              <h4>Cuenta</h4>
+              <a href="#" data-home-footer="plans">Planes</a>
+              <a href="#" data-home-footer="account">Mi cuenta</a>
+              <a href="/" class="home-footer-link--desktop">Landing</a>
+            </div>
+          </nav>
+        </div>
+      </footer>`;
+  }
+
   function renderDetail(project) {
     const detail = $("#homeProjectsDetail");
     const empty = $("#homeProjectsEmpty");
     if (!detail) return;
     if (!project) {
-      detail.innerHTML = "";
-      if (empty) {
-        empty.classList.remove("hidden");
-        detail.appendChild(empty);
-      }
+      detail.innerHTML = `
+        <div class="home-project-scroll home-project-scroll--empty" id="homeProjectDetailScroll">
+          <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
+            <span class="material-symbols-outlined text-4xl mb-2">home_work</span>
+            <p class="text-sm">Selecciona un proyecto o crea uno nuevo</p>
+          </div>
+          ${homeFooterMarkup()}
+        </div>`;
       return;
     }
     if (empty) empty.classList.add("hidden");
@@ -1175,6 +1207,7 @@
       }
 
       <div class="home-stage-layout">${mainContent}</div>
+      ${homeFooterMarkup()}
       </div>
       ${detailView === "stage" && !completionOverviewMode ? renderModuleOverlay(project, openSection, editable) : ""}`;
 
@@ -2035,6 +2068,20 @@
     } else {
       close();
       window.setNavActive?.("workspace");
+    }
+  });
+
+  $("#homeProjectsDetail")?.addEventListener("click", (e) => {
+    const link = e.target.closest("[data-home-footer]");
+    if (!link) return;
+    e.preventDefault();
+    const action = link.getAttribute("data-home-footer");
+    if (action === "workspace") {
+      $("#btnHomeBackToWorkspace")?.click();
+    } else if (action === "plans") {
+      document.getElementById("btnPlans")?.click();
+    } else if (action === "account") {
+      document.getElementById("btnAccount")?.click();
     }
   });
 

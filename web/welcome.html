@@ -761,9 +761,9 @@
     }
     .legacy-pricing-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      max-width: 56rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: stretch;
+      max-width: 72rem;
       min-height: 0;
       margin: 0 auto;
       gap: 0.85rem;
@@ -788,24 +788,21 @@
         box-shadow 0.45s ease,
         background 0.45s ease;
     }
-    .legacy-plan:first-child {
-      transform: translateX(28px) scale(0.94);
-      border-color: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 70px rgba(255, 255, 255, 0.1);
-    }
+    .legacy-plan:first-child,
     .legacy-plan:last-child {
-      transform: translateX(-28px) scale(0.94);
-      opacity: 0.78;
+      transform: none;
+      opacity: 1;
+      box-shadow: 0 30px 110px rgba(0, 0, 0, 0.32);
     }
     .legacy-pricing-grid:has(.legacy-plan:hover) .legacy-plan {
       opacity: 0.55;
-      transform: scale(0.94);
+      transform: scale(0.96);
     }
     .legacy-pricing-grid:has(.legacy-plan:hover) .legacy-plan:hover {
       position: relative;
       z-index: 5;
       opacity: 1;
-      transform: translateX(0) scale(1.04);
+      transform: scale(1.03);
       border-color: rgba(255, 255, 255, 0.18);
       background:
         radial-gradient(circle at 28% 88%, rgba(255, 255, 255, 0.1), transparent 28%),
@@ -817,7 +814,7 @@
     }
     .legacy-pricing-grid:has(.legacy-plan:first-child:hover) .legacy-plan.featured,
     .legacy-pricing-grid:has(.legacy-plan:last-child:hover) .legacy-plan.featured {
-      transform: scale(0.86);
+      transform: scale(0.96);
     }
     .legacy-plan.featured {
       position: relative;
@@ -1031,6 +1028,12 @@
         justify-self: end;
       }
     }
+    @media (max-width: 1100px) {
+      .legacy-pricing-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 44rem;
+      }
+    }
     @media (max-width: 900px) {
       .welcome-nav-login {
         display: none;
@@ -1206,7 +1209,7 @@
         <div class="mb-8 scroll-reveal">
           <p class="model-eyebrow">Flujo de análisis</p>
           <h2 class="model-title">Del archivo subido al plano marcado con observaciones.</h2>
-          <p class="model-copy">Convierte PDF y CAD a imagen, corre detección YOLO sobre la planta y pasa los resultados por un motor de reglas configurable. Obtienes medidas estimadas, incidencias numeradas sobre el dibujo y un chat para preguntar o profundizar en cada revisión. No sustituye la firma de un responsable de obra.</p>
+          <p class="model-copy">Sube imagen o PDF, corre detección YOLO sobre la planta y pasa los resultados por un motor de reglas configurable. Obtienes medidas estimadas, incidencias numeradas sobre el dibujo y un chat para preguntar o profundizar en cada revisión. No sustituye la firma de un responsable de obra.</p>
         </div>
         <div class="w-full mx-auto scroll-reveal" id="hero-image">
             <div class="glass p-4 rounded-xl shadow-2xl relative group">
@@ -1248,9 +1251,9 @@
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter text-center">
           <div class="p-5 scroll-reveal">
-            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="4" data-suffix="">4</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Formatos de entrada</p>
-            <p class="mt-4 text-secondary/70">PNG, JPG, PDF, DXF y DWG. Los CAD y PDF se rasterizan antes del análisis.</p>
+            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="2" data-suffix="">2</div>
+            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Formatos de análisis</p>
+            <p class="mt-4 text-secondary/70">PNG/JPG y PDF para la revisión con IA. DXF/DWG se pueden subir en la documentación de Casa hogar.</p>
           </div>
           <div class="p-5 scroll-reveal" style="transition-delay: 100ms">
             <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="1" data-suffix="">1</div>
@@ -1345,22 +1348,41 @@
       <div class="legacy-pricing-intro scroll-reveal">
         <span class="inline-block px-3.5 py-1.5 mb-5 text-label-sm font-label-sm uppercase tracking-widest bg-secondary-container text-on-secondary-container rounded-full">Planes de uso</span>
         <h2>Límites claros según cuántos planos revisas al mes.</h2>
-        <p>Todos empiezan en el plan Gratis (5 análisis/mes, modelo demo). Los planes de pago se activan tras una <strong>pasarela de pago simulada</strong> (proyecto escolar, sin cobro real).</p>
+        <p>Todos empiezan en <strong>Gratis</strong> (5 análisis/mes, modelo demo). Los planes de pago se activan con una <strong>pasarela simulada</strong> (proyecto escolar, sin cobro real).</p>
       </div>
       <div class="legacy-pricing-grid scroll-reveal">
         <article class="legacy-plan">
           <div class="legacy-plan-head">
+            <h3>Gratis</h3>
+          </div>
+          <p>Ideal para conocer ARCHITECT sin compromiso.</p>
+          <div class="legacy-plan-divider"></div>
+          <div class="legacy-plan-price">$0 <small>/mes</small></div>
+          <span class="legacy-plan-label">Incluye</span>
+          <ul>
+            <li>5 análisis de planos al mes</li>
+            <li>20 preguntas al chat / mes</li>
+            <li>1 proyecto casa hogar · 1 GB docs</li>
+            <li>Modelo demo</li>
+            <li>Archivos hasta 5 MB por carga</li>
+          </ul>
+          <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','free')">Empezar gratis</a>
+        </article>
+
+        <article class="legacy-plan">
+          <div class="legacy-plan-head">
             <h3>Starter</h3>
           </div>
-          <p>Para estudiantes y revisiones ocasionales de plantas arquitectónicas.</p>
+          <p>Ideal para estudiantes y proyectos pequeños.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$300 <small>/mes</small></div>
           <span class="legacy-plan-label">Incluye</span>
           <ul>
             <li>30 análisis de planos al mes</li>
-            <li>Modelo entrenado (no demo)</li>
-            <li>Archivos hasta 10 MB</li>
-            <li>Exportar reportes</li>
+            <li>Hasta 3 proyectos casa hogar · 5 GB</li>
+            <li>Análisis con modelo real (imagen y PDF)</li>
+            <li>Exportar reportes PDF</li>
+            <li>Archivos hasta 10 MB · Soporte por correo</li>
           </ul>
           <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','starter')">Elegir plan</a>
         </article>
@@ -1370,15 +1392,16 @@
             <h3>Pro</h3>
             <span class="legacy-plan-badge">Popular</span>
           </div>
-          <p>Para despachos que revisan planos cada semana y necesitan más capacidad.</p>
+          <p>Ideal para obra y despacho individual.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$500 <small>/mes</small></div>
           <span class="legacy-plan-label">Más elegido</span>
           <ul>
             <li>150 análisis de planos al mes</li>
-            <li>Archivos hasta 20 MB</li>
-            <li>App móvil y exportación</li>
-            <li>Soporte prioritario</li>
+            <li>Hasta 20 proyectos · 25 GB docs</li>
+            <li>IA con normas de Chiapas e indexación</li>
+            <li>App móvil ARCHITECT incluida</li>
+            <li>Archivos hasta 20 MB · Soporte prioritario</li>
           </ul>
           <a class="primary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','pro')">Elegir plan</a>
         </article>
@@ -1387,15 +1410,16 @@
           <div class="legacy-plan-head">
             <h3>Enterprise</h3>
           </div>
-          <p>Para equipos con alto volumen de revisiones y archivos pesados.</p>
+          <p>Ideal para equipos y despachos con alto volumen.</p>
           <div class="legacy-plan-divider"></div>
           <div class="legacy-plan-price">$900 <small>/mes</small></div>
           <span class="legacy-plan-label">Equipo</span>
           <ul>
-            <li>Hasta 9 999 análisis al mes</li>
-            <li>Archivos hasta 50 MB</li>
-            <li>API, exportación y SLA</li>
-            <li>Soporte dedicado</li>
+            <li>Análisis y chat ilimitados</li>
+            <li>Proyectos ilimitados · 100 GB docs</li>
+            <li>Equipos, invitaciones y colaboración</li>
+            <li>App móvil ARCHITECT incluida</li>
+            <li>Archivos hasta 50 MB · Soporte dedicado con SLA</li>
           </ul>
           <a class="secondary" href="/login#register" onclick="localStorage.setItem('plano_ia_selected_plan','enterprise')">Elegir plan</a>
         </article>

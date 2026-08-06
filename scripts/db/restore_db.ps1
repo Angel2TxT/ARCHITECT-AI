@@ -1,11 +1,11 @@
-# Restaura scripts/db/architect_current.sql en el MySQL de Docker.
+# Restaura scripts/db/architect.sql en el MySQL de Docker.
 # ATENCIÓN: sobrescribe la base 'architect'.
 # Uso (desde la raíz del repo): .\scripts\db\restore_db.ps1
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $repoRoot
 
-$sql = Join-Path $PSScriptRoot "architect_current.sql"
+$sql = Join-Path $PSScriptRoot "architect.sql"
 if (-not (Test-Path $sql)) {
   throw "No existe $sql — genera uno con .\scripts\db\dump_db.ps1"
 }

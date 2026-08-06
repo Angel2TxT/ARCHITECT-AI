@@ -62,7 +62,7 @@ DEFAULT_PLANS = [
             "benefits": [
                 "30 análisis de planos al mes",
                 "Hasta 3 proyectos casa hogar · 5 GB",
-                "Análisis con modelo real (imagen, PDF, DXF/DWG)",
+                "Análisis con modelo real (imagen y PDF)",
                 "Exportar reportes PDF",
                 "Archivos hasta 10 MB · Soporte por correo",
             ],

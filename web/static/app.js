@@ -36,12 +36,11 @@ const TOOL_MODES = {
 
 const PLANO_EXTENSIONS = [
   ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
-  ".pdf", ".dxf", ".dwg",
+  ".pdf",
 ];
-const CAD_EXTENSIONS = [".dxf", ".dwg"];
 const PDF_EXTENSIONS = [".pdf"];
 const FILE_INPUT_ACCEPT =
-  "image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf,.dxf,.dwg";
+  "image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf";
 
 function getFileExt(name) {
   const n = (name || "").toLowerCase();
@@ -57,10 +56,6 @@ function isPlanoFile(file) {
   return false;
 }
 
-function isCadFile(file) {
-  return CAD_EXTENSIONS.includes(getFileExt(file.name));
-}
-
 function isPdfFile(file) {
   return (
     PDF_EXTENSIONS.includes(getFileExt(file.name)) ||
@@ -69,7 +64,7 @@ function isPdfFile(file) {
 }
 
 function needsServerPreview(file) {
-  return isCadFile(file) || isPdfFile(file);
+  return isPdfFile(file);
 }
 
 function pickPlanoFile(fileList) {
@@ -82,7 +77,7 @@ function pickPlanoFile(fileList) {
 
 function handlePlanoFile(file, autoSend = false) {
   if (!isPlanoFile(file)) {
-    showToast("Formato no soportado: PNG, JPG, PDF, DXF o DWG");
+    showToast("Formato no soportado: PNG, JPG o PDF");
     return;
   }
   setAttachment(file);
@@ -91,7 +86,7 @@ function handlePlanoFile(file, autoSend = false) {
     pendingPrompt = null;
     sendMessage(p || undefined);
   } else {
-    const label = isCadFile(file) ? "CAD listo" : isPdfFile(file) ? "PDF listo" : "Plano listo";
+    const label = isPdfFile(file) ? "PDF listo" : "Plano listo";
     showToast(`${label} — pulsa enviar o escribe un comando`);
   }
 }
@@ -395,7 +390,7 @@ function mapMessageFromApi(m) {
           name: filename,
           extLabel: (ext.replace(".", "") || "archivo").toUpperCase(),
           sizeLabel: "",
-          kind: ext === ".pdf" ? "pdf" : [".dxf", ".dwg"].includes(ext) ? "cad" : "image",
+          kind: ext === ".pdf" ? "pdf" : "image",
         }
       : null,
   };
@@ -1587,13 +1582,12 @@ function buildAttachmentMeta(file) {
     name: file.name || "plano",
     extLabel: (ext.replace(".", "") || "archivo").toUpperCase(),
     sizeLabel: formatFileSize(file.size),
-    kind: isPdfFile(file) ? "pdf" : isCadFile(file) ? "cad" : "image",
+    kind: isPdfFile(file) ? "pdf" : "image",
   };
 }
 
 function attachmentIconName(kind) {
   if (kind === "pdf") return "picture_as_pdf";
-  if (kind === "cad") return "architecture";
   return "draft";
 }
 
@@ -1678,10 +1672,7 @@ async function loadServerPreview(file) {
   if (!img) return;
 
   const reqId = ++previewRequestId;
-  const cadLabel = isCadFile(file) && getFileExt(file.name) === ".dwg"
-    ? "Convirtiendo DWG… puede tardar un momento"
-    : "Generando vista previa…";
-  setAttachPreviewLoading(true, cadLabel);
+  setAttachPreviewLoading(true, "Generando vista previa…");
   try {
     const { url } = await fetchPreviewDataUrl(file);
     if (attachedFile !== file || reqId !== previewRequestId) return;
@@ -2477,7 +2468,9 @@ function closeAttachPicker() {
   if (!menu) return;
   menu.hidden = true;
   menu.classList.remove("is-open");
-  if (btn) btn.setAttribute("aria-expanded", "false");
+  if (btn) {
+    btn.setAttribute("aria-expanded", "false");
+  }
 }
 
 function openAttachPicker() {
@@ -2486,7 +2479,17 @@ function openAttachPicker() {
   if (!menu) return;
   menu.hidden = false;
   menu.classList.add("is-open");
-  if (btn) btn.setAttribute("aria-expanded", "true");
+  if (btn) {
+    btn.setAttribute("aria-expanded", "true");
+  }
+}
+
+function openPlanoFileBrowser(accept = FILE_INPUT_ACCEPT) {
+  const fileInput = $("#fileInput");
+  if (!fileInput) return;
+  fileInput.accept = accept || FILE_INPUT_ACCEPT;
+  fileInput.value = "";
+  fileInput.click();
 }
 
 function setupAttachPicker() {
@@ -2494,9 +2497,11 @@ function setupAttachPicker() {
   const btn = $("#btnAttach");
   const menu = $("#attachPickerMenu");
   const fileInput = $("#fileInput");
-  if (!wrap || !btn || !menu || !fileInput) return;
+  if (!btn || !menu || !fileInput) return;
 
+  // El clip abre el menú para elegir formato; luego el explorador.
   btn.onclick = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     if (menu.classList.contains("is-open")) closeAttachPicker();
     else openAttachPicker();
@@ -2504,17 +2509,16 @@ function setupAttachPicker() {
 
   menu.querySelectorAll("[data-attach-accept]").forEach((item) => {
     item.onclick = (e) => {
+      e.preventDefault();
       e.stopPropagation();
       const mode = item.dataset.attachAccept;
-      fileInput.accept = mode === "all" ? FILE_INPUT_ACCEPT : mode;
-      fileInput.click();
       closeAttachPicker();
+      openPlanoFileBrowser(mode === "all" ? FILE_INPUT_ACCEPT : mode);
     };
   });
 
   menu.addEventListener("click", (e) => e.stopPropagation());
-  wrap.addEventListener("click", (e) => e.stopPropagation());
-
+  wrap?.addEventListener("click", (e) => e.stopPropagation());
   document.addEventListener("click", () => closeAttachPicker());
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAttachPicker();
@@ -2526,7 +2530,7 @@ setupAttachPicker();
 $("#fileInput").onchange = (e) => {
   const f = pickPlanoFile(e.target.files);
   if (!f) {
-    showToast("Formato no soportado: PNG, JPG, PDF, DXF o DWG");
+    showToast("Formato no soportado: PNG, JPG o PDF");
     return;
   }
   handlePlanoFile(f, !!pendingPrompt);
@@ -3704,7 +3708,7 @@ function setupDragDrop() {
     hide();
     const f = pickPlanoFile(e.dataTransfer?.files);
     if (!f) {
-      showToast("Formato no soportado: PNG, JPG, PDF, DXF o DWG");
+      showToast("Formato no soportado: PNG, JPG o PDF");
       return;
     }
     handlePlanoFile(f, !!pendingPrompt);

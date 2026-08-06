@@ -1,10 +1,10 @@
-"""Limpia architect_current.sql: deja esquema completo + INSERT solo de tablas clave."""
+"""Limpia architect.sql: deja esquema completo + INSERT solo de tablas clave."""
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-SQL = Path(__file__).resolve().parent / "architect_current.sql"
+SQL = Path(__file__).resolve().parent / "architect.sql"
 
 # Datos de catálogo / arranque. El resto queda solo con CREATE TABLE vacío.
 KEEP_INSERTS = {"plans", "users", "subscriptions"}
