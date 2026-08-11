@@ -9,8 +9,13 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
 from api.routes.analyze import analyze as analyze_endpoint
-from api.routes.auth import register as register_endpoint
-from api.schemas import RegisterRequest
+from api.routes.auth import (
+    _user_out,
+    login as login_endpoint,
+    patch_me as patch_me_endpoint,
+    register as register_endpoint,
+)
+from api.schemas import LoginRequest, RegisterRequest, UpdateProfileRequest
 from db.database import get_db
 from db.models import User
 from services.subscription_service import subscription_payload
@@ -25,14 +30,17 @@ def mobile_health():
         "ok": True,
         "service": "mobile",
         "message": "API móvil lista",
-        "version": "1.0",
+        "version": "1.1",
         "endpoints": [
             "/api/mobile/health",
             "/api/mobile/register",
+            "/api/mobile/login",
             "/api/mobile/me",
             "/api/mobile/analyze",
             "/api/mobile/home-projects",
             "/api/mobile/home-projects/catalog",
+            "/api/mobile/home-projects/{id}/stages/{n}/ai-reviews",
+            "/api/mobile/home-projects/{id}/sections/{sid}/slots",
         ],
     }
 
@@ -53,6 +61,22 @@ def mobile_register(
     }
 
 
+@router.post("/login")
+def mobile_login(
+    body: LoginRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Inicia sesión y devuelve JWT para la app móvil."""
+    result = login_endpoint(body, db)
+    return {
+        "ok": True,
+        "access_token": result.access_token,
+        "token_type": result.token_type,
+        "user": result.user,
+        "subscription": result.subscription,
+    }
+
+
 @router.get("/me")
 def mobile_me(
     user: Annotated[User, Depends(get_current_user)],
@@ -61,14 +85,20 @@ def mobile_me(
     """Devuelve el perfil del usuario autenticado para la app móvil."""
     return {
         "ok": True,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role.value,
-        },
+        "user": _user_out(user),
         "subscription": subscription_payload(db, user),
     }
+
+
+@router.patch("/me")
+def mobile_patch_me(
+    body: UpdateProfileRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Actualiza el nombre del perfil."""
+    result = patch_me_endpoint(body, user, db)
+    return {"ok": True, "user": result.get("user")}
 
 
 @router.post("/analyze")
