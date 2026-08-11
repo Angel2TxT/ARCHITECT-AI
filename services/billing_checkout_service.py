@@ -16,6 +16,7 @@ from db.models import Plan, Subscription, SubscriptionStatus, User
 from services.auth_service import ALGORITHM, SECRET_KEY
 from services.stripe_service import (
     APP_BASE_URL,
+    STRIPE_CURRENCY,
     STRIPE_PUBLISHABLE_KEY,
     build_checkout_line_item,
     create_portal_session,
@@ -39,6 +40,105 @@ CHECKOUT_TTL_MINUTES = int(os.getenv("BILLING_CHECKOUT_TTL_MINUTES", "45"))
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
 
 CHECKOUT_TOKEN_TYPE = "billing_checkout"
+
+
+def plan_change_quote(current: Plan | None, target: Plan) -> dict[str, Any]:
+    """Reglas de cambio: no bajadas; upgrades pagan solo la diferencia de precio."""
+    current_price = int(current.price_monthly_cents or 0) if current else 0
+    target_price = int(target.price_monthly_cents or 0)
+    current_slug = current.slug if current else "free"
+    target_slug = target.slug
+
+    if current_slug == target_slug:
+        return {
+            "allowed": True,
+            "already_active": True,
+            "code": "already_active",
+            "current_price_cents": current_price,
+            "list_price_cents": target_price,
+            "credit_cents": 0,
+            "amount_due_cents": 0,
+            "is_upgrade": False,
+            "is_downgrade": False,
+            "message": "Ya tienes este plan activo.",
+        }
+
+    if target_price < current_price:
+        return {
+            "allowed": False,
+            "already_active": False,
+            "code": "downgrade_blocked",
+            "current_price_cents": current_price,
+            "list_price_cents": target_price,
+            "credit_cents": 0,
+            "amount_due_cents": 0,
+            "is_upgrade": False,
+            "is_downgrade": True,
+            "message": (
+                "No puedes bajar a un plan más barato mientras tu plan actual esté activo. "
+                "Si necesitas cancelar, usa la opción de cancelar suscripción."
+            ),
+        }
+
+    credit = current_price if target_price > current_price else 0
+    amount_due = max(0, target_price - current_price)
+    is_upgrade = current_price > 0 and target_price > current_price
+    return {
+        "allowed": True,
+        "already_active": False,
+        "code": "upgrade" if is_upgrade else "new_paid",
+        "current_price_cents": current_price,
+        "list_price_cents": target_price,
+        "credit_cents": credit,
+        "amount_due_cents": amount_due,
+        "is_upgrade": is_upgrade,
+        "is_downgrade": False,
+        "message": (
+            f"Pagas la diferencia: ${_fmt_cents(amount_due)} (crédito de tu plan actual ${_fmt_cents(credit)})."
+            if is_upgrade
+            else f"Total a pagar: ${_fmt_cents(amount_due)}."
+        ),
+    }
+
+
+def _fmt_cents(cents: int) -> str:
+    return f"{max(0, int(cents)) / 100:.0f}"
+
+
+def assert_plan_change_allowed(
+    db: Session,
+    user: User,
+    target: Plan,
+    *,
+    allow_admin_bypass: bool = True,
+) -> dict[str, Any]:
+    if allow_admin_bypass and is_admin_user(user):
+        price = int(target.price_monthly_cents or 0)
+        return {
+            "allowed": True,
+            "already_active": False,
+            "code": "admin_bypass",
+            "current_price_cents": 0,
+            "list_price_cents": price,
+            "credit_cents": 0,
+            "amount_due_cents": price,
+            "is_upgrade": False,
+            "is_downgrade": False,
+            "message": "Cambio de administrador.",
+        }
+    sub = ensure_subscription(db, user)
+    quote = plan_change_quote(sub.plan, target)
+    if not quote["allowed"]:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": quote["message"],
+                "code": quote["code"],
+                "current_price_cents": quote["current_price_cents"],
+                "list_price_cents": quote["list_price_cents"],
+            },
+        )
+    return quote
 
 
 def billing_mode() -> str:
@@ -72,6 +172,9 @@ def create_checkout_token(
     user_id: int,
     plan_slug: str,
     return_url: str,
+    amount_due_cents: int | None = None,
+    credit_cents: int = 0,
+    list_price_cents: int | None = None,
 ) -> str:
     payload = {
         "typ": CHECKOUT_TOKEN_TYPE,
@@ -80,7 +183,12 @@ def create_checkout_token(
         "return_url": return_url,
         "exp": _checkout_expiry(),
         "jti": secrets.token_urlsafe(12),
+        "credit_cents": int(credit_cents or 0),
     }
+    if amount_due_cents is not None:
+        payload["amount_due_cents"] = int(amount_due_cents)
+    if list_price_cents is not None:
+        payload["list_price_cents"] = int(list_price_cents)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -127,6 +235,15 @@ def checkout_session_preview(db: Session, token: str) -> dict[str, Any]:
         raise HTTPException(404, "Usuario no encontrado")
     plan = _plan_or_404(db, str(payload["plan"]))
     sub = ensure_subscription(db, user)
+    quote = plan_change_quote(sub.plan, plan)
+    list_price = int(payload.get("list_price_cents", plan.price_monthly_cents or 0))
+    amount_due = int(
+        payload.get(
+            "amount_due_cents",
+            quote["amount_due_cents"] if quote["allowed"] else list_price,
+        )
+    )
+    credit = int(payload.get("credit_cents", quote.get("credit_cents", 0)))
     return {
         "mode": billing_mode(),
         **billing_public_config(),
@@ -137,10 +254,17 @@ def checkout_session_preview(db: Session, token: str) -> dict[str, Any]:
             "price_monthly_cents": plan.price_monthly_cents,
             "analyses_limit_monthly": plan.analyses_limit_monthly,
             "max_file_mb": plan.max_file_mb,
+            "storage_gb": (plan.features or {}).get("storage_gb", 1),
             "allow_real_model": plan.allow_real_model,
         },
         "user_email": user.email,
         "current_plan_slug": sub.plan.slug if sub.plan else "free",
+        "current_price_cents": quote["current_price_cents"],
+        "list_price_cents": list_price,
+        "credit_cents": credit,
+        "amount_due_cents": amount_due,
+        "is_upgrade": bool(credit > 0 and amount_due < list_price),
+        "quote_message": quote.get("message"),
         "return_url": payload.get("return_url") or "/legacy-app",
         "expires_at": datetime.fromtimestamp(payload["exp"], tz=timezone.utc).isoformat(),
     }
@@ -156,16 +280,21 @@ def start_checkout(
     plan_slug = plan_slug.strip().lower()
     plan = _plan_or_404(db, plan_slug)
     safe_return = _normalize_return_url(return_url)
-    sub = ensure_subscription(db, user)
+    quote = assert_plan_change_allowed(db, user, plan)
 
-    if sub.plan and sub.plan.slug == plan_slug:
+    if quote.get("already_active"):
         return {
             "status": "already_active",
             "mode": billing_mode(),
             "subscription": subscription_payload(db, user),
         }
 
-    if not is_paid_plan(plan) or is_admin_user(user):
+    amount_due = int(quote["amount_due_cents"])
+    credit = int(quote["credit_cents"])
+    list_price = int(quote["list_price_cents"])
+
+    # Admin, plan gratis (solo si cotización lo permite) o upgrade con $0.
+    if not is_paid_plan(plan) or is_admin_user(user) or amount_due <= 0:
         subscription = change_plan(
             db,
             user,
@@ -177,17 +306,35 @@ def start_checkout(
             "status": "completed",
             "mode": billing_mode(),
             "subscription": subscription,
+            "amount_due_cents": amount_due,
+            "credit_cents": credit,
         }
 
     mode = billing_mode()
     if mode == "stripe":
-        stripe_payload = _start_stripe_checkout(db, user, plan, safe_return)
-        return {"status": "checkout_required", **stripe_payload}
+        stripe_payload = _start_stripe_checkout(
+            db,
+            user,
+            plan,
+            safe_return,
+            amount_due_cents=amount_due,
+            credit_cents=credit,
+        )
+        return {
+            "status": "checkout_required",
+            "amount_due_cents": amount_due,
+            "credit_cents": credit,
+            "list_price_cents": list_price,
+            **stripe_payload,
+        }
 
     session_token = create_checkout_token(
         user_id=user.id,
         plan_slug=plan_slug,
         return_url=safe_return,
+        amount_due_cents=amount_due,
+        credit_cents=credit,
+        list_price_cents=list_price,
     )
     return {
         "status": "checkout_required",
@@ -195,6 +342,9 @@ def start_checkout(
         "session_token": session_token,
         "checkout_url": _checkout_url(session_token),
         "return_url": safe_return,
+        "amount_due_cents": amount_due,
+        "credit_cents": credit,
+        "list_price_cents": list_price,
         "plan": {
             "slug": plan.slug,
             "name": plan.name,
@@ -208,6 +358,8 @@ def _issue_purchase_receipt(
     user: User,
     plan_slug: str,
     payment_ref: str,
+    *,
+    amount_cents: int | None = None,
 ) -> dict[str, Any] | None:
     plan = _plan_or_404(db, plan_slug)
     if not is_paid_plan(plan):
@@ -224,6 +376,7 @@ def _issue_purchase_receipt(
         payment_ref=payment_ref,
         period_start=sub.current_period_start,
         period_end=sub.current_period_end,
+        amount_cents=amount_cents,
         send_email=True,
     )
     return receipt_payload(receipt)
@@ -234,6 +387,10 @@ def complete_demo_checkout(db: Session, user: User, session_token: str) -> dict[
     if int(payload["uid"]) != user.id:
         raise HTTPException(403, "Esta sesión de pago pertenece a otra cuenta")
     plan_slug = str(payload["plan"])
+    plan = _plan_or_404(db, plan_slug)
+    # Revalidar: no permitir completar si el usuario ya no puede subir a ese plan.
+    quote = assert_plan_change_allowed(db, user, plan, allow_admin_bypass=False)
+    amount_due = int(payload.get("amount_due_cents", quote["amount_due_cents"]))
     payment_ref = f"demo_sub_{payload.get('jti', secrets.token_hex(8))}"
     subscription = change_plan(
         db,
@@ -242,13 +399,21 @@ def complete_demo_checkout(db: Session, user: User, session_token: str) -> dict[
         bypass_checkout=True,
         payment_ref=payment_ref,
     )
-    receipt = _issue_purchase_receipt(db, user, plan_slug, payment_ref)
+    receipt = _issue_purchase_receipt(
+        db,
+        user,
+        plan_slug,
+        payment_ref,
+        amount_cents=amount_due,
+    )
     return {
         "status": "completed",
         "mode": "demo",
         "return_url": payload.get("return_url") or "/legacy-app",
         "subscription": subscription,
         "receipt": receipt,
+        "amount_due_cents": amount_due,
+        "credit_cents": int(payload.get("credit_cents", quote["credit_cents"])),
     }
 
 
@@ -257,6 +422,9 @@ def _start_stripe_checkout(
     user: User,
     plan: Plan,
     return_url: str,
+    *,
+    amount_due_cents: int,
+    credit_cents: int = 0,
 ) -> dict[str, Any]:
     stripe = get_stripe()
     sub = get_user_subscription(db, user)
@@ -271,21 +439,58 @@ def _start_stripe_checkout(
         f"?checkout_canceled=1&return_url={quote(return_url, safe='')}"
     )
 
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer=customer_id,
-        line_items=[build_checkout_line_item(plan)],
-        success_url=success_url,
-        cancel_url=cancel_url,
-        client_reference_id=str(user.id),
-        metadata={"user_id": str(user.id), "plan_slug": plan.slug},
-        subscription_data={
-            "metadata": {
-                "user_id": str(user.id),
-                "plan_slug": plan.slug,
-            }
-        },
-    )
+    list_price = int(plan.price_monthly_cents or 0)
+    is_partial_upgrade = credit_cents > 0 and amount_due_cents < list_price
+    meta = {
+        "user_id": str(user.id),
+        "plan_slug": plan.slug,
+        "amount_due_cents": str(amount_due_cents),
+        "credit_cents": str(credit_cents),
+        "list_price_cents": str(list_price),
+    }
+
+    if is_partial_upgrade:
+        # Cobro único de la diferencia; el plan se activa al completar.
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            customer=customer_id,
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": STRIPE_CURRENCY,
+                        "unit_amount": amount_due_cents,
+                        "product_data": {
+                            "name": f"ARCHITECT — Mejora a {plan.name}",
+                            "description": (
+                                f"Diferencia de plan (crédito ${_fmt_cents(credit_cents)})."
+                            )[:500],
+                            "metadata": {"plan_slug": plan.slug},
+                        },
+                    },
+                    "quantity": 1,
+                }
+            ],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=str(user.id),
+            metadata=meta,
+        )
+    else:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer=customer_id,
+            line_items=[build_checkout_line_item(plan)],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=str(user.id),
+            metadata=meta,
+            subscription_data={
+                "metadata": {
+                    "user_id": str(user.id),
+                    "plan_slug": plan.slug,
+                }
+            },
+        )
     return {
         "mode": "stripe",
         "session_token": session.id,
@@ -321,7 +526,15 @@ def complete_stripe_checkout(
         raise HTTPException(403, "Esta sesión de pago pertenece a otra cuenta")
 
     sub = get_user_subscription(db, db_user)
-    payment_ref = str(session.subscription.id if session.subscription else session.id)
+    payment_ref = str(
+        session.subscription.id
+        if getattr(session, "subscription", None)
+        else session.id
+    )
+    amount_due = None
+    raw_amount = (session.metadata or {}).get("amount_due_cents")
+    if raw_amount is not None and str(raw_amount).isdigit():
+        amount_due = int(raw_amount)
 
     if (
         sub
@@ -343,12 +556,19 @@ def complete_stripe_checkout(
         payment_ref=payment_ref,
         stripe_customer_id=str(session.customer) if session.customer else None,
     )
-    receipt = _issue_purchase_receipt(db, db_user, plan_slug, payment_ref)
+    receipt = _issue_purchase_receipt(
+        db,
+        db_user,
+        plan_slug,
+        payment_ref,
+        amount_cents=amount_due,
+    )
     return {
         "status": "completed",
         "mode": "stripe",
         "subscription": subscription,
         "receipt": receipt,
+        "amount_due_cents": amount_due,
     }
 
 

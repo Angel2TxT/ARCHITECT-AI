@@ -116,11 +116,24 @@ def main() -> int:
             print("OK  change-plan pro sigue bloqueado tras activación demo")
 
         status, down = req("POST", "/api/billing/change-plan", {"plan_slug": "free"}, token)
-        if status != 200:
-            print(f"FAIL bajar a free: {status} {down}")
+        if status != 400:
+            print(f"FAIL bajar a free debería bloquearse (400), got {status}: {down}")
             ok = False
         else:
-            print("OK  bajar a plan gratis inmediato")
+            code = (down.get("detail") or {}).get("code") if isinstance(down.get("detail"), dict) else None
+            print(f"OK  bajar a free bloqueado (code={code})")
+
+        status, down_co = req(
+            "POST",
+            "/api/billing/checkout",
+            {"plan_slug": "starter", "return_url": "/legacy-app"},
+            token,
+        )
+        if status != 400:
+            print(f"FAIL starter desde pro debería ser downgrade 400, got {status}: {down_co}")
+            ok = False
+        else:
+            print("OK  downgrade a starter bloqueado desde checkout")
 
     elif config.get("mode") == "stripe":
         if not checkout_url.startswith("https://checkout.stripe.com"):

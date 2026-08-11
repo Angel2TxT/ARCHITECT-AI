@@ -17,8 +17,6 @@ from db.models import Analysis, Chat, Message, User
 from services.cad_service import (
     PREVIEW_DPI,
     CadConversionError,
-    cad_bytes_to_png_async,
-    is_cad_filename,
     is_pdf_filename,
     is_supported_filename,
     pdf_bytes_to_png_async,
@@ -70,7 +68,7 @@ async def analyze(
     if not is_supported_filename(filename):
         raise HTTPException(
             400,
-            "Formato no soportado. Usa PNG, JPG, PDF, DXF o DWG.",
+            "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.",
         )
 
     wpath = _resolve_weights(weights)
@@ -128,6 +126,7 @@ async def analyze(
         "text": message.strip() or "Analiza este plano",
         "filename": filename,
         "analysis_id": analysis.id,
+        "type": "analysis",
     }
     db.add(
         Message(
@@ -187,131 +186,24 @@ async def analyze(
     result["chat_id"] = chat.id
     result["analysis_id"] = analysis.id
     result["subscription"] = sub
+    result.update(assistant_content)
     return result
-
-
-def _maybe_enhance_analysis_text(text: str, data: dict) -> tuple[str, str]:
-    return text, "architect"
 
 
 def _build_assistant_content(
     data: dict, prepared=None, *, analysis_id: int | None = None
 ) -> dict:
+    from services.analysis_reply_service import compose_analysis_reply
+
     errors = data.get("counts", {}).get("errors", 0)
     warnings = data.get("counts", {}).get("warnings", 0)
     det_count = data.get("counts", {}).get("detections", 0)
 
-    intent = data.get("analysis_intent") or {}
-    intent_title = intent.get("title") or "Revisión integral"
-    verdict = data.get("verdict") or {}
-    conversational = intent.get("conversational", False)
-    list_measures = intent.get("list_measures", False)
-    measures_report = data.get("measures_report")
-
-    if list_measures and measures_report and measures_report.get("text"):
-        text = measures_report["text"]
-        if prepared and prepared.conversion_note:
-            text = f"{prepared.conversion_note}\n\n{text}"
-        elif data.get("conversion_note"):
-            text = f"{data['conversion_note']}\n\n{text}"
-        auto = data.get("auto_calibration")
-        if auto and auto.get("summary"):
-            text = f"{auto['summary']}\n\n{text}"
-        text, assistant_mode = _maybe_enhance_analysis_text(text, data)
-        return {
-            "text": text,
-            "steps": None,
-            "image_base64": data.get("image_base64"),
-            "stats": {
-                "detections": det_count,
-                "errors": errors,
-                "warnings": warnings,
-            }
-            if det_count > 0
-            else None,
-            "issues_summary": [],
-            "detections_summary": data.get("detections_summary"),
-            "scale_hint": data.get("scale_hint"),
-            "auto_calibration": data.get("auto_calibration"),
-            "construction_coverage": None,
-            "knowledge_references": [],
-            "verdict": data.get("verdict"),
-            "analysis_intent": data.get("analysis_intent"),
-            "custom_findings": data.get("custom_findings"),
-            "measures_report": measures_report,
-            "conversion_note": data.get("conversion_note"),
-            "analysis_id": analysis_id,
-            "assistant_mode": assistant_mode,
-        }
-
-    if conversational and verdict.get("headline"):
-        text = verdict["headline"]
-        if verdict.get("detail"):
-            text += f"\n{verdict['detail']}"
-        for tip in verdict.get("suggestions") or []:
-            text += f"\n→ {tip}"
-    else:
-        text = f"{intent_title}\n{data.get('status', '')}"
-
-    for cf in data.get("custom_findings") or []:
-        msg = cf.get("message", "")
-        if cf.get("severity") == "ok":
-            text += f"\n✓ {msg}"
-        elif msg:
-            text += f"\n• {msg}"
-
+    payload = dict(data)
     if prepared and prepared.conversion_note:
-        text = f"{prepared.conversion_note}\n{text}"
-    elif data.get("conversion_note"):
-        text = f"{data['conversion_note']}\n{text}"
-    steps = None
-    auto = data.get("auto_calibration")
-    if auto and auto.get("summary"):
-        text = f"{auto['summary']}\n{text}"
+        payload["conversion_note"] = prepared.conversion_note
 
-    if conversational and verdict.get("headline") and det_count > 0:
-        pass  # ya respondido arriba con veredicto
-    elif det_count == 0:
-        if data.get("is_demo_model"):
-            text = (
-                "No detecté puertas, ventanas ni muros en este plano.\n"
-                "El modelo demo solo aprendió dibujos sintéticos.\n"
-                "Entrena con CubiCasa5K o sube de plan."
-            )
-            steps = [
-                "python scripts/download_dataset.py",
-                "python scripts/cubicasa_to_yolo.py --input data/raw/dataset",
-                "python scripts/train.py --epochs 50 --device cpu",
-            ]
-        else:
-            text = (
-                "No detecté elementos. Verifica best.pt o desactiva "
-                "calibración automática para ajustar confianza manualmente."
-            )
-    elif not conversational:
-        if errors == 0 and warnings == 0:
-            has_ok = any(
-                (cf.get("severity") == "ok")
-                for cf in (data.get("custom_findings") or [])
-            )
-            text = (
-                f"En «{intent_title}» no hay incidencias normativas pendientes."
-                + (" Ver criterio de uniformidad arriba." if has_ok else "")
-            )
-        else:
-            text = f"En «{intent_title}»: {errors} error(es) y {warnings} aviso(s)."
-
-    refs = data.get("knowledge_references") or []
-    if refs and not list_measures:
-        lines = ["\nReferencias de tus manuales:"]
-        for r in refs[:3]:
-            title = r.get("doc_title", "Documento")
-            page = r.get("page", "?")
-            snip = (r.get("snippet") or "")[:200]
-            lines.append(f"• {title} (pág. {page}): {snip}")
-        text = text + "\n".join(lines)
-
-    text, assistant_mode = _maybe_enhance_analysis_text(text, data)
+    text, steps, llm_used = compose_analysis_reply(payload)
 
     return {
         "text": text,
@@ -334,11 +226,12 @@ def _build_assistant_content(
         "analysis_intent": data.get("analysis_intent"),
         "custom_findings": data.get("custom_findings"),
         "measures_report": data.get("measures_report"),
-        "conversion_note": data.get("conversion_note"),
+        "conversion_note": payload.get("conversion_note"),
         "analysis_id": analysis_id,
         "detections_list": data.get("detections") or [],
         "corrections_count": data.get("corrections_count"),
-        "assistant_mode": assistant_mode,
+        "assistant_mode": "architect",
+        "llm_used": llm_used,
     }
 
 
@@ -412,7 +305,11 @@ async def analyze_followup(
         Message(
             chat_id=chat.id,
             role="user",
-            content={"text": prompt, "filename": analysis.original_filename},
+            content={
+                "text": prompt,
+                "filename": analysis.original_filename,
+                "type": "analysis",
+            },
             analysis_id=analysis.id,
         )
     )
@@ -452,12 +349,14 @@ async def analyze_followup(
         )
     )
     chat.updated_at = datetime.utcnow()
-    record_analysis_usage(db, user.id)
+    if not is_admin_user(user):
+        record_analysis_usage(db, user.id)
     db.commit()
 
     result["chat_id"] = chat.id
     result["analysis_id"] = analysis.id
     result["subscription"] = subscription_payload(db, user)
+    result.update(assistant_content)
     return result
 
 
@@ -466,13 +365,13 @@ async def plano_preview(
     user: Annotated[User, Depends(get_current_user)],
     file: UploadFile = File(...),
 ):
-    """Vista previa rápida (imagen o conversión CAD) para el compositor."""
+    """Vista previa rápida (imagen o PDF) para el compositor."""
     import base64
 
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
 
     mime_map = {
         ".png": "image/png",
@@ -486,11 +385,7 @@ async def plano_preview(
     ext = Path(filename).suffix.lower()
 
     try:
-        if is_cad_filename(filename):
-            png = await cad_bytes_to_png_async(content, filename, dpi=PREVIEW_DPI)
-            mime = "image/png"
-            note = "Vista previa desde CAD (puede tardar en DWG grandes)"
-        elif is_pdf_filename(filename):
+        if is_pdf_filename(filename):
             png, pdf_note = await pdf_bytes_to_png_async(content, dpi=PREVIEW_DPI)
             mime = "image/png"
             note = pdf_note or "Vista previa desde PDF (página 1)"

@@ -8,14 +8,19 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from rules.catalog import APPLIED_THRESHOLDS
+from rules.catalog import APPLIED_THRESHOLDS, ISSUE_LABELS
 
-from services.architect_ai_service import architect_ai_status, compose_knowledge_answer
+from services.architect_ai_service import (
+    architect_ai_status,
+    compose_knowledge_answer,
+    format_context_for_llm,
+)
 from services.knowledge_service import (
     _load_pages,
     get_document_catalog,
     search_knowledge_for_question,
 )
+from services.llm_service import generate_reasoned_answer, llm_status
 from services.web_search_service import search_construction_web
 
 # Municipios Chiapas (ampliar según necesidad)
@@ -78,23 +83,64 @@ def detect_municipality(question: str) -> str | None:
 
 
 def _thresholds_for_question(question: str) -> list[dict]:
+    """Solo umbrales ligados al tema; no volcar toda la tabla por keywords genéricos."""
     q = _normalize(question)
     codes: list[str] = []
     for topic, topic_codes in TOPIC_THRESHOLD_CODES.items():
         if topic in q:
             codes.extend(topic_codes)
 
-    if not codes or re.search(
-        r"medida\s+oficial|norma\s+minim|minimo\s+legal|cuanto\s+exige|tabla\s+oficial|neufert",
-        q,
-    ):
-        codes = [t["code"] for t in APPLIED_THRESHOLDS]
-    elif re.search(r"medida|cota|dimensi|ancho|alto", q) and len(codes) < 3:
-        codes = [t["code"] for t in APPLIED_THRESHOLDS[:10]]
+    # Pedido explícito de norma/mínimo legal → ampliar un poco, no toda la tabla
+    wants_norms = bool(
+        re.search(
+            r"norma\s+minim|minimo\s+legal|cuanto\s+exige|medida\s+oficial|"
+            r"tabla\s+oficial|reglamento|umbrales?",
+            q,
+        )
+    )
+    if wants_norms and not codes:
+        # Temas frecuentes como respaldo corto
+        codes = [
+            "DOOR_WIDTH_MIN",
+            "DOOR_HEIGHT_MIN",
+            "CORRIDOR_WIDTH_MIN",
+            "ROOM_AREA_MIN",
+            "ROOM_HEIGHT_MIN",
+            "WINDOW_LIGHT_RATIO",
+        ]
+    elif wants_norms and len(codes) < 3:
+        codes.extend(
+            [
+                "DOOR_WIDTH_MIN",
+                "CORRIDOR_WIDTH_MIN",
+                "ROOM_AREA_MIN",
+            ]
+        )
+
+    # "neufert" sin otro topic: dimensiones tipicas, no dump completo
+    if "neufert" in q and not codes:
+        codes = [
+            "ROOM_DIMENSION_MIN",
+            "CORRIDOR_WIDTH_MIN",
+            "STAIR_WIDTH_UNIFAM",
+            "DOOR_WIDTH_MIN",
+        ]
+
+    if not codes:
+        return []
 
     code_set = set(codes)
-    rows = [t for t in APPLIED_THRESHOLDS if t["code"] in code_set]
-    return rows[:14]
+    rows = []
+    for t in APPLIED_THRESHOLDS:
+        if t["code"] not in code_set:
+            continue
+        rows.append(
+            {
+                **t,
+                "label": ISSUE_LABELS.get(t["code"], str(t["code"]).replace("_", " ")),
+            }
+        )
+    return rows[:6]
 
 
 def _is_plan_measures_question(question: str) -> bool:
@@ -132,6 +178,39 @@ def _gather_qa_context(question: str) -> dict:
     }
 
 
+def _is_meta_capability_question(question: str) -> bool:
+    q = _normalize(question)
+    return bool(
+        re.search(
+            r"cualquier\s+pregunta|respondes\s+(ya\s+)?|puedes\s+(responder|contestar|ayudar)|"
+            r"que\s+puedes\s+(hacer|responder)|para\s+que\s+sirves|eres\s+(una\s+)?ia|"
+            r"como\s+funcionas|tienes\s+(ia|llm|gemini|inteligencia)|razon(as|ar)|"
+            r"me\s+contestas|sabes\s+de\s+todo",
+            q,
+        )
+    )
+
+
+def _meta_capability_answer() -> str:
+    llm = llm_status()
+    if llm.get("llm_configured"):
+        mode = (
+            f"Sí: con Gemini ({llm.get('llm_model') or 'activo'}) razono sobre tu pregunta "
+            "usando manuales indexados, umbrales de Chiapas y web si está activa."
+        )
+    else:
+        mode = (
+            "Respondo con manuales indexados y umbrales locales. "
+            "Para razonar con un LLM, configura LLM_PROVIDER=gemini en .env."
+        )
+    return (
+        f"{mode}\n\n"
+        "Alcance: arquitectura, medidas, normativa y obra (sobre todo Chiapas/México). "
+        "No soy un chat generalista: si preguntas algo fuera de eso, te lo digo.\n\n"
+        "Para un plano concreto, adjúntalo y pregunta p. ej. «¿Este plano está bien?»."
+    )
+
+
 def answer_construction_question(question: str) -> dict:
     q = (question or "").strip()
     catalog = get_document_catalog()
@@ -153,11 +232,42 @@ def answer_construction_question(question: str) -> dict:
             "knowledge_pages": pages_count,
             "document_catalog": catalog,
             "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_meta_capability_question(q):
+        # Preguntas sobre el propio asistente: LLM si puede; si no, texto corto (sin RAG).
+        meta_ctx = format_context_for_llm(
+            q,
+            {
+                "municipality": None,
+                "local_sources": [],
+                "web_sources": [],
+                "thresholds": [],
+            },
+        )
+        llm_text = generate_reasoned_answer(meta_ctx)
+        return {
+            "text": llm_text or _meta_capability_answer(),
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": bool(llm_text),
+            **llm_status(),
             **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
         }
 
     ctx = _gather_qa_context(q)
-    text = compose_knowledge_answer(q, ctx)
+    llm_text = generate_reasoned_answer(format_context_for_llm(q, ctx))
+    text = llm_text or compose_knowledge_answer(q, ctx)
+    used_llm = bool(llm_text)
 
     return {
         "text": text,
@@ -169,5 +279,7 @@ def answer_construction_question(question: str) -> dict:
         "knowledge_pages": ctx["knowledge_pages"],
         "document_catalog": catalog,
         "assistant_mode": "architect",
+        "llm_used": used_llm,
+        **llm_status(),
         **architect_ai_status(knowledge_pages=ctx["knowledge_pages"], catalog=catalog),
     }

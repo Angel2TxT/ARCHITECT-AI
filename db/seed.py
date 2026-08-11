@@ -15,46 +15,116 @@ DEFAULT_PLANS = [
     {
         "slug": "free",
         "name": "Gratis",
-        "description": "Prueba la IA con límite mensual y modelo demo.",
+        "description": "Ideal para conocer ARCHITECT sin compromiso.",
         "price_monthly_cents": 0,
         "analyses_limit_monthly": 5,
         "allow_real_model": False,
         "max_file_mb": 5,
         "sort_order": 0,
-        "features": {"support": "comunidad", "export": False},
+        "features": {
+            "ideal_for": "Probar la plataforma",
+            "support": "comunidad",
+            "export": False,
+            "mobile_app": False,
+            "home_projects": True,
+            "team_invites": False,
+            "max_projects": 1,
+            "asks_limit_monthly": 20,
+            "storage_gb": 1,
+            "benefits": [
+                "5 análisis de planos al mes",
+                "20 preguntas al chat / mes",
+                "1 proyecto casa hogar · 1 GB docs",
+                "Modelo demo",
+                "Archivos hasta 5 MB por carga",
+            ],
+        },
     },
     {
         "slug": "starter",
         "name": "Starter",
-        "description": "Para estudiantes y proyectos pequeños.",
-        "price_monthly_cents": 9900,
+        "description": "Ideal para estudiantes y proyectos pequeños.",
+        "price_monthly_cents": 30000,
         "analyses_limit_monthly": 30,
         "allow_real_model": True,
         "max_file_mb": 10,
         "sort_order": 1,
-        "features": {"support": "email", "export": True},
+        "features": {
+            "ideal_for": "Estudiantes y freelancers",
+            "support": "email",
+            "export": True,
+            "mobile_app": False,
+            "home_projects": True,
+            "team_invites": False,
+            "max_projects": 3,
+            "asks_limit_monthly": 200,
+            "storage_gb": 5,
+            "benefits": [
+                "30 análisis de planos al mes",
+                "Hasta 3 proyectos casa hogar · 5 GB",
+                "Análisis con modelo real (imagen y PDF)",
+                "Exportar reportes PDF",
+                "Archivos hasta 10 MB · Soporte por correo",
+            ],
+        },
     },
     {
         "slug": "pro",
         "name": "Pro",
-        "description": "Uso profesional recurrente en obra.",
-        "price_monthly_cents": 29900,
+        "description": "Ideal para obra y despacho individual.",
+        "price_monthly_cents": 50000,
         "analyses_limit_monthly": 150,
         "allow_real_model": True,
         "max_file_mb": 20,
         "sort_order": 2,
-        "features": {"support": "prioritario", "export": True, "api": True},
+        "features": {
+            "ideal_for": "Profesionales en obra",
+            "recommended": True,
+            "support": "prioritario",
+            "export": True,
+            "mobile_app": True,
+            "home_projects": True,
+            "team_invites": False,
+            "max_projects": 20,
+            "asks_limit_monthly": 9999,
+            "storage_gb": 25,
+            "benefits": [
+                "150 análisis de planos al mes",
+                "Hasta 20 proyectos · 25 GB docs",
+                "IA con normas de Chiapas e indexación",
+                "App móvil ARCHITECT incluida",
+                "Archivos hasta 20 MB · Soporte prioritario",
+            ],
+        },
     },
     {
         "slug": "enterprise",
         "name": "Enterprise",
-        "description": "Equipos y despachos con volumen alto.",
-        "price_monthly_cents": 99900,
+        "description": "Ideal para equipos y despachos con alto volumen.",
+        "price_monthly_cents": 90000,
         "analyses_limit_monthly": 9999,
         "allow_real_model": True,
         "max_file_mb": 50,
         "sort_order": 3,
-        "features": {"support": "dedicado", "export": True, "api": True, "sla": True},
+        "features": {
+            "ideal_for": "Equipos y constructoras",
+            "support": "dedicado",
+            "export": True,
+            "mobile_app": True,
+            "sla": True,
+            "home_projects": True,
+            "team_invites": True,
+            "max_projects": 9999,
+            "asks_limit_monthly": 9999,
+            "storage_gb": 100,
+            "benefits": [
+                "Análisis y chat ilimitados",
+                "Proyectos ilimitados · 100 GB docs",
+                "Equipos, invitaciones y colaboración",
+                "App móvil ARCHITECT incluida",
+                "Archivos hasta 50 MB · Soporte dedicado con SLA",
+            ],
+        },
     },
 ]
 
@@ -73,9 +143,13 @@ def seed_plans(db: Session) -> None:
         if existing:
             for key, val in data.items():
                 if key == "features":
+                    # Reemplaza beneficios/flags del seed; conserva claves externas (p. ej. Stripe).
                     merged = dict(existing.features or {})
-                    merged.update(val or {})
-                    setattr(existing, key, merged)
+                    incoming = dict(val or {})
+                    for sticky in ("stripe_price_id", "stripe_product_id"):
+                        if sticky in merged and sticky not in incoming:
+                            incoming[sticky] = merged[sticky]
+                    setattr(existing, key, incoming)
                 else:
                     setattr(existing, key, val)
         else:

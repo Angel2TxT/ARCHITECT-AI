@@ -503,46 +503,49 @@ const subscriptionPlans = [
     slug: "starter",
     name: "Starter",
     tone: "mono",
-    price: "$99",
+    price: "$300",
     period: "/mes",
-    description: "Para estudiantes, freelancers o revisiones puntuales de planos.",
+    description: "Ideal para estudiantes y proyectos pequeños.",
     label: "Incluye",
     features: [
-      "30 revisiones de planos al mes",
-      "Deteccion de cotas y simbologia",
-      "Modelo real habilitado",
-      "Reporte PDF con observaciones"
+      "30 análisis de planos al mes",
+      "Hasta 3 proyectos casa hogar · 5 GB",
+      "Análisis con modelo real (imagen y PDF)",
+      "Exportar reportes PDF",
+      "Archivos hasta 10 MB · Soporte por correo"
     ]
   },
   {
     slug: "pro",
     name: "Pro",
     tone: "mono",
-    price: "$299",
+    price: "$500",
     period: "/mes",
-    description: "Para despachos que revisan entregables de arquitectura e ingenieria cada semana.",
-    label: "Mas elegido",
+    description: "Ideal para obra y despacho individual.",
+    label: "Recomendado",
     popular: true,
     features: [
-      "150 revisiones de planos al mes",
-      "Revision arquitectonica, estructural e instalaciones",
-      "Prioridad en procesamiento de IA",
-      "API y reportes exportables"
+      "150 análisis de planos al mes",
+      "Hasta 20 proyectos · 25 GB docs",
+      "IA con normas de Chiapas e indexación",
+      "App móvil ARCHITECT incluida",
+      "Archivos hasta 20 MB · Soporte prioritario"
     ]
   },
   {
     slug: "enterprise",
     name: "Enterprise",
     tone: "mono",
-    price: "$999",
+    price: "$900",
     period: "/mes",
-    description: "Para constructoras, universidades o equipos con criterios tecnicos propios.",
+    description: "Ideal para equipos y despachos con alto volumen.",
     label: "Equipo",
     features: [
-      "Hasta 9999 revisiones mensuales",
-      "Criterios y listas de chequeo privadas",
-      "Usuarios por equipo y roles",
-      "Soporte dedicado y SLA"
+      "Análisis y chat ilimitados",
+      "Proyectos ilimitados · 100 GB docs",
+      "Equipos, invitaciones y colaboración",
+      "App móvil ARCHITECT incluida",
+      "Archivos hasta 50 MB · Soporte dedicado con SLA"
     ]
   }
 ];
@@ -575,18 +578,21 @@ function Welcome() {
                 : "Gratis",
               period: p.price_monthly_cents ? "/mes" : "",
               description: p.description || "",
-              label: p.slug === "pro" ? "Mas elegido" : p.slug === "enterprise" ? "Equipo" : "Incluye",
-              popular: p.slug === "pro",
-              features: [
-                p.analyses_limit_monthly >= 9999
-                  ? "Uso alto incluido"
-                  : `${p.analyses_limit_monthly} revisiones de planos al mes`,
-                p.allow_real_model ? "Modelo real habilitado" : "Modelo demo",
-                `Archivos hasta ${p.max_file_mb} MB`,
-                ...(p.features?.export ? ["Reportes exportables"] : []),
-                ...(p.features?.api ? ["Acceso API"] : []),
-                ...(p.features?.sla ? ["SLA dedicado"] : [])
-              ]
+              label: p.features?.recommended || p.slug === "pro" ? "Recomendado" : p.slug === "enterprise" ? "Equipo" : "Incluye",
+              popular: !!(p.features?.recommended || p.slug === "pro"),
+              features: Array.isArray(p.features?.benefits) && p.features.benefits.length
+                ? p.features.benefits
+                : [
+                    p.analyses_limit_monthly >= 9999
+                      ? "Análisis ilimitados"
+                      : `${p.analyses_limit_monthly} análisis de planos al mes`,
+                    `${p.storage_gb ?? p.features?.storage_gb ?? 1} GB de documentación`,
+                    p.allow_real_model ? "Modelo real habilitado" : "Modelo demo",
+                    `Archivos hasta ${p.max_file_mb} MB`,
+                    ...(p.features?.export ? ["Reportes exportables"] : []),
+                    ...(p.features?.mobile_app ? ["App móvil ARCHITECT"] : []),
+                    ...(p.features?.sla ? ["SLA dedicado"] : [])
+                  ]
             }))
         );
       })
@@ -1040,6 +1046,8 @@ function AppShell() {
     () => localStorage.getItem("plano_ia_sidebar_collapsed") === "1"
   );
   const isAdmin = user?.role === "admin";
+  const isSupport = user?.role === "support";
+  const canOpenStaffPanel = isAdmin || isSupport;
 
   function toggleSidebarCollapsed() {
     setSidebarCollapsed((prev) => {
@@ -1101,10 +1109,10 @@ function AppShell() {
 
   useEffect(() => {
     if (!sessionReady) return;
-    if (isAdminRoute && !isAdmin) {
+    if (isAdminRoute && !canOpenStaffPanel) {
       window.location.replace("/legacy-app");
     }
-  }, [isAdminRoute, isAdmin, sessionReady]);
+  }, [isAdminRoute, canOpenStaffPanel, sessionReady]);
 
   if (!sessionReady) {
     return (
@@ -1133,7 +1141,7 @@ function AppShell() {
         onToggleCollapsed={toggleSidebarCollapsed}
       />
       <div className="workspace-main">
-        {isAdminRoute && isAdmin ? (
+        {isAdminRoute && canOpenStaffPanel ? (
           <AdminPanel />
         ) : isProjects ? (
           null

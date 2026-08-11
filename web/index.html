@@ -10,7 +10,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=81" />
+  <link rel="stylesheet" href="/static/style.css?v=162" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -108,14 +108,46 @@
   <div class="app-shell flex h-screen w-full">
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar fixed left-0 top-0 z-40 flex h-full flex-col border-r px-3 py-6 backdrop-blur-xl">
+      <nav class="sidebar-rail" id="sidebarRail" aria-label="Accesos rápidos">
+        <button type="button" class="sidebar-rail-btn" id="railExpand" title="Abrir panel" aria-label="Abrir panel">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn sidebar-rail-btn--accent" id="railNewChat" title="Nuevo chat" aria-label="Nuevo chat">
+          <span class="material-symbols-outlined">edit_square</span>
+        </button>
+        <div class="sidebar-rail-divider" aria-hidden="true"></div>
+        <button type="button" class="sidebar-rail-btn" id="railWorkspace" title="Revisión IA" aria-label="Revisión IA" data-rail-target="btnWorkspace">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railHomeProjects" title="Casa hogar" aria-label="Casa hogar" data-rail-target="btnHomeProjects">
+          <span class="material-symbols-outlined">home_work</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railSearchChats" title="Buscar chats" aria-label="Buscar chats">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railPlans" title="Planes" aria-label="Planes" data-rail-target="btnPlans">
+          <span class="material-symbols-outlined">workspace_premium</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railSupport" title="Ayuda" aria-label="Ayuda" data-rail-target="btnSupportHelp">
+          <span class="material-symbols-outlined">support_agent</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railSettings" title="Ajustes" aria-label="Ajustes" data-rail-target="btnSettings">
+          <span class="material-symbols-outlined">settings</span>
+        </button>
+        <div class="sidebar-rail-spacer" aria-hidden="true"></div>
+        <button type="button" class="sidebar-rail-btn" id="railAdmin" title="Administración" aria-label="Administración" data-rail-target="btnAdmin" hidden>
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn sidebar-rail-avatar" id="railAccount" title="Mi cuenta" aria-label="Mi cuenta">
+          <span class="sidebar-rail-avatar-letter" id="railAvatarLetter">IA</span>
+        </button>
+      </nav>
       <div class="sidebar-inner flex h-full min-h-0 flex-col">
       <div class="mb-6 flex items-start justify-between gap-2 px-1">
         <div class="sidebar-brand min-w-0">
         <img src="/static/brand/architect-icon.png?v=3" alt="" class="brand-mark-img" width="28" height="28" />
         <div class="sidebar-brand-text min-w-0">
         <h1 class="text-[15px] font-semibold tracking-tight text-black dark:text-white">ARCHITECT</h1>
-        <p class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-black/40 dark:text-white/40">AI Plan Review Studio</p>
-        <p class="mt-2 truncate text-[11px] text-black/45 dark:text-white/45" id="modelName">Revisión estructural · IA</p>
         </div>
         </div>
         <button type="button" class="btn-sidebar-toggle shrink-0 rounded-[10px] p-2 transition-colors" id="btnMenu" aria-label="Minimizar panel" title="Minimizar panel lateral">
@@ -132,10 +164,13 @@
         <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
           <div class="usage-fill h-full bg-black transition-all dark:bg-white" id="usageFill" style="width:0%"></div>
         </div>
+        <p class="usage-asks-label mt-1.5 text-[11px] text-black/55 dark:text-white/50" id="usageAsksLabel">
+          0 / 20 preguntas
+        </p>
         </button>
       </div>
 
-      <nav class="mb-2 space-y-0.5" aria-label="Herramientas">
+      <nav class="sidebar-main-nav mb-2 space-y-0.5" aria-label="Herramientas">
         <a href="#" id="btnWorkspace" class="nav-item active flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-transform active:scale-[0.98]">
           <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
           <span class="text-[13px] font-medium">Revisión IA</span>
@@ -146,7 +181,11 @@
         </a>
         <a href="#" id="btnAdmin" class="nav-item hidden flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
           <span class="material-symbols-outlined">admin_panel_settings</span>
-          <span class="text-sm font-medium">Administración</span>
+          <span class="text-sm font-medium" id="btnAdminLabel">Administración</span>
+        </a>
+        <a href="#" id="btnSupportHelp" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">support_agent</span>
+          <span class="text-sm font-medium">Ayuda</span>
         </a>
         <a href="#" id="btnPlans" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
           <span class="material-symbols-outlined">workspace_premium</span>
@@ -158,7 +197,48 @@
         </a>
       </nav>
 
-      <div class="min-h-0 flex-1" aria-hidden="true"></div>
+      <div class="sidebar-chats min-h-0 flex-1 flex-col" id="sidebarChats">
+        <div class="sidebar-chats-head px-1 pt-1 pb-2">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h2 class="sidebar-chats-title text-[12px] font-semibold uppercase tracking-[0.08em]">
+              <span class="sidebar-chats-title-dot" aria-hidden="true"></span>
+              Chats
+            </h2>
+            <button type="button" class="btn-new-chat inline-flex items-center gap-1 rounded-[8px] px-2 py-1 text-[11px] font-medium" id="btnNewChat" title="Nuevo chat">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              Nuevo
+            </button>
+          </div>
+          <div class="sidebar-chats-search relative">
+            <span class="material-symbols-outlined sidebar-chats-search-icon absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px]">search</span>
+            <input id="searchChats" class="sidebar-chats-search-input w-full rounded-[8px] border-none pl-8 pr-3 py-1.5 text-[13px] outline-none" placeholder="Buscar chats…" type="search" autocomplete="off" />
+          </div>
+        </div>
+        <ul class="chat-list min-h-0 flex-1 overflow-y-auto px-1 pb-2" id="chatList"></ul>
+        <p class="sidebar-chats-empty px-2 pb-2 text-[12px]" id="chatListEmpty" hidden>Aún no hay chats. Escribe una pregunta o crea uno nuevo.</p>
+      </div>
+
+      <div class="sidebar-home-projects hidden min-h-0 flex-1 flex-col" id="sidebarHomeProjects" hidden>
+        <div class="home-projects-sidebar-head px-1 pt-1 pb-3">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h2 class="home-sidebar-title text-[15px] font-semibold tracking-tight">Proyectos</h2>
+            <button type="button" class="home-back-to-ia text-[11px] font-medium" id="btnHomeBackToWorkspace" title="Volver a Revisión IA">
+              Volver a IA
+            </button>
+          </div>
+          <div class="home-projects-search relative">
+            <span class="material-symbols-outlined home-projects-search-icon absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">search</span>
+            <input id="homeProjectsSearch" class="home-projects-search-input w-full border-none rounded-[8px] pl-9 pr-3 py-1.5 text-sm outline-none transition-all duration-200" placeholder="Buscar..." type="text" />
+          </div>
+        </div>
+        <ul class="home-projects-list min-h-0 flex-1 overflow-y-auto px-1 pb-2 space-y-2" id="homeProjectsList"></ul>
+        <div class="home-projects-sidebar-foot pt-2 pb-1">
+          <button type="button" class="home-new-project-btn w-full py-2 px-3 rounded-[8px] border shadow-sm font-medium flex items-center justify-center gap-2 transition-colors" id="btnNewHomeProject">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Nuevo proyecto
+          </button>
+        </div>
+      </div>
 
       <div class="sidebar-footer mt-3 border-t pt-3">
         <div class="guest-sidebar-actions mb-2 hidden flex-col gap-2 px-1" id="guestSidebarActions">
@@ -193,10 +273,29 @@
         <a href="/login" class="guest-trial-link">Registrarse</a>
       </div>
 
+      <div class="connection-banner hidden mx-4 mt-3 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="connectionBanner" role="status" hidden>
+        <span class="material-symbols-outlined connection-banner-icon">wifi_off</span>
+        <span id="connectionBannerText">Sin conexión. Reintentaré automáticamente al volver.</span>
+        <button type="button" class="connection-banner-retry" id="btnConnectionRetry" hidden>Reintentar ahora</button>
+      </div>
+
       <div class="plan-usage-badge hidden mx-4 mt-3 md:mx-8" id="planUsageBadge" role="status">
         <button type="button" class="plan-usage-badge-btn" id="btnPlanUsageBadge" title="Ver plan y uso">
           <span class="material-symbols-outlined plan-usage-badge-icon">workspace_premium</span>
           <span id="planUsageBadgeText">Plan · 0/5</span>
+        </button>
+      </div>
+
+      <div class="impersonation-banner hidden mx-4 mt-3 md:mx-8" id="impersonationBanner" role="status">
+        <div class="impersonation-banner-copy">
+          <span class="material-symbols-outlined">support_agent</span>
+          <div>
+            <strong>Modo soporte</strong>
+            <p id="impersonationBannerText">Estás usando la cuenta de un usuario para diagnosticar.</p>
+          </div>
+        </div>
+        <button type="button" class="impersonation-exit-btn" id="btnExitImpersonation">
+          Volver al panel
         </button>
       </div>
 
@@ -224,30 +323,7 @@
 
       <div id="homeProjectsPanel" class="home-projects-panel hidden flex min-h-0 flex-1 flex-col overflow-hidden" hidden>
         <div class="home-projects-body flex min-h-0 flex-1 overflow-hidden">
-          <button type="button" class="home-projects-drawer-toggle" id="btnHomeProjectsDrawerToggle" aria-label="Abrir proyectos">
-            <span class="material-symbols-outlined">menu</span>
-          </button>
-          <button type="button" class="home-projects-drawer-backdrop" id="homeProjectsDrawerBackdrop" aria-label="Cerrar panel de proyectos"></button>
-          <aside class="home-projects-list-wrap border-r flex flex-col" id="homeProjectsListWrap">
-            <div class="home-projects-sidebar-head p-5 pt-8">
-              <h2 class="home-sidebar-title text-headline-md font-bold mb-4">Proyectos</h2>
-              <div class="home-projects-search relative">
-                <span class="material-symbols-outlined home-projects-search-icon absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">search</span>
-                <input id="homeProjectsSearch" class="home-projects-search-input w-full border-none rounded-[8px] pl-9 pr-3 py-1.5 text-sm outline-none transition-all duration-200" placeholder="Buscar..." type="text" />
-              </div>
-            </div>
-            <ul class="home-projects-list flex-1 overflow-y-auto px-3 pb-3 space-y-2" id="homeProjectsList"></ul>
-            <div class="home-projects-sidebar-foot p-4">
-              <button type="button" class="home-new-project-btn w-full py-2 px-3 rounded-[8px] border shadow-sm font-medium flex items-center justify-center gap-2 transition-colors" id="btnNewHomeProject">
-                <span class="material-symbols-outlined text-[18px]">add</span>
-                Nuevo proyecto
-              </button>
-            </div>
-            <button type="button" class="home-switch-tab" id="btnSwitchToMainSidebar" aria-label="Volver a IA">
-              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
-            </button>
-          </aside>
-          <section class="home-projects-detail flex min-h-0 flex-1 flex-col overflow-hidden p-0" id="homeProjectsDetail">
+          <section class="home-projects-detail flex min-h-0 flex-1 flex-col p-0" id="homeProjectsDetail">
             <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
               <span class="material-symbols-outlined text-4xl mb-2">home_work</span>
               <p class="text-sm">Selecciona un proyecto o crea uno nuevo</p>
@@ -258,56 +334,13 @@
 
       <div class="chat-area flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-24 pt-6 md:px-margin-desktop md:pb-28" id="chatArea">
         <div class="welcome flex flex-1 flex-col items-center justify-center py-6" id="welcome">
-          <div class="welcome-hero mb-8 max-w-xl text-center animate-fade-up">
-            <h2 class="mb-2 text-[2rem] font-semibold tracking-tight md:text-[2.35rem]">
+          <div class="welcome-hero mb-8 max-w-xl text-center" id="welcomeHero" data-neon="cyan">
+            <p class="welcome-hero-eyebrow" aria-hidden="true">ARCHITECT</p>
+            <h2 class="welcome-hero-title mb-2 text-[2rem] font-semibold tracking-tight md:text-[2.35rem]" id="welcomeHeroTitle">
               ¿Qué plano revisamos hoy?
             </h2>
-            <p class="welcome-sub text-[15px] leading-relaxed" id="welcomeSub">
-              ARCHITECT responde con tus manuales, normas de Chiapas y fuentes indexadas. También puedes subir planos.
-            </p>
             <span class="assistant-mode-badge hidden mt-3 inline-block rounded-full px-3 py-1 text-[11px] font-medium" id="assistantModeBadge"></span>
           </div>
-
-          <div class="suggestion-grid grid w-full grid-cols-1 gap-3 px-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Cuáles son las medidas mínimas de puertas en Chiapas?">
-              <div class="card-icon-wrap">
-                <span class="material-symbols-outlined">gavel</span>
-              </div>
-              <h3>Normativa</h3>
-              <p>Medidas, trámites y reglamentos.</p>
-            </div>
-            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Qué materiales recomiendas para una losa en clima cálido-húmedo?">
-              <div class="card-icon-wrap">
-                <span class="material-symbols-outlined">chat</span>
-              </div>
-              <h3>Consulta general</h3>
-              <p>Materiales, procesos y dudas de obra.</p>
-            </div>
-            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="¿Este plano está bien?">
-              <div class="card-icon-wrap">
-                <span class="material-symbols-outlined">report_problem</span>
-              </div>
-              <h3>¿Está bien?</h3>
-              <p>Respuesta clara según normativa y lo detectado.</p>
-            </div>
-            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="Revisa las puertas y sus medidas de ancho">
-              <div class="card-icon-wrap">
-                <span class="material-symbols-outlined">sensor_door</span>
-              </div>
-              <h3>Revisión de Puertas</h3>
-              <p>Giros, anchos y accesibilidad.</p>
-            </div>
-            <div class="suggestion-card glass-card group cursor-pointer px-4 py-5 text-center" data-prompt="Revisa si las ventanas son del mismo tamaño">
-              <div class="card-icon-wrap">
-                <span class="material-symbols-outlined">window</span>
-              </div>
-              <h3>Ventanas</h3>
-              <p>Tamaños, uniformidad e iluminación.</p>
-            </div>
-          </div>
-          <p class="welcome-examples mt-3 text-center text-[12px] text-on-surface-variant/70 px-4">
-            Ejemplos: «¿Medidas en Ocosingo?», «¿Qué es una losa maciza?», «¿Este plano está bien?»
-          </p>
         </div>
 
         <div class="messages mx-auto w-full max-w-3xl" id="messages" hidden></div>
@@ -318,13 +351,13 @@
         <div class="drop-overlay-inner glass-panel">
           <span class="material-symbols-outlined">upload_file</span>
           <p>Suelta el plano aquí</p>
-          <p class="drop-overlay-sub">Imágenes · PDF · DXF · DWG</p>
+          <p class="drop-overlay-sub">Imágenes · PDF</p>
         </div>
       </div>
 
       <div class="composer-wrap composer-dock pointer-events-none fixed bottom-0 left-0 right-0 z-30" id="composerDock">
         <div class="composer-inner pointer-events-auto mx-auto max-w-2xl px-4 pb-3 pt-2">
-          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf,.dxf,.dwg" hidden />
+          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf" hidden />
 
           <div class="composer-stack mb-2">
             <div class="attachments-row flex justify-center" id="attachmentsRow" hidden>
@@ -339,140 +372,208 @@
                   <span class="attach-name block max-w-[12rem] truncate text-xs font-semibold" id="attachName"></span>
                   <span class="attach-type text-[10px] text-on-surface-variant/60" id="attachType"></span>
                 </div>
-                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5" id="btnRemoveAttach" aria-label="Quitar archivo">
+                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10" id="btnRemoveAttach" aria-label="Quitar archivo">
                   <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <form class="composer-bar glass-panel flex items-end gap-1 rounded-full p-1 transition-all focus-within:ring-1 focus-within:ring-black/10 dark:focus-within:ring-white/15" id="composerForm">
-            <div class="attach-picker-wrap ml-0.5 shrink-0" id="attachPickerWrap">
-              <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true">
-                <span class="material-symbols-outlined">attach_file</span>
-              </button>
-              <div class="attach-picker-menu glass-panel" id="attachPickerMenu" role="menu" hidden>
-                <p class="attach-picker-title">Tipo de archivo</p>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
-                  <span class="material-symbols-outlined">image</span>
-                  <span class="attach-picker-label"><strong>Imagen</strong><small>PNG, JPG, WEBP</small></span>
+          <div class="composer-beam" id="composerBeam">
+            <form class="composer-bar glass-panel flex items-center gap-1 rounded-full p-1 transition-all" id="composerForm">
+              <div class="attach-picker-wrap ml-0.5 shrink-0" id="attachPickerWrap">
+                <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true" title="Elegir tipo de archivo">
+                  <span class="material-symbols-outlined">attach_file</span>
                 </button>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="application/pdf,.pdf">
-                  <span class="material-symbols-outlined">picture_as_pdf</span>
-                  <span class="attach-picker-label"><strong>PDF</strong><small>Plano en PDF</small></span>
-                </button>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dxf,application/dxf">
-                  <span class="material-symbols-outlined">architecture</span>
-                  <span class="attach-picker-label"><strong>DXF</strong><small>AutoCAD intercambio</small></span>
-                </button>
-                <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dwg">
-                  <span class="material-symbols-outlined">domain</span>
-                  <span class="attach-picker-label"><strong>DWG</strong><small>AutoCAD nativo</small></span>
-                </button>
-                <button type="button" class="attach-picker-item attach-picker-item--all" role="menuitem" data-attach-accept="all">
-                  <span class="material-symbols-outlined">folder_open</span>
-                  <span class="attach-picker-label"><strong>Todos</strong><small>Cualquier formato soportado</small></span>
-                </button>
+                <div class="attach-picker-menu glass-panel" id="attachPickerMenu" role="menu" hidden>
+                  <p class="attach-picker-title">Tipo de archivo</p>
+                  <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+                    <span class="material-symbols-outlined">image</span>
+                    <span class="attach-picker-label"><strong>Imagen</strong><small>PNG, JPG, WEBP</small></span>
+                  </button>
+                  <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="application/pdf,.pdf">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                    <span class="attach-picker-label"><strong>PDF</strong><small>Plano en PDF</small></span>
+                  </button>
+                  <button type="button" class="attach-picker-item attach-picker-item--all" role="menuitem" data-attach-accept="all">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span class="attach-picker-label"><strong>Todos</strong><small>Imagen o PDF</small></span>
+                  </button>
+                </div>
               </div>
-            </div>
-            <textarea
-              id="messageInput"
-              rows="1"
-              class="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2.5 text-[14px] focus:ring-0"
-              placeholder="Pregunta sobre arquitectura, normativa u obra — ARCHITECT responde con tu biblioteca…"
-              aria-label="Mensaje"
-            ></textarea>
-            <button type="submit" class="btn-send mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-30" id="btnSend" aria-label="Enviar" disabled>
-              <span class="material-symbols-outlined">arrow_upward</span>
-            </button>
-          </form>
-          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen, PDF, DXF o DWG · arrastra o Ctrl+V</p>
+              <textarea
+                id="messageInput"
+                rows="1"
+                class="composer-input max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2.5 text-[14px] focus:ring-0"
+                placeholder="Pregunta a ARCHITECT…"
+                aria-label="Mensaje"
+              ></textarea>
+              <button type="submit" class="btn-send mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-30" id="btnSend" aria-label="Enviar" disabled>
+                <span class="material-symbols-outlined">arrow_upward</span>
+              </button>
+            </form>
+            <span class="border-beam" aria-hidden="true"></span>
+          </div>
+          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen o PDF · arrastra o Ctrl+V</p>
         </div>
       </div>
     </main>
   </div>
 
   <dialog class="modal" id="plansModal">
-    <div class="modal-box glass-panel">
-      <div class="modal-header">
+    <div class="modal-box glass-panel plans-modal-box">
+      <div class="modal-header plans-modal-header">
         <h2>Planes y suscripción</h2>
         <button type="button" class="modal-close" id="btnClosePlans" aria-label="Cerrar">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <p class="mb-4 text-sm text-black/60 dark:text-white/60" id="plansUsageText"></p>
-      <div class="plans-grid space-y-3" id="plansGrid"></div>
-      <p class="mt-4 text-xs text-black/45 dark:text-white/45" id="plansDemoNote">Proyecto escolar: los planes de pago usan una pasarela simulada (sin cobro real). Bajar a Gratis es inmediato.</p>
-      <button type="button" class="btn-secondary mt-3 w-full text-xs py-2 hidden" id="btnStripePortal">Gestionar suscripción en Stripe</button>
+      <div class="plans-usage-banner" id="plansUsageText"></div>
+      <div class="plans-grid" id="plansGrid"></div>
+      <p class="plans-demo-note" id="plansDemoNote">Proyecto escolar: pasarela simulada (sin cobro real). Al mejorar un plan solo pagas la diferencia; no se permiten bajadas desde aquí.</p>
+      <button type="button" class="plans-portal-btn hidden" id="btnStripePortal">Gestionar suscripción en Stripe</button>
     </div>
   </dialog>
 
-  <dialog class="modal" id="settingsModal">
-    <div class="modal-box glass-panel">
-      <div class="modal-header">
-        <h2>Configuración</h2>
+  <dialog class="modal settings-modal" id="settingsModal">
+    <div class="modal-box glass-panel settings-modal-box">
+      <div class="modal-header settings-modal-header">
+        <div>
+          <h2>Configuración</h2>
+          <p class="settings-modal-sub">Preferencias de tu cuenta</p>
+        </div>
         <button type="button" class="modal-close" id="btnCloseSettings" aria-label="Cerrar">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <form id="settingsForm">
-        <div class="form-group">
-          <label>Modelo YOLO (.pt)</label>
-          <input type="text" id="weightsPath" placeholder="runs/detect/.../best.pt" />
-          <small>Ruta al archivo de pesos entrenado</small>
-        </div>
-        <div class="form-group">
-          <label>Apariencia</label>
-          <div class="theme-switch" role="group" aria-label="Tema">
-            <button type="button" class="theme-option" data-theme="light" id="themeLight">Claro</button>
-            <button type="button" class="theme-option active" data-theme="dark" id="themeDark">Oscuro</button>
-          </div>
-          <small>Predeterminado: fondo negro</small>
-        </div>
-        <div class="form-group">
-          <label class="checkbox-row">
-            <input type="checkbox" id="autoCalibrate" checked />
-            <span>Calibración automática (escala y confianza por plano)</span>
-          </label>
-          <small id="autoCalHelp">Se estiman píxeles/m y confianza con puertas, ventanas, recintos y circulación del plano.</small>
-          <p class="auto-cal-readout hidden" id="autoCalReadout"></p>
-        </div>
-        <div class="form-row" id="manualCalRow">
+      <form id="settingsForm" class="settings-form">
+        <div class="settings-scroll">
           <div class="form-group">
-            <label>Píxeles por metro (manual)</label>
-            <input type="number" id="ppmInput" min="10" max="500" step="5" value="100" disabled />
+            <label>Apariencia</label>
+            <div class="theme-switch" role="group" aria-label="Tema">
+              <button type="button" class="theme-option" data-theme="light" id="themeLight">Claro</button>
+              <button type="button" class="theme-option active" data-theme="dark" id="themeDark">Oscuro</button>
+            </div>
+            <small>Cambia el tema de la interfaz</small>
           </div>
-          <div class="form-group">
-            <label>Confianza mínima (manual)</label>
-            <input type="number" id="confInput" min="0.01" max="0.95" step="0.01" value="0.25" disabled />
+
+          <div class="form-group norms-panel" id="normsPanel">
+            <label>Normativa aplicada</label>
+            <p class="norms-bundle" id="normsBundleTitle">Chiapas, México</p>
+            <ul class="norms-thresholds" id="normsThresholdsList"></ul>
+            <small>Referencia de habitabilidad, vanos, circulación y accesibilidad usada en la revisión.</small>
+          </div>
+
+          <div class="settings-admin-block hidden" id="settingsAdminBlock">
+            <div class="settings-admin-head">
+              <span class="material-symbols-outlined" aria-hidden="true">admin_panel_settings</span>
+              <div>
+                <strong>Ajustes de administrador</strong>
+                <p>Modelo YOLO y calibración del motor de análisis</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="weightsPath">Modelo YOLO (.pt)</label>
+              <input type="text" id="weightsPath" placeholder="runs/detect/.../best.pt" autocomplete="off" />
+              <small>Ruta al archivo de pesos entrenado</small>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-row">
+                <input type="checkbox" id="autoCalibrate" checked />
+                <span>Calibración automática (escala y confianza por plano)</span>
+              </label>
+              <small id="autoCalHelp">Se estiman píxeles/m y confianza con puertas, ventanas, recintos y circulación.</small>
+              <p class="auto-cal-readout hidden" id="autoCalReadout"></p>
+            </div>
+            <div class="form-row" id="manualCalRow">
+              <div class="form-group">
+                <label for="ppmInput">Píxeles por metro</label>
+                <input type="number" id="ppmInput" min="10" max="500" step="5" value="100" disabled />
+              </div>
+              <div class="form-group">
+                <label for="confInput">Confianza mínima</label>
+                <input type="number" id="confInput" min="0.01" max="0.95" step="0.01" value="0.25" disabled />
+              </div>
+            </div>
           </div>
         </div>
-        <div class="form-group norms-panel" id="normsPanel">
-          <label>Normativa aplicada</label>
-          <p class="norms-bundle" id="normsBundleTitle">Chiapas, México</p>
-          <ul class="norms-thresholds" id="normsThresholdsList"></ul>
-          <small>Revisión integral: habitabilidad, vanos, muros, circulación, urbano, instalaciones, estructura y accesibilidad. Ver <code>docs/NORMAS_CHIAPAS.md</code>.</small>
-        </div>
-        <div class="modal-actions">
+        <div class="modal-actions settings-modal-actions">
           <button type="button" class="btn-secondary" id="btnCancelSettings">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="submit" class="btn-primary" id="btnSaveSettings">Guardar</button>
         </div>
       </form>
     </div>
   </dialog>
 
   <dialog class="modal" id="accountModal">
-    <div class="modal-box glass-panel">
-      <div class="modal-header">
+    <div class="modal-box glass-panel account-modal-box">
+      <div class="modal-header account-modal-header">
         <h2>Mi cuenta</h2>
         <button type="button" class="modal-close" id="btnCloseAccount" aria-label="Cerrar">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <div class="account-body text-sm space-y-2" id="accountBody"></div>
-      <div class="modal-actions mt-4">
-        <button type="button" class="btn-secondary" id="btnAccountPlans">Ver planes</button>
-        <button type="button" class="btn-primary" id="btnAccountLogout">Cerrar sesión</button>
+      <div class="account-body" id="accountBody"></div>
+      <div class="modal-actions account-modal-actions">
+        <button type="button" class="account-btn account-btn--ghost" id="btnAccountPlans">Ver planes</button>
+        <button type="button" class="account-btn account-btn--solid" id="btnAccountLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal support-help-modal" id="supportHelpModal">
+    <div class="modal-box glass-panel support-help-box">
+      <div class="support-help-hero">
+        <div class="support-help-hero-copy">
+          <span class="support-help-hero-icon" aria-hidden="true">
+            <span class="material-symbols-outlined">support_agent</span>
+          </span>
+          <div>
+            <h2>Ayuda y soporte</h2>
+            <p>Solo para tu cuenta de usuario. El equipo te responde desde la bandeja de soporte.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseSupportHelp" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="support-help-body" id="supportHelpBodyWrap">
+        <div class="support-help-layout">
+          <div class="support-help-pane" id="supportHelpPane">
+            <section class="support-help-compose">
+              <header class="support-help-pane-head">
+                <h3>Nuevo ticket</h3>
+                <p>Describe el problema con el mayor detalle posible.</p>
+              </header>
+              <form id="supportHelpForm" class="support-help-form">
+                <label>Asunto
+                  <input type="text" id="supportHelpSubject" required minlength="3" maxlength="160" placeholder="Ej. No puedo subir un plano" />
+                </label>
+                <label>Mensaje
+                  <textarea id="supportHelpBody" required minlength="5" rows="3" placeholder="Qué intentabas hacer, qué viste y en qué dispositivo…"></textarea>
+                </label>
+                <button type="submit" class="btn-primary support-help-submit">
+                  <span class="material-symbols-outlined">send</span>
+                  Enviar ticket
+                </button>
+              </form>
+            </section>
+            <section class="support-help-tickets">
+              <header class="support-help-pane-head">
+                <h3>Tus tickets</h3>
+                <p>Historial de conversaciones con soporte.</p>
+              </header>
+              <div class="support-help-list" id="supportHelpList"></div>
+            </section>
+          </div>
+          <div class="support-help-thread" id="supportHelpThread">
+            <div class="support-help-empty-state">
+              <span class="material-symbols-outlined">forum</span>
+              <strong>Selecciona un ticket</strong>
+              <p>Verás aquí la conversación y podrás responder.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </dialog>
@@ -560,14 +661,14 @@
   </dialog>
 
   <dialog class="modal" id="homeSectionModal">
-    <div class="modal-box glass-panel">
-      <div class="modal-header">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
         <h2>Nuevo apartado</h2>
         <button type="button" class="modal-close" id="btnCloseHomeSection" aria-label="Cerrar">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <form id="homeSectionForm" class="space-y-3">
+      <form id="homeSectionForm" class="home-create-modal-form">
         <div class="form-group">
           <label for="homeSectionTitle">Título *</label>
           <input type="text" id="homeSectionTitle" required minlength="2" maxlength="200" placeholder="Ej. Memoria descriptiva, Fotos de fachada…" />
@@ -576,7 +677,7 @@
           <label for="homeSectionDescription">Descripción</label>
           <textarea id="homeSectionDescription" rows="3" maxlength="4000" placeholder="Qué documentación o imágenes debe incluir este apartado"></textarea>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions home-create-modal-actions">
           <button type="button" class="btn-secondary" id="btnCancelHomeSection">Cancelar</button>
           <button type="submit" class="btn-primary">Crear apartado</button>
         </div>
@@ -584,15 +685,43 @@
     </div>
   </dialog>
 
+  <dialog class="modal" id="homeSlotModal">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
+        <h2>Nuevo espacio de archivo</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeSlot" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeSlotForm" class="home-create-modal-form">
+        <div class="form-group">
+          <label for="homeSlotTitle">Nombre *</label>
+          <input type="text" id="homeSlotTitle" required minlength="2" maxlength="120" placeholder="Ej. Plano de instalación, Fotos adicionales…" autocomplete="off" />
+        </div>
+        <label class="home-slot-required-row" for="homeSlotRequired">
+          <span class="home-slot-required-copy">
+            <span class="home-slot-required-title">Obligatorio</span>
+            <span class="home-slot-required-hint">Necesario para completar el apartado</span>
+          </span>
+          <input type="checkbox" id="homeSlotRequired" class="home-slot-required-check" />
+        </label>
+        <div class="modal-actions home-create-modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeSlot">Cancelar</button>
+          <button type="submit" class="btn-primary">Agregar espacio</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <dialog class="modal" id="homeInviteModal">
-    <div class="modal-box glass-panel">
-      <div class="modal-header">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
         <h2>Invitar al proyecto</h2>
         <button type="button" class="modal-close" id="btnCloseHomeInvite" aria-label="Cerrar">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <form id="homeInviteForm" class="space-y-3">
+      <form id="homeInviteForm" class="home-create-modal-form">
         <div class="form-group">
           <label for="homeInviteEmail">Correo electrónico *</label>
           <input type="email" id="homeInviteEmail" required placeholder="colaborador@ejemplo.com" />
@@ -604,7 +733,7 @@
             <option value="viewer">Lector — solo consulta</option>
           </select>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions home-create-modal-actions">
           <button type="button" class="btn-secondary" id="btnCancelHomeInvite">Cancelar</button>
           <button type="submit" class="btn-primary" id="btnSubmitHomeInvite">Enviar invitación</button>
         </div>
@@ -637,10 +766,11 @@
   <div class="sidebar-backdrop hidden" id="sidebarBackdrop" aria-hidden="true"></div>
   <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="/static/auth.js?v=28"></script>
-  <script src="/static/billing.js?v=1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="/static/auth.js?v=31"></script>
+  <script src="/static/billing.js?v=2"></script>
   <script src="/static/dialogs.js?v=4"></script>
-  <script src="/static/home-projects.js?v=45"></script>
-  <script src="/static/app.js?v=53"></script>
+  <script src="/static/home-projects.js?v=58"></script>
+  <script src="/static/app.js?v=95"></script>
 </body>
 </html>

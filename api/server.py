@@ -41,6 +41,7 @@ from api.routes import (  # noqa: E402
     mobile,
     mobile_home_projects,
     norms,
+    support,
 )
 from core.pipeline import find_default_weights  # noqa: E402
 from db.database import engine  # noqa: E402
@@ -52,6 +53,7 @@ from services.knowledge_service import knowledge_stats  # noqa: E402
 WEB_DIR = ROOT / "web"
 STATIC_DIR = WEB_DIR / "static"
 FRONTEND_DIST = ROOT / "frontend" / "dist"
+AVATAR_DIR = ROOT / "data" / "avatars"
 
 
 @asynccontextmanager
@@ -82,6 +84,10 @@ class NoCacheHTML(BaseHTTPMiddleware):
                 "/app",
                 "/login",
                 "/welcome",
+                "/privacidad",
+                "/privacy",
+                "/terminos",
+                "/terms",
                 "/checkout",
                 "/checkout/success",
                 "/index.html",
@@ -101,6 +107,7 @@ app.include_router(auth.router)
 app.include_router(chats.router)
 app.include_router(billing.router)
 app.include_router(admin.router)
+app.include_router(support.router)
 app.include_router(analyze.router)
 app.include_router(feedback.router)
 app.include_router(analyses.router)
@@ -144,11 +151,8 @@ def health():
         )
     if not weights or not weights.is_file():
         hints.append("Modelo best.pt no encontrado; entrena o configura la ruta en Ajustes.")
-    if cad.get("dxf") and not cad.get("dwg"):
-        if cad.get("backends", {}).get("ezdwg"):
-            pass
-        else:
-            hints.append('Para DWG: pip install "ezdwg[dxf,plot]"')
+    if not cad.get("pdf"):
+        hints.append("Para PDF en análisis: pip install pymupdf")
     if k.get("pages", 0) == 0:
         hints.append(
             "Sin manuales indexados; opcional: python scripts/ingest_knowledge_docs.py"
@@ -240,6 +244,18 @@ def login_page():
     return _legacy_page(WEB_DIR / "login.html")
 
 
+@app.get("/privacidad")
+@app.get("/privacy")
+def privacy_page():
+    return _legacy_page(WEB_DIR / "privacy.html")
+
+
+@app.get("/terminos")
+@app.get("/terms")
+def terms_page():
+    return _legacy_page(WEB_DIR / "terms.html")
+
+
 @app.get("/welcome")
 def welcome_page():
     return _legacy_page(WEB_DIR / "welcome.html")
@@ -261,5 +277,7 @@ def legacy_app_page():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
 if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")

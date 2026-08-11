@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Prueba SMTP Brevo (tickets, reset password). Uso: python scripts/test_mail.py destino@correo.com"""
+"""Prueba correo Brevo (API o SMTP). Uso: python scripts/test_mail.py destino@correo.com"""
 
 from __future__ import annotations
 
@@ -23,10 +22,10 @@ def main() -> int:
 
     to = sys.argv[1].strip().lower()
     status = mail_config_status()
-    print("Estado SMTP:", status)
+    print("Estado correo:", status)
 
     if not status.get("configured"):
-        print("\nFAIL: Completa MAIL_* en .env (ver docs/MAIL_BREVO_SETUP.md)")
+        print("\nFAIL: Completa MAIL_* / BREVO_API_KEY en .env (ver docs/MAIL_BREVO_SETUP.md)")
         if status.get("missing"):
             print("Faltan:", ", ".join(status["missing"]))
         return 1
@@ -37,7 +36,7 @@ def main() -> int:
             subject="Prueba ARCHITECT — Brevo OK",
             text_body=(
                 "Si recibes este correo, Brevo está bien configurado.\n\n"
-                "Los comprobantes de compra simulada se enviarán igual.\n\n— ARCHITECT"
+                "Los comprobantes de compra se enviarán igual.\n\n— ARCHITECT"
             ),
             html_body="<p>Si recibes este correo, <strong>Brevo</strong> está bien configurado.</p>",
         )
@@ -45,7 +44,7 @@ def main() -> int:
         print(f"\nFAIL: {exc}")
         return 1
 
-    print(f"\nOK: Correo enviado a {to}")
+    print(f"\nOK: Correo enviado a {to} vía {status.get('mailer')}")
     return 0
 
 

@@ -25,6 +25,7 @@ from db.database import Base
 
 class UserRole(str, enum.Enum):
     admin = "admin"
+    support = "support"
     user = "user"
 
 
@@ -68,6 +69,14 @@ class User(Base):
     usage_records: Mapped[list[UsageRecord]] = relationship(back_populates="user")
     home_projects: Mapped[list[HomeProject]] = relationship(back_populates="user")
     billing_receipts: Mapped[list["BillingReceipt"]] = relationship(back_populates="user")
+    support_tickets: Mapped[list["SupportTicket"]] = relationship(
+        back_populates="user",
+        foreign_keys="SupportTicket.user_id",
+    )
+    refund_requests: Mapped[list["RefundRequest"]] = relationship(
+        back_populates="user",
+        foreign_keys="RefundRequest.user_id",
+    )
 
 
 class Plan(Base):
@@ -139,7 +148,7 @@ class BillingReceipt(Base):
 
 
 class UsageRecord(Base):
-    """Contador de análisis por usuario y período (YYYY-MM)."""
+    """Contador de análisis y preguntas por usuario y período (YYYY-MM)."""
 
     __tablename__ = "usage_records"
     __table_args__ = (UniqueConstraint("user_id", "period_key", name="uq_usage_period"),)
@@ -150,6 +159,7 @@ class UsageRecord(Base):
     )
     period_key: Mapped[str] = mapped_column(String(7), index=True)
     analyses_count: Mapped[int] = mapped_column(Integer, default=0)
+    asks_count: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
@@ -306,6 +316,10 @@ class HomeProject(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    ai_reviews: Mapped[list["HomeProjectAiReview"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class HomeProjectSectionStatus(str, enum.Enum):
@@ -333,6 +347,8 @@ class HomeProjectSection(Base):
     stage_number: Mapped[int] = mapped_column(Integer, index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
+    catalog_key: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    slots_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[HomeProjectSectionStatus] = mapped_column(
         Enum(HomeProjectSectionStatus), default=HomeProjectSectionStatus.pending
@@ -402,6 +418,65 @@ class HomeProjectEventType(str, enum.Enum):
     stage_completed = "stage_completed"
     stage_reopened = "stage_reopened"
     stage_advanced = "stage_advanced"
+    ai_review_created = "ai_review_created"
+    ai_finding_updated = "ai_finding_updated"
+
+
+class HomeProjectAiReviewStatus(str, enum.Enum):
+    open = "open"
+    resolved = "resolved"
+    dismissed = "dismissed"
+
+
+class HomeProjectAiReview(Base):
+    """Paquete de revisión IA de un plano ligado a un entregable del expediente."""
+
+    __tablename__ = "home_project_ai_reviews"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("home_projects.id", ondelete="CASCADE"), index=True
+    )
+    stage_number: Mapped[int] = mapped_column(Integer, index=True)
+    section_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("home_project_sections.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    document_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("home_project_documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    analysis_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("analyses.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[HomeProjectAiReviewStatus] = mapped_column(
+        Enum(HomeProjectAiReviewStatus),
+        default=HomeProjectAiReviewStatus.open,
+        index=True,
+    )
+    scope_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    exclusions_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    verdict_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    findings_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    project: Mapped[HomeProject] = relationship(back_populates="ai_reviews")
+    section: Mapped[HomeProjectSection | None] = relationship()
+    document: Mapped[HomeProjectDocument | None] = relationship()
+    analysis: Mapped[Analysis | None] = relationship()
+    creator: Mapped[User | None] = relationship(foreign_keys=[created_by])
 
 
 class HomeProjectEvent(Base):
@@ -506,6 +581,7 @@ class HomeProjectDocument(Base):
         nullable=True,
         index=True,
     )
+    slot_key: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     original_filename: Mapped[str] = mapped_column(String(255))
     stored_path: Mapped[str] = mapped_column(String(512))
     mime_type: Mapped[str] = mapped_column(String(120), default="application/octet-stream")
@@ -551,3 +627,118 @@ class HomeProjectStage(Base):
 
     project: Mapped[HomeProject] = relationship(back_populates="stages")
     analysis: Mapped[Analysis | None] = relationship()
+
+
+class RefundRequestStatus(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class RefundRequest(Base):
+    """Solicitud de reembolso tras cancelar (o con uso bajo en la ventana de días)."""
+
+    __tablename__ = "refund_requests"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    receipt_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("billing_receipts.id", ondelete="SET NULL"), nullable=True
+    )
+    amount_cents: Mapped[int] = mapped_column(Integer, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="MXN")
+    status: Mapped[RefundRequestStatus] = mapped_column(
+        Enum(RefundRequestStatus), default=RefundRequestStatus.pending, index=True
+    )
+    eligible_at_request: Mapped[bool] = mapped_column(Boolean, default=False)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    admin_note: Mapped[str] = mapped_column(Text, default="")
+    eligibility_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reviewed_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+
+    user: Mapped[User] = relationship(
+        back_populates="refund_requests", foreign_keys=[user_id]
+    )
+    receipt: Mapped[BillingReceipt | None] = relationship()
+    reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
+
+
+class SupportTicketStatus(str, enum.Enum):
+    open = "open"
+    pending = "pending"
+    resolved = "resolved"
+    closed = "closed"
+
+
+class SupportTicketPriority(str, enum.Enum):
+    normal = "normal"
+    high = "high"
+
+
+class SupportTicket(Base):
+    """Ticket de soporte humano (no confundir con chats de IA)."""
+
+    __tablename__ = "support_tickets"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    assigned_to: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subject: Mapped[str] = mapped_column(String(160))
+    status: Mapped[SupportTicketStatus] = mapped_column(
+        Enum(SupportTicketStatus), default=SupportTicketStatus.open, index=True
+    )
+    priority: Mapped[SupportTicketPriority] = mapped_column(
+        Enum(SupportTicketPriority), default=SupportTicketPriority.normal
+    )
+    related_chat_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    related_analysis_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("analyses.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), index=True
+    )
+
+    user: Mapped[User] = relationship(
+        back_populates="support_tickets", foreign_keys=[user_id]
+    )
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to])
+    messages: Mapped[list["SupportMessage"]] = relationship(
+        back_populates="ticket",
+        order_by="SupportMessage.created_at",
+        cascade="all, delete-orphan",
+    )
+
+
+class SupportMessage(Base):
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    author_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str] = mapped_column(Text)
+    is_staff: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+
+    ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+    author: Mapped[User] = relationship()

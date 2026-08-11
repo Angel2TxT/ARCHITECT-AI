@@ -14,6 +14,7 @@ from api.schemas import (
     CheckoutStartRequest,
     PlanChangeRequest,
     PortalStartRequest,
+    RefundRequestCreate,
 )
 from db.database import get_db
 from db.models import Plan, User
@@ -32,6 +33,12 @@ from services.billing_receipt_service import (
     receipt_payload,
     receipt_pdf_bytes,
     resend_receipt_email,
+)
+from services.refund_service import (
+    cancel_subscription,
+    evaluate_refund_eligibility,
+    list_user_refunds,
+    request_refund,
 )
 from services.subscription_service import (
     change_plan,
@@ -65,6 +72,7 @@ def list_plans(db: Annotated[Session, Depends(get_db)]):
             "analyses_limit_monthly": p.analyses_limit_monthly,
             "allow_real_model": p.allow_real_model,
             "max_file_mb": p.max_file_mb,
+            "storage_gb": (p.features or {}).get("storage_gb", 1),
             "features": p.features or {},
             "requires_checkout": (p.price_monthly_cents or 0) > 0,
         }
@@ -231,3 +239,37 @@ def upgrade_plan(
     if is_admin_user(user):
         return change_plan(db, user, slug, bypass_checkout=True)
     return change_plan(db, user, slug, bypass_checkout=False)
+
+
+@router.post("/cancel")
+def cancel_my_subscription(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Cancela el plan de pago y vuelve a Gratis. Incluye elegibilidad de reembolso."""
+    return cancel_subscription(db, user)
+
+
+@router.get("/refund-eligibility")
+def refund_eligibility(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return evaluate_refund_eligibility(db, user)
+
+
+@router.get("/refunds")
+def my_refunds(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return {"refunds": list_user_refunds(db, user.id)}
+
+
+@router.post("/refunds")
+def create_refund_request(
+    body: RefundRequestCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return request_refund(db, user, reason=body.reason)

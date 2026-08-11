@@ -87,6 +87,13 @@
     }
     .checkout-summary strong { font-size: 1.1rem; }
     .checkout-summary span { color: var(--muted); font-size: 0.82rem; }
+    .checkout-quote-hint {
+      margin: 0.65rem 0 0;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .checkout-quote-hint strong { color: inherit; }
     label {
       display: block;
       margin-bottom: 0.35rem;
@@ -336,9 +343,10 @@
           </div>
           <div style="text-align:right">
             <strong id="planPrice">$0</strong>
-            <div><span>/ mes</span></div>
+            <div><span id="planPriceLabel">A pagar hoy</span></div>
           </div>
         </div>
+        <p id="planQuoteHint" class="checkout-quote-hint hidden"></p>
 
         <p id="checkoutError" class="checkout-error hidden"></p>
 

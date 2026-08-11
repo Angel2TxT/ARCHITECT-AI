@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from api.deps import require_admin
+from api.deps import get_current_user, require_admin, require_support_staff
+from api.schemas import RefundReviewRequest
 from db.database import get_db
 from db.models import (
     Analysis,
@@ -32,11 +33,14 @@ from db.models import (
 )
 from services.subscription_service import change_plan, period_key
 from services.billing_receipt_service import admin_billing_summary, admin_receipts_list
+from services.refund_service import list_admin_refunds, review_refund
 from services.admin_report_service import (
     build_period_report,
     export_report,
+    export_resource,
     parse_report_dates,
 )
+from services.auth_service import hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -44,10 +48,39 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 class AdminUserUpdate(BaseModel):
     role: str | None = None
     is_active: bool | None = None
+    full_name: str | None = Field(default=None, max_length=120)
+    email: str | None = Field(default=None, min_length=5, max_length=255)
 
 
 class AdminUserPlanUpdate(BaseModel):
     plan_slug: str = Field(min_length=2, max_length=32)
+
+
+class AdminUserCreate(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+    full_name: str = Field(default="", max_length=120)
+    role: str = "user"
+    plan_slug: str = "free"
+    is_active: bool = True
+
+
+class AdminPlanUpsert(BaseModel):
+    slug: str | None = Field(default=None, min_length=2, max_length=32)
+    name: str = Field(min_length=2, max_length=80)
+    description: str = ""
+    price_monthly_cents: int = Field(default=0, ge=0)
+    analyses_limit_monthly: int = Field(default=5, ge=0)
+    allow_real_model: bool = False
+    max_file_mb: int = Field(default=5, ge=1, le=500)
+    is_public: bool = True
+    sort_order: int = 0
+    features: dict | None = None
+
+
+class AdminSubscriptionUpdate(BaseModel):
+    plan_slug: str | None = Field(default=None, min_length=2, max_length=32)
+    status: str | None = None
 
 
 def _safe_count(db: Session, model, *filters) -> int:
@@ -122,6 +155,7 @@ def _plan_item(db: Session, plan: Plan) -> dict:
         or 0
     )
     return {
+        "id": plan.id,
         "slug": plan.slug,
         "name": plan.name,
         "description": plan.description or "",
@@ -129,6 +163,7 @@ def _plan_item(db: Session, plan: Plan) -> dict:
         "price_monthly_cents": plan.price_monthly_cents,
         "allow_real_model": plan.allow_real_model,
         "max_file_mb": plan.max_file_mb,
+        "storage_gb": (plan.features or {}).get("storage_gb", 1),
         "is_public": plan.is_public,
         "sort_order": plan.sort_order,
         "subscribers": int(subscribers),
@@ -333,7 +368,7 @@ def stats(
 
 @router.get("/users")
 def list_users(
-    _: Annotated[User, Depends(require_admin)],
+    _: Annotated[User, Depends(require_support_staff)],
     db: Annotated[Session, Depends(get_db)],
     limit: int = 100,
     offset: int = 0,
@@ -643,7 +678,28 @@ def update_user(
             raise HTTPException(400, "No puedes desactivar tu propia cuenta")
         user.is_active = body.is_active
 
-    if body.role is None and body.is_active is None:
+    if body.full_name is not None:
+        user.full_name = body.full_name.strip()
+
+    if body.email is not None:
+        email = body.email.strip().lower()
+        if "@" not in email:
+            raise HTTPException(400, "Correo inválido")
+        taken = (
+            db.query(User)
+            .filter(User.email == email, User.id != user.id)
+            .first()
+        )
+        if taken:
+            raise HTTPException(400, "Ese correo ya está en uso")
+        user.email = email
+
+    if (
+        body.role is None
+        and body.is_active is None
+        and body.full_name is None
+        and body.email is None
+    ):
         raise HTTPException(400, "Nada que actualizar")
 
     db.commit()
@@ -683,8 +739,9 @@ def reset_user_usage(
     )
     if row:
         row.analyses_count = 0
+        row.asks_count = 0
     else:
-        db.add(UsageRecord(user_id=user.id, period_key=key, analyses_count=0))
+        db.add(UsageRecord(user_id=user.id, period_key=key, analyses_count=0, asks_count=0))
     db.commit()
     return _user_item(db, user)
 
@@ -759,4 +816,344 @@ def admin_billing_receipts(
 ):
     """Listado de comprobantes emitidos (pasarela simulada)."""
     return admin_receipts_list(db, limit=limit, offset=offset)
+
+
+@router.get("/export/{resource}")
+def download_resource_export(
+    resource: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+    format: str = Query("csv", pattern="^(csv|pdf|xlsx|excel)$"),
+):
+    try:
+        content, filename, media_type = export_resource(db, resource, format)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/users")
+def create_user(
+    body: AdminUserCreate,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    email = body.email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(400, "Correo inválido")
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(409, "Ya existe un usuario con ese correo")
+    try:
+        role = UserRole(body.role)
+    except ValueError as exc:
+        raise HTTPException(400, "Rol inválido") from exc
+
+    user = User(
+        email=email,
+        password_hash=hash_password(body.password),
+        full_name=(body.full_name or "").strip(),
+        role=role,
+        is_active=body.is_active,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    change_plan(db, user, (body.plan_slug or "free").strip().lower(), bypass_checkout=True)
+    return _user_item(db, user)
+
+
+@router.post("/plans")
+def create_plan(
+    body: AdminPlanUpsert,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    slug = (body.slug or body.name).strip().lower().replace(" ", "-")
+    slug = "".join(ch for ch in slug if ch.isalnum() or ch in "-_")[:32]
+    if len(slug) < 2:
+        raise HTTPException(400, "Slug inválido")
+    if db.query(Plan).filter(Plan.slug == slug).first():
+        raise HTTPException(409, "Ya existe un plan con ese slug")
+    plan = Plan(
+        slug=slug,
+        name=body.name.strip(),
+        description=body.description or "",
+        price_monthly_cents=body.price_monthly_cents,
+        analyses_limit_monthly=body.analyses_limit_monthly,
+        allow_real_model=body.allow_real_model,
+        max_file_mb=body.max_file_mb,
+        is_public=body.is_public,
+        sort_order=body.sort_order,
+        features=body.features or {},
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    return _plan_item(db, plan)
+
+
+@router.patch("/plans/{plan_id}")
+def update_plan(
+    plan_id: int,
+    body: AdminPlanUpsert,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    plan = db.query(Plan).filter(Plan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(404, "Plan no encontrado")
+    plan.name = body.name.strip()
+    plan.description = body.description or ""
+    plan.price_monthly_cents = body.price_monthly_cents
+    plan.analyses_limit_monthly = body.analyses_limit_monthly
+    plan.allow_real_model = body.allow_real_model
+    plan.max_file_mb = body.max_file_mb
+    plan.is_public = body.is_public
+    plan.sort_order = body.sort_order
+    if body.features is not None:
+        merged = dict(plan.features or {})
+        merged.update(body.features)
+        # Preserve stripe ids if omitted
+        for sticky in ("stripe_price_id", "stripe_product_id"):
+            if sticky in (plan.features or {}) and sticky not in body.features:
+                merged[sticky] = plan.features[sticky]
+        plan.features = merged
+    db.commit()
+    db.refresh(plan)
+    return _plan_item(db, plan)
+
+
+@router.delete("/plans/{plan_id}")
+def deactivate_plan(
+    plan_id: int,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """No borra el plan si tiene suscriptores: lo oculta (is_public=false)."""
+    plan = db.query(Plan).filter(Plan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(404, "Plan no encontrado")
+    if plan.slug == "free":
+        raise HTTPException(400, "No se puede desactivar el plan Gratis")
+    subs = (
+        db.query(func.count(Subscription.id)).filter(Subscription.plan_id == plan.id).scalar()
+        or 0
+    )
+    if subs:
+        plan.is_public = False
+        db.commit()
+        return {"ok": True, "action": "hidden", "subscribers": int(subs), "plan": _plan_item(db, plan)}
+    db.delete(plan)
+    db.commit()
+    return {"ok": True, "action": "deleted", "plan_id": plan_id}
+
+
+@router.patch("/subscriptions/{subscription_id}")
+def update_subscription(
+    subscription_id: int,
+    body: AdminSubscriptionUpdate,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.user), joinedload(Subscription.plan))
+        .filter(Subscription.id == subscription_id)
+        .first()
+    )
+    if not sub or not sub.user:
+        raise HTTPException(404, "Suscripción no encontrada")
+    if body.plan_slug:
+        change_plan(db, sub.user, body.plan_slug.strip().lower(), bypass_checkout=True)
+        db.refresh(sub)
+    if body.status is not None:
+        try:
+            sub.status = SubscriptionStatus(body.status)
+        except ValueError as exc:
+            raise HTTPException(400, "Estado inválido") from exc
+        db.commit()
+        db.refresh(sub)
+    return {
+        "id": sub.id,
+        "user_id": sub.user_id,
+        "user_email": sub.user.email if sub.user else None,
+        "plan_slug": sub.plan.slug if sub.plan else None,
+        "plan_name": sub.plan.name if sub.plan else None,
+        "status": sub.status.value,
+    }
+
+
+@router.get("/analyses/{analysis_id}")
+def get_analysis(
+    analysis_id: int,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    a = (
+        db.query(Analysis)
+        .options(joinedload(Analysis.user))
+        .filter(Analysis.id == analysis_id)
+        .first()
+    )
+    if not a:
+        raise HTTPException(404, "Análisis no encontrado")
+    return {
+        "id": a.id,
+        "user_id": a.user_id,
+        "user_email": a.user.email if a.user else None,
+        "original_filename": a.original_filename,
+        "status_text": a.status_text,
+        "is_demo_model": a.is_demo_model,
+        "training_eligible": a.training_eligible,
+        "created_at": a.created_at.isoformat() if a.created_at else None,
+        "counts": a.counts_json,
+        "issues_count": len(a.issues_json or []),
+        "detections_count": len(a.detections_json or []),
+    }
+
+
+@router.delete("/analyses/{analysis_id}")
+def delete_analysis(
+    analysis_id: int,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    a = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if not a:
+        raise HTTPException(404, "Análisis no encontrado")
+    db.delete(a)
+    db.commit()
+    return {"ok": True, "deleted_id": analysis_id}
+
+
+@router.get("/chats/{chat_id}")
+def get_chat(
+    chat_id: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    chat = (
+        db.query(Chat)
+        .options(joinedload(Chat.user))
+        .filter(Chat.id == chat_id)
+        .first()
+    )
+    if not chat:
+        raise HTTPException(404, "Chat no encontrado")
+    messages = (
+        db.query(Message)
+        .filter(Message.chat_id == chat.id)
+        .order_by(Message.created_at.asc())
+        .limit(200)
+        .all()
+    )
+    return {
+        "id": chat.id,
+        "title": chat.title,
+        "user_email": chat.user.email if chat.user else None,
+        "created_at": chat.created_at.isoformat() if chat.created_at else None,
+        "messages": [
+            {
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in messages
+        ],
+    }
+
+
+@router.delete("/chats/{chat_id}")
+def delete_chat(
+    chat_id: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    chat = db.query(Chat).filter(Chat.id == chat_id).first()
+    if not chat:
+        raise HTTPException(404, "Chat no encontrado")
+    db.query(Message).filter(Message.chat_id == chat.id).delete(synchronize_session=False)
+    db.delete(chat)
+    db.commit()
+    return {"ok": True, "deleted_id": chat_id}
+
+
+@router.delete("/home-projects/{project_id}")
+def delete_home_project(
+    project_id: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    project = db.query(HomeProject).filter(HomeProject.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Proyecto no encontrado")
+    db.delete(project)
+    db.commit()
+    return {"ok": True, "deleted_id": project_id}
+
+
+@router.post("/guest-trials/{trial_id}/reset")
+def reset_guest_trial(
+    trial_id: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    trial = db.query(GuestTrial).filter(GuestTrial.id == trial_id).first()
+    if not trial:
+        raise HTTPException(404, "Invitado no encontrado")
+    trial.analyses_count = 0
+    trial.asks_count = 0
+    db.commit()
+    return {
+        "ok": True,
+        "id": trial.id,
+        "analyses_count": 0,
+        "asks_count": 0,
+    }
+
+
+@router.delete("/guest-trials/{trial_id}")
+def delete_guest_trial(
+    trial_id: str,
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    trial = db.query(GuestTrial).filter(GuestTrial.id == trial_id).first()
+    if not trial:
+        raise HTTPException(404, "Invitado no encontrado")
+    db.delete(trial)
+    db.commit()
+    return {"ok": True, "deleted_id": trial_id}
+
+
+@router.get("/refunds")
+def admin_list_refunds(
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+    status: str | None = None,
+):
+    return {"refunds": list_admin_refunds(db, status=status)}
+
+
+@router.post("/refunds/{request_id}/review")
+def admin_review_refund(
+    request_id: int,
+    body: RefundReviewRequest,
+    admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return review_refund(
+        db,
+        admin,
+        request_id,
+        approve=body.approve,
+        admin_note=body.admin_note,
+    )
 

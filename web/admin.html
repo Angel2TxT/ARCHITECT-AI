@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARCHITECT</title>
+  <title>Administración · ARCHITECT</title>
   <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=81" />
+  <link rel="stylesheet" href="/static/style.css?v=151" />
   <script>
     (function () {
       var KEY = "plano_ia_theme";
       var saved = localStorage.getItem(KEY);
       if (saved !== "light" && saved !== "dark") {
-        saved = "dark";
+        saved = "light";
         localStorage.setItem(KEY, saved);
       }
       var dark = saved === "dark";
@@ -27,32 +27,68 @@
   </script>
 </head>
 <body class="admin-shell-page">
-  <header class="admin-topbar">
-    <a href="/legacy-app" class="admin-back-link">
-      <span class="material-symbols-outlined">arrow_back</span>
-      Volver al workspace
-    </a>
-    <div class="admin-topbar-title">
-      <span class="material-symbols-outlined">admin_panel_settings</span>
-      <h1>Administración</h1>
-    </div>
-    <button type="button" class="btn-secondary admin-refresh-btn" id="btnAdminRefresh">
-      <span class="material-symbols-outlined">refresh</span>
-      Actualizar
-    </button>
-  </header>
+  <aside class="admin-sidebar" id="adminSidebar" aria-label="Módulos de administración"></aside>
+  <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" aria-hidden="true"></div>
 
-  <div class="admin-layout">
-    <aside class="admin-sidebar" id="adminSidebar" aria-label="Apartados de administración"></aside>
-    <main class="admin-content" id="adminContent">
+  <main class="admin-main-pane">
+    <header class="admin-topbar">
+      <div class="admin-topbar-left">
+        <button type="button" class="admin-menu-btn" id="adminMenuBtn" aria-label="Abrir menú" aria-controls="adminSidebar" aria-expanded="false">
+          <span class="material-symbols-outlined" id="adminMenuIcon">menu</span>
+        </button>
+        <div class="admin-topbar-crumb">
+          <span class="material-symbols-outlined">deployed_code</span>
+          <span class="admin-topbar-sep">/</span>
+          <strong id="adminBreadcrumb">Administración</strong>
+        </div>
+      </div>
+      <button type="button" class="admin-refresh-btn" id="btnAdminRefresh">
+        <span class="material-symbols-outlined">refresh</span>
+        <span class="admin-refresh-label">Actualizar</span>
+      </button>
+    </header>
+
+    <div class="admin-content" id="adminContent">
       <p id="adminStatus" class="admin-status">Cargando panel…</p>
       <p id="adminError" class="admin-error-banner hidden" role="alert"></p>
-      <div id="adminSectionRoot"></div>
-    </main>
-  </div>
+      <div class="admin-content-inner">
+        <div id="adminSectionRoot"></div>
+      </div>
+    </div>
+  </main>
 
-  <script src="/static/auth.js?v=28"></script>
+  <dialog class="admin-modal" id="adminModal" aria-labelledby="adminModalTitle">
+    <form method="dialog" class="admin-modal-box" id="adminModalForm">
+      <header class="admin-modal-head">
+        <h2 id="adminModalTitle">Detalle</h2>
+        <button type="button" class="admin-modal-close" id="adminModalClose" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="admin-modal-body" id="adminModalBody"></div>
+      <footer class="admin-modal-foot" id="adminModalFoot"></footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="accountModal">
+    <div class="modal-box glass-panel account-modal-box">
+      <div class="modal-header account-modal-header">
+        <h2>Mi cuenta</h2>
+        <button type="button" class="modal-close" id="btnCloseAccount" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="account-body" id="accountBody"></div>
+      <div class="modal-actions account-modal-actions">
+        <button type="button" class="account-btn account-btn--ghost" id="btnAccountPlans">Ver planes</button>
+        <button type="button" class="account-btn account-btn--solid" id="btnAccountLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/auth.js?v=31"></script>
   <script src="/static/dialogs.js?v=4"></script>
-  <script src="/static/admin.js?v=6"></script>
+  <script src="/static/account-modal.js?v=1"></script>
+  <script src="/static/admin.js?v=28"></script>
 </body>
 </html>

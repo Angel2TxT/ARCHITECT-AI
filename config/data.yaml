@@ -3,9 +3,22 @@ path: datasets/cubicasa_yolo
 train: images/train
 val: images/val
 
+# Clases actuales del modelo en producción (best.pt).
+# Para ampliar detección (stair, bathroom, kitchen, column, parking…):
+# 1) Añade nombres aquí y sube nc
+# 2) Etiqueta dataset (ver docs/ENTRENAMIENTO_PLANOS.md)
+# 3) Reentrena con scripts/train.py y actualiza pesos
 nc: 4
 names:
   0: door
   1: window
   2: wall
   3: room
+
+# Futuro (no activo hasta reentrenar):
+# 4: stair
+# 5: bathroom
+# 6: kitchen
+# 7: column
+# 8: parking
+# 9: corridor

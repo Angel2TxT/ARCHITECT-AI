@@ -56,9 +56,35 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role: str
+    avatar_url: str | None = None
+    has_password: bool = True
+    oauth_provider: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str = Field(min_length=1, max_length=120)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str | None = None
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str | None = None
+    confirm_email: str | None = None
+
+
+class RefundRequestCreate(BaseModel):
+    reason: str = Field(default="", max_length=2000)
+
+
+class RefundReviewRequest(BaseModel):
+    approve: bool
+    admin_note: str = Field(default="", max_length=2000)
 
 
 class AuthResponse(BaseModel):
@@ -66,6 +92,8 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     user: UserOut
     subscription: dict
+    impersonation: bool = False
+    impersonator: dict | None = None
 
 
 class PlanChangeRequest(BaseModel):

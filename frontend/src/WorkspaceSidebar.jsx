@@ -42,7 +42,10 @@ export default function WorkspaceSidebar({
   collapsed,
   onToggleCollapsed
 }) {
-  const [plansOpen, setPlansOpen] = useState(false);  const isAdmin = user?.role === "admin";
+  const [plansOpen, setPlansOpen] = useState(false);
+  const isAdmin = user?.role === "admin";
+  const isSupport = user?.role === "support";
+  const canOpenStaffPanel = isAdmin || isSupport;
   const isWorkspace = path === "/app" || path === "/app/";
   const isProjects = path.startsWith("/app/projects");
   const isAdminRoute = path.startsWith("/app/admin");
@@ -73,7 +76,6 @@ export default function WorkspaceSidebar({
         <div className="workspace-sidebar-brand">
           <div className="workspace-sidebar-brand-text">
             <strong>ARCHITECT</strong>
-            <small>AI Plan Review Studio</small>
           </div>
           <button
             type="button"
@@ -94,11 +96,12 @@ export default function WorkspaceSidebar({
           >
             <div className="workspace-sidebar-usage-row">
               <span>{usage.planName}</span>
-              <span>{usage.isUnlimited ? usage.usageLabel : usage.usageLabel}</span>
+              <span>{usage.usageLabel}</span>
             </div>
             <div className="workspace-sidebar-usage-bar">
               <span style={{ width: `${usage.pct}%` }} />
             </div>
+            <div className="workspace-sidebar-usage-asks">{usage.asksLabel}</div>
           </button>
         )}
 
@@ -119,14 +122,14 @@ export default function WorkspaceSidebar({
             <Building2 size={18} />
             Casa hogar
           </button>
-          {isAdmin && (
+          {canOpenStaffPanel && (
             <button
               type="button"
               className={isAdminRoute ? "is-active" : ""}
               onClick={() => navigate("/app/admin")}
             >
               <Shield size={18} />
-              Administración
+              {isSupport ? "Bandeja soporte" : "Administración"}
             </button>
           )}
           <button type="button" onClick={() => setPlansOpen(true)}>
@@ -146,7 +149,9 @@ export default function WorkspaceSidebar({
             <span className="workspace-sidebar-avatar">{initials}</span>
             <div>
               <strong>{user?.full_name || user?.email || "Usuario"}</strong>
-              <small>{isAdmin ? "Administrador" : usage.planName}</small>
+              <small>
+                {isAdmin ? "Administrador" : isSupport ? "Soporte" : usage.planName}
+              </small>
             </div>
           </div>
           <button

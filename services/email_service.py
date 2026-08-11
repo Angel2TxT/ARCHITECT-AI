@@ -1,7 +1,8 @@
-"""Envío de correos vía SMTP (Brevo u otro proveedor)."""
+"""Envío de correos vía API Brevo (recomendado) o SMTP."""
 
 from __future__ import annotations
 
+import base64
 import logging
 import os
 import smtplib
@@ -11,37 +12,64 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape as html_escape
 
+import httpx
+
 logger = logging.getLogger(__name__)
+
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def _mail_setting(name: str, default: str = "") -> str:
     return os.getenv(name, default).strip()
 
 
+def _mailer() -> str:
+    """brevo = API HTTP (sin bloqueo SMTP por IP); smtp = relay clásico."""
+    explicit = _mail_setting("MAIL_MAILER", "").lower()
+    if explicit in ("brevo", "api", "brevo_api"):
+        return "brevo"
+    if explicit == "smtp":
+        return "smtp"
+    if _mail_setting("BREVO_API_KEY"):
+        return "brevo"
+    return "smtp"
+
+
 def is_mail_configured() -> bool:
+    if not _mail_setting("MAIL_FROM_ADDRESS"):
+        return False
+    if _mailer() == "brevo":
+        return bool(_mail_setting("BREVO_API_KEY"))
     return bool(
         _mail_setting("MAIL_HOST")
         and _mail_setting("MAIL_USERNAME")
         and _mail_setting("MAIL_PASSWORD")
-        and _mail_setting("MAIL_FROM_ADDRESS")
     )
 
 
 def mail_config_status() -> dict[str, object]:
-    """Estado de SMTP (Brevo) sin exponer secretos."""
+    """Estado de correo (Brevo API o SMTP) sin exponer secretos."""
+    mailer = _mailer()
     host = _mail_setting("MAIL_HOST")
     missing: list[str] = []
-    if not host:
-        missing.append("MAIL_HOST")
-    if not _mail_setting("MAIL_USERNAME"):
-        missing.append("MAIL_USERNAME")
-    if not _mail_setting("MAIL_PASSWORD"):
-        missing.append("MAIL_PASSWORD")
     if not _mail_setting("MAIL_FROM_ADDRESS"):
         missing.append("MAIL_FROM_ADDRESS")
+    if mailer == "brevo":
+        if not _mail_setting("BREVO_API_KEY"):
+            missing.append("BREVO_API_KEY")
+        provider = "brevo_api"
+    else:
+        if not host:
+            missing.append("MAIL_HOST")
+        if not _mail_setting("MAIL_USERNAME"):
+            missing.append("MAIL_USERNAME")
+        if not _mail_setting("MAIL_PASSWORD"):
+            missing.append("MAIL_PASSWORD")
+        provider = "brevo_smtp" if "brevo" in host.lower() else ("smtp" if host else None)
     return {
         "configured": not missing,
-        "provider": "brevo" if "brevo" in host.lower() else ("smtp" if host else None),
+        "mailer": mailer,
+        "provider": provider,
         "host": host or None,
         "port": int(_mail_setting("MAIL_PORT", "587") or "587"),
         "encryption": _mail_setting("MAIL_ENCRYPTION", "tls") or "tls",
@@ -51,29 +79,81 @@ def mail_config_status() -> dict[str, object]:
     }
 
 
-def _from_header() -> str:
+def _from_parts() -> tuple[str, str]:
     address = _mail_setting("MAIL_FROM_ADDRESS")
-    name = _mail_setting("MAIL_FROM_NAME", "ARCHITECT")
+    name = _mail_setting("MAIL_FROM_NAME", "ARCHITECT") or "ARCHITECT"
+    return address, name
+
+
+def _from_header() -> str:
+    address, name = _from_parts()
     if name:
         return f"{name} <{address}>"
     return address
 
 
-def send_email(
+def _send_via_brevo_api(
     *,
     to: str,
     subject: str,
     text_body: str,
-    html_body: str | None = None,
-    attachments: list[tuple[str, bytes, str]] | None = None,
+    html_body: str | None,
+    attachments: list[tuple[str, bytes, str]] | None,
 ) -> None:
-    if not is_mail_configured():
-        raise RuntimeError("Correo no configurado (revisa MAIL_* en .env)")
+    api_key = _mail_setting("BREVO_API_KEY")
+    if not api_key:
+        raise RuntimeError("Falta BREVO_API_KEY en .env")
 
-    to = (to or "").strip().lower()
-    if not to or "@" not in to:
-        raise ValueError("Destinatario inválido")
+    address, name = _from_parts()
+    payload: dict = {
+        "sender": {"name": name, "email": address},
+        "to": [{"email": to}],
+        "subject": subject,
+        "textContent": text_body,
+    }
+    if html_body:
+        payload["htmlContent"] = html_body
+    if attachments:
+        payload["attachment"] = [
+            {
+                "name": filename,
+                "content": base64.b64encode(content).decode("ascii"),
+            }
+            for filename, content, _mime in attachments
+        ]
 
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            res = client.post(
+                BREVO_API_URL,
+                headers={
+                    "api-key": api_key,
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                },
+                json=payload,
+            )
+    except httpx.HTTPError as exc:
+        raise RuntimeError(f"No se pudo contactar la API de Brevo: {exc}") from exc
+
+    if res.status_code >= 400:
+        detail = res.text
+        try:
+            data = res.json()
+            detail = data.get("message") or data.get("error") or detail
+        except Exception:
+            pass
+        raise RuntimeError(f"Brevo API ({res.status_code}): {detail}")
+
+
+def _send_via_smtp(
+    *,
+    to: str,
+    subject: str,
+    text_body: str,
+    html_body: str | None,
+    attachments: list[tuple[str, bytes, str]] | None,
+) -> None:
     host = _mail_setting("MAIL_HOST")
     port = int(_mail_setting("MAIL_PORT", "587") or "587")
     username = _mail_setting("MAIL_USERNAME")
@@ -107,6 +187,40 @@ def send_email(
                 smtp.starttls(context=ssl.create_default_context())
             smtp.login(username, password)
             smtp.sendmail(_mail_setting("MAIL_FROM_ADDRESS"), [to], msg.as_string())
+
+
+def send_email(
+    *,
+    to: str,
+    subject: str,
+    text_body: str,
+    html_body: str | None = None,
+    attachments: list[tuple[str, bytes, str]] | None = None,
+) -> None:
+    if not is_mail_configured():
+        raise RuntimeError("Correo no configurado (revisa MAIL_* / BREVO_API_KEY en .env)")
+
+    to = (to or "").strip().lower()
+    if not to or "@" not in to:
+        raise ValueError("Destinatario inválido")
+
+    if _mailer() == "brevo":
+        _send_via_brevo_api(
+            to=to,
+            subject=subject,
+            text_body=text_body,
+            html_body=html_body,
+            attachments=attachments,
+        )
+        return
+
+    _send_via_smtp(
+        to=to,
+        subject=subject,
+        text_body=text_body,
+        html_body=html_body,
+        attachments=attachments,
+    )
 
 
 def _app_base_url() -> str:

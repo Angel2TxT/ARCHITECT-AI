@@ -27,8 +27,17 @@ ISSUE_LABELS: dict[str, str] = {
     "BUILT_AREA_MINOR_WORK": "Superficie construida / licencia",
     "WALL_COVERAGE_LOW": "Cerramiento / muros insuficientes",
     "CONSTRUCTION_MANUAL_REVIEW": "Revisión complementaria de proyecto",
+    "MANUAL_ACCESSIBILITY": "Checklist: accesibilidad",
+    "MANUAL_STAIRS": "Checklist: escaleras y desniveles",
+    "MANUAL_MEP": "Checklist: instalaciones hidráulicas/sanitarias/gas",
+    "MANUAL_ELECTRICAL": "Checklist: instalaciones eléctricas",
+    "MANUAL_STRUCTURE": "Checklist: estructura",
+    "MANUAL_CIVIL_PROTECTION": "Checklist: protección civil",
+    "MANUAL_CLEAR_HEIGHT": "Checklist: alturas libres / cortes",
     "WINDOW_SIZE_UNIFORMITY": "Ventanas con tamaños no uniformes",
     "DOOR_SIZE_UNIFORMITY": "Puertas con tamaños no uniformes",
+    "ROOM_OVERLAP": "Recintos superpuestos en planta",
+    "LIVING_AREA_LOW": "Estancia / área social insuficiente",
 }
 
 NORM_BUNDLE_ID = "chiapas_mx"

@@ -1,37 +1,26 @@
-# Planos: imágenes, PDF, DXF y DWG
+# Planos para análisis IA: imágenes y PDF
 
-## Sin instalar programas .exe
+El **análisis con IA** acepta solo:
 
-El proyecto convierte **DWG dentro del servidor** con la librería **ezdwg** (solo `pip install`, sin ODA ni AutoCAD).
+| Formato | Notas |
+|---------|--------|
+| Imágenes | PNG, JPG, WEBP, BMP, TIF/TIFF |
+| PDF | Se rasteriza la 1ª página con **pymupdf** |
 
-```powershell
-cd c:\UNI\plano-validador
-pip install "ezdwg[dxf,plot]" ezdxf matplotlib pymupdf
-python app.py
+**DXF / DWG ya no se usan en el análisis.** Exporta a PNG/JPG/PDF desde AutoCAD, o súbelos como **documentación** en Casa hogar (ahí sí están).
+
+## Dependencia PDF
+
+```bash
+pip install pymupdf
 ```
 
-Al arrancar deberías ver: `CAD DWG: listo via ezdwg`
+Health: `/api/health` → `"cad": { "pdf": true, ... }`
 
-Comprueba también: http://127.0.0.1:8080/api/health → `"cad": { "dwg": true, "backends": { "ezdwg": "0.9.0" } }`
+## Casa hogar (documentación)
 
-## Formatos
+En proyectos casa hogar se permiten también: `.dxf`, `.dwg`, `.doc`, `.docx`, `.xls`, `.xlsx` (almacenamiento; sin conversión YOLO).
 
-| Formato | Cómo se procesa |
-|---------|-----------------|
-| PNG, JPG, WEBP | Directo |
-| **PDF** | **pymupdf** → página 1 como imagen (sin .exe) |
-| DXF | ezdxf + matplotlib |
-| **DWG** | **ezdwg** → imagen (sin .exe) |
+## Código legacy CAD
 
-## PDF con varias páginas
-
-Por defecto se analiza **la página 1**. Si el plano está en otra hoja, exporta esa página como PNG o usa un PDF de una sola página.
-
-## Si un DWG concreto falla
-
-- Versiones muy nuevas o archivos corruptos pueden no leerse.
-- **Solución:** en AutoCAD → Guardar como → **DXF** o **PNG** y subir ese archivo.
-
-## Herramientas externas (opcional, ya no hace falta)
-
-Solo se usan como respaldo si ezdwg no puede leer el archivo: ODA, LibreDWG o AutoCAD+pywin32. No es necesario instalarlas para el uso normal.
+`services/cad_service.py` aún contiene helpers DXF/DWG por si se reactivan o para scripts de entrenamiento (`scripts/prepare_training_images.py`), pero `SUPPORTED_EXTENSIONS` del análisis **excluye** CAD.

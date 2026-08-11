@@ -44,6 +44,7 @@ class HolisticConstructionValidator:
         issues.extend(self._check_special_spaces(rooms, windows))
         issues.extend(self._check_urban_built_area(rooms))
         issues.extend(self._check_wall_presence(rooms, walls))
+        issues.extend(self._check_room_geometry(rooms))
         issues.extend(self._check_manual_construction_domains(detections))
         return issues
 
@@ -316,35 +317,146 @@ class HolisticConstructionValidator:
             )
         return issues
 
+    def _check_room_geometry(self, rooms: list[Detection]) -> list[ValidationIssue]:
+        """Solapes de recintos y tamaño de estancia principal (heurística)."""
+        issues: list[ValidationIssue] = []
+        if len(rooms) < 2:
+            return issues
+
+        # Solapes fuertes entre recintos (dibujo duplicado / hatch mal cerrado).
+        for i, a in enumerate(rooms):
+            ga = a.to_shapely()
+            if ga.is_empty or ga.area <= 0:
+                continue
+            for b in rooms[i + 1 :]:
+                gb = b.to_shapely()
+                if gb.is_empty:
+                    continue
+                inter = ga.intersection(gb)
+                if inter.is_empty:
+                    continue
+                ratio = inter.area / min(ga.area, gb.area)
+                if ratio >= 0.45:
+                    issues.append(
+                        ValidationIssue(
+                            code="ROOM_OVERLAP",
+                            message=(
+                                "Dos recintos se solapan de forma significativa en planta. "
+                                "Revisa hatches duplicados o límites mal dibujados."
+                            ),
+                            severity="warning",
+                            related_class="room",
+                            bbox_xyxy=a.bbox_xyxy,
+                            norm_ref="Legibilidad del plano",
+                        )
+                    )
+                    break
+
+        # Estancia: el local más grande debería alcanzar un mínimo de área social.
+        living_ref = self.rules.room.living_ref_area_m2
+        areas = [(r, self._dims_m(r)[2]) for r in rooms]
+        largest, area_m2 = max(areas, key=lambda t: t[1])
+        if area_m2 > 0 and area_m2 < living_ref * 0.75 and len(rooms) >= 3:
+            issues.append(
+                ValidationIssue(
+                    code="LIVING_AREA_LOW",
+                    message=(
+                        f"El local más grande mide ~{area_m2:.1f} m² "
+                        f"(ref. estar ~{living_ref:.0f} m²). Revisa el área social."
+                    ),
+                    severity="warning",
+                    related_class="room",
+                    bbox_xyxy=largest.bbox_xyxy,
+                    norm_ref="CEV / INFONAVIT · estar",
+                )
+            )
+        return issues
+
     def _check_manual_construction_domains(
         self, detections: list[Detection]
     ) -> list[ValidationIssue]:
-        """Recordatorios normativos que no se pueden medir solo con las 4 clases YOLO."""
+        """Checklists accionables para dominios que no mide YOLO en planta."""
         if not detections:
             return []
 
-        manual = [d for d in CONSTRUCTION_DOMAINS if not d.auto_in_planta]
-        if not manual:
-            return []
+        domain_codes = {
+            "accesibilidad": (
+                "MANUAL_ACCESSIBILITY",
+                "Accesibilidad universal aún no se valida sola en planta. "
+                "Revisa rampas, anchos PCD y sanitario accesible en el expediente.",
+                "tuxtla_rc Arts. 234-243 · IMSS",
+            ),
+            "escaleras": (
+                "MANUAL_STAIRS",
+                "Escaleras y desniveles requieren corte (huella/contrahuella/ancho). "
+                "Complétalos en el ejecutivo si hay más de un nivel.",
+                "tuxtla_rc Art. 150",
+            ),
+            "instalaciones": (
+                "MANUAL_MEP",
+                "Instalaciones hidráulicas, sanitarias y gas no se detectan en esta planta. "
+                "Adjunta esquemas o planos de instalaciones.",
+                "NOM-006-CNA · CEV instalaciones",
+            ),
+            "electrico": (
+                "MANUAL_ELECTRICAL",
+                "El proyecto eléctrico no se deduce de la planta arquitectónica. "
+                "Incluye diagrama/contactos según la etapa.",
+                "CEV · buenas prácticas eléctricas",
+            ),
+            "estructura": (
+                "MANUAL_STRUCTURE",
+                "La estructura no se valida con el modelo actual de planta. "
+                "Adjunta memoria o croquis estructural.",
+                "Reglamento local · criterio estructural",
+            ),
+            "proteccion_civil": (
+                "MANUAL_CIVIL_PROTECTION",
+                "Protección civil y evacuación deben revisarse con rutas y salidas. "
+                "Documenta el criterio de seguridad del proyecto.",
+                "LPC Chiapas",
+            ),
+            "altura_libre": (
+                "MANUAL_CLEAR_HEIGHT",
+                "La altura libre (p. ej. 2.60 m) no se mide en planta: revisa cortes. "
+                "Confirma cielos y vanos en sección.",
+                "tuxtla_rc Art. 145",
+            ),
+        }
 
-        titles = ", ".join(d.title for d in manual[:6])
-        extra = len(manual) - 6
-        suffix = f" y {extra} más" if extra > 0 else ""
-
-        return [
-            ValidationIssue(
-                code="CONSTRUCTION_MANUAL_REVIEW",
-                message=(
-                    "Revisión complementaria obligatoria en proyecto completo: "
-                    f"{titles}{suffix}. "
-                    "Incluye cortes (altura 2.60 m), estructura, instalaciones, "
-                    "accesibilidad, escaleras y protección civil."
-                ),
-                severity="info",
-                related_class=None,
-                norm_ref="Marco integral Chiapas",
+        issues: list[ValidationIssue] = []
+        for domain in CONSTRUCTION_DOMAINS:
+            if domain.auto_in_planta:
+                continue
+            packed = domain_codes.get(domain.id)
+            if not packed:
+                continue
+            code, message, norm_ref = packed
+            issues.append(
+                ValidationIssue(
+                    code=code,
+                    message=message,
+                    severity="info",
+                    related_class=None,
+                    norm_ref=norm_ref,
+                )
             )
-        ]
+
+        # Resumen compacto además de los checklists (compat).
+        if issues:
+            issues.append(
+                ValidationIssue(
+                    code="CONSTRUCTION_MANUAL_REVIEW",
+                    message=(
+                        "Hay dominios de construcción que requieren entregables fuera de planta "
+                        f"({len(issues)} checklist(s)). Usa las guías de corrección de cada uno."
+                    ),
+                    severity="info",
+                    related_class=None,
+                    norm_ref="Marco integral Chiapas",
+                )
+            )
+        return issues
 
 
 def construction_coverage_report(
@@ -363,6 +475,8 @@ def construction_coverage_report(
             "BEDROOM_LIGHTING",
             "BATHROOM_VENTILATION",
             "KITCHEN_VENTILATION",
+            "LIVING_AREA_LOW",
+            "ROOM_OVERLAP",
         },
         "vanos": {
             "DOOR_WIDTH_MIN",
@@ -381,6 +495,13 @@ def construction_coverage_report(
             "DOOR_PER_ROOM_LOW",
         },
         "urbano": {"BUILT_AREA_MINOR_WORK"},
+        "accesibilidad": {"MANUAL_ACCESSIBILITY"},
+        "escaleras": {"MANUAL_STAIRS"},
+        "instalaciones": {"MANUAL_MEP"},
+        "electrico": {"MANUAL_ELECTRICAL"},
+        "estructura": {"MANUAL_STRUCTURE"},
+        "proteccion_civil": {"MANUAL_CIVIL_PROTECTION"},
+        "altura_libre": {"MANUAL_CLEAR_HEIGHT"},
     }
 
     issue_codes = {i.code for i in issues}

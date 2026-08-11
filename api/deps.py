@@ -51,3 +51,12 @@ def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     if not is_admin_user(user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo administradores")
     return user
+
+
+def require_support_staff(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Admin o agente de soporte (inbox de tickets)."""
+    from services.support_service import is_staff_user
+
+    if not is_staff_user(user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Se requiere rol de soporte o admin")
+    return user

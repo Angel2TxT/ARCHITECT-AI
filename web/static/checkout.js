@@ -268,7 +268,29 @@
 
       document.getElementById("planName").textContent = data.plan?.name || "Plan";
       document.getElementById("planEmail").textContent = maskEmail(data.user_email);
-      document.getElementById("planPrice").textContent = formatPrice(data.plan?.price_monthly_cents);
+      const listPrice = Number(data.list_price_cents ?? data.plan?.price_monthly_cents ?? 0);
+      const amountDue = Number(
+        data.amount_due_cents != null ? data.amount_due_cents : listPrice
+      );
+      const credit = Number(data.credit_cents || 0);
+      document.getElementById("planPrice").textContent = formatPrice(amountDue);
+      const priceLabel = document.getElementById("planPriceLabel");
+      if (priceLabel) {
+        priceLabel.textContent =
+          credit > 0 && amountDue < listPrice ? "A pagar hoy (diferencia)" : "A pagar hoy";
+      }
+      const quoteHint = document.getElementById("planQuoteHint");
+      if (quoteHint) {
+        if (credit > 0 && amountDue < listPrice) {
+          quoteHint.textContent = `Precio del plan ${formatPrice(listPrice)}/mes − crédito de tu plan actual ${formatPrice(credit)} = ${formatPrice(amountDue)} hoy.`;
+          quoteHint.classList.remove("hidden");
+        } else if (data.quote_message) {
+          quoteHint.textContent = data.quote_message;
+          quoteHint.classList.remove("hidden");
+        } else {
+          quoteHint.classList.add("hidden");
+        }
+      }
       document.getElementById("checkoutTitle").textContent =
         data.mode === "stripe" ? "Redirigiendo a Stripe…" : "Confirmar suscripción";
 

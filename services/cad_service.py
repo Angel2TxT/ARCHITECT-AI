@@ -1,4 +1,8 @@
-"""Conversión de planos (imagen, PDF, DXF, DWG) a PNG para el pipeline YOLO."""
+"""Conversión de planos (imagen, PDF) a PNG para el pipeline YOLO.
+
+DXF/DWG ya no se aceptan en el análisis IA; sí pueden subirse como
+documentación en proyectos casa hogar (storage_service).
+"""
 
 from __future__ import annotations
 
@@ -16,9 +20,10 @@ PREVIEW_DPI = 120
 ANALYZE_DPI = 200
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
-CAD_EXTENSIONS = {".dxf", ".dwg"}
+CAD_EXTENSIONS = {".dxf", ".dwg"}  # solo referencia / legacy; no en análisis
 PDF_EXTENSIONS = {".pdf"}
-SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | CAD_EXTENSIONS | PDF_EXTENSIONS
+SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | PDF_EXTENSIONS
+ANALYSIS_FORMAT_HINT = "PNG, JPG, WEBP, TIFF o PDF"
 
 
 class CadConversionError(Exception):
@@ -508,12 +513,15 @@ def cad_bytes_to_png(content: bytes, filename: str, dpi: int = 200) -> bytes:
 def plano_bytes_to_png(
     content: bytes, filename: str, dpi: int = 200
 ) -> tuple[bytes, str | None]:
-    """Convierte PDF o CAD a PNG. Devuelve (png_bytes, nota_opcional)."""
+    """Convierte PDF a PNG. Devuelve (png_bytes, nota_opcional)."""
     ext = Path(filename or "").suffix.lower()
     if ext in PDF_EXTENSIONS:
         return pdf_bytes_to_png(content, dpi=dpi)
     if ext in CAD_EXTENSIONS:
-        return cad_bytes_to_png(content, filename, dpi=dpi), None
+        raise CadConversionError(
+            f"DXF/DWG no se usan en el análisis IA. Exporta a {ANALYSIS_FORMAT_HINT}, "
+            "o súbelos como documentación en Casa hogar."
+        )
     raise CadConversionError(f"Formato no convertible: {ext}")
 
 
@@ -529,9 +537,14 @@ def prepare_upload(
     safe_name = Path(filename or "plano.png").name
     ext = Path(safe_name).suffix.lower() or ".png"
 
+    if ext in CAD_EXTENSIONS:
+        raise CadConversionError(
+            f"DXF/DWG no se usan en el análisis IA. Usa {ANALYSIS_FORMAT_HINT}. "
+            "Los archivos CAD sí se pueden subir en documentación de Casa hogar."
+        )
     if ext not in SUPPORTED_EXTENSIONS:
         raise CadConversionError(
-            f"Formato «{ext}» no soportado. Usa PNG, JPG, PDF, DXF o DWG."
+            f"Formato «{ext}» no soportado. Usa {ANALYSIS_FORMAT_HINT}."
         )
 
     original_path = work_dir / f"source{ext}"

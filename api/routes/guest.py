@@ -16,8 +16,6 @@ from db.database import get_db
 from services.cad_service import (
     PREVIEW_DPI,
     CadConversionError,
-    cad_bytes_to_png_async,
-    is_cad_filename,
     is_pdf_filename,
     is_supported_filename,
     pdf_bytes_to_png_async,
@@ -88,7 +86,7 @@ async def guest_analyze(
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, PDF, DXF o DWG.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
 
     assert_guest_can_analyze(db, guest_id, len(content))
     wpath = _guest_weights()
@@ -156,7 +154,7 @@ async def guest_preview(
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
 
     mime_map = {
         ".png": "image/png",
@@ -170,11 +168,7 @@ async def guest_preview(
     ext = Path(filename).suffix.lower()
 
     try:
-        if is_cad_filename(filename):
-            png = await cad_bytes_to_png_async(content, filename, dpi=PREVIEW_DPI)
-            mime = "image/png"
-            note = "Vista previa desde CAD (puede tardar en DWG grandes)"
-        elif is_pdf_filename(filename):
+        if is_pdf_filename(filename):
             png, pdf_note = await pdf_bytes_to_png_async(content, dpi=PREVIEW_DPI)
             mime = "image/png"
             note = pdf_note or "Vista previa desde PDF (página 1)"

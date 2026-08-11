@@ -1,142 +1,320 @@
-# Etapas de proyecto — construcción de casa hogar (vivienda unifamiliar)
-# Fuente: LAS ETAPAS.docx + tareas operativas de despacho
+# Etapas casa hogar — apartados con slots de archivo nombrados
+# Cada apartado agrupa entregables; cada slot pide un tipo concreto de archivo.
+#
+# slots[].accept: extensiones permitidas (con punto)
+# slots[].required: si falta, el apartado no está completo documentalmente
+# slots[].ai_plan_review: muestra acción de revisión de planta 2D
 
 stages:
   - number: 1
     slug: programacion
     title: Programación
     summary: Identificación de necesidades del cliente y definición del programa arquitectónico.
-    tasks:
-      - Identificación de necesidades del cliente
-      - Definición de objetivos del proyecto
-      - Definición de espacios requeridos (recámaras, baños, cocina, sala, etc.)
-      - Definición de requerimientos (área, presupuesto orientativo, plazos)
-      - Entrevista / cuestionario de estilo de vida y prioridades
-      - Registro de restricciones conocidas del cliente
-      - Aprobación del programa arquitectónico por escrito
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - programa arquitectónico vivienda unifamiliar
       - brief arquitectónico casa hogar
+    sections:
+      - key: necesidades
+        title: Necesidades del cliente
+        description: Evidencia del brief y prioridades del cliente.
+        slots:
+          - key: brief
+            title: Brief / entrevista
+            accept: [".pdf", ".doc", ".docx"]
+            required: true
+          - key: restricciones
+            title: Restricciones y presupuesto orientativo
+            accept: [".pdf", ".doc", ".docx", ".xlsx", ".xls"]
+            required: false
+      - key: programa
+        title: Programa arquitectónico
+        description: Espacios requeridos y aprobación formal.
+        slots:
+          - key: cuadro_espacios
+            title: Cuadro de espacios
+            accept: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
+            required: true
+          - key: acta_programa
+            title: Acta de aprobación del programa
+            accept: [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"]
+            required: true
 
   - number: 2
     slug: investigacion
     title: Investigación
     summary: Análisis del terreno, entorno, clima y marco normativo aplicable.
-    tasks:
-      - Análisis del terreno (topografía, orientación, accesos, servicios)
-      - Estudio del entorno urbano o rural y vecindario
-      - Estudio de clima, insolación y vientos predominantes
-      - Identificación de normativas y reglamentos locales aplicables
-      - Verificación de uso de suelo y coeficientes permitidos
-      - Levantamiento fotográfico del sitio
-      - Subir fotos o PDF de estudio de sitio a la etapa
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - normativa construcción vivienda Chiapas
       - estudio de sitio arquitectura
+    sections:
+      - key: sitio
+        title: Estudio de sitio
+        description: Terreno, entorno y evidencia fotográfica.
+        slots:
+          - key: estudio_sitio
+            title: Estudio de sitio (PDF)
+            accept: [".pdf"]
+            required: true
+          - key: fotos_sitio
+            title: Fotos del predio
+            accept: [".png", ".jpg", ".jpeg", ".webp", ".pdf"]
+            required: true
+      - key: normativa
+        title: Normativa y uso de suelo
+        description: Reglamentos locales y coeficientes aplicables.
+        slots:
+          - key: uso_suelo
+            title: Uso de suelo / coeficientes
+            accept: [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"]
+            required: true
+          - key: normas_locales
+            title: Notas de normativa aplicable
+            accept: [".pdf", ".doc", ".docx"]
+            required: false
 
   - number: 3
     slug: esquematizacion
     title: Esquematización
     summary: Diagramas de funcionamiento, relaciones entre espacios y zonificación.
-    tasks:
-      - Diagramas de funcionamiento (burbujas o esquemas)
-      - Relaciones entre espacios y zonificación
-      - Definir zona pública, privada y de servicio
-      - Circulaciones principales y secundarias
-      - Validar coherencia con el programa aprobado
-      - Presentar esquemas al cliente para validación
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - zonificación vivienda unifamiliar
       - diagrama de burbujas arquitectura
+    sections:
+      - key: esquemas
+        title: Diagramas y zonificación
+        description: Burbujas, zonas y circulaciones.
+        slots:
+          - key: diagramas
+            title: Diagramas de funcionamiento
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: true
+          - key: zonificacion
+            title: Zonificación (pública / privada / servicio)
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: true
+          - key: validacion_cliente
+            title: Validación del cliente
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx"]
+            required: false
 
   - number: 4
     slug: anteproyecto
     title: Anteproyecto
     summary: Bocetos, propuestas preliminares, plantas y volumetrías iniciales.
-    tasks:
-      - Bocetos y propuestas preliminares
-      - Plantas preliminares con dimensiones orientativas
-      - Volumetrías iniciales y relación con el sitio
-      - Comparar alternativas con el cliente
-      - Seleccionar propuesta a desarrollar
-      - Acta de aprobación del anteproyecto
+    ai_ask: true
+    ai_plan_review: true
+    ai_plan_scope: planta_integral_2d
     ai_hints:
       - anteproyecto arquitectónico vivienda
+    sections:
+      - key: plantas_prev
+        title: Plantas preliminares
+        description: Plantas orientativas para revisión.
+        slots:
+          - key: planta
+            title: Planta preliminar
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: true
+            ai_plan_review: true
+          - key: alternativas
+            title: Alternativas comparadas
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: false
+      - key: volumen_aprobacion
+        title: Volumetría y aprobación
+        slots:
+          - key: volumetria
+            title: Volumetría / renders
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: false
+          - key: acta_anteproyecto
+            title: Acta de aprobación del anteproyecto
+            accept: [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"]
+            required: true
 
   - number: 5
     slug: proyecto_arquitectonico
     title: Proyecto Arquitectónico
     summary: Desarrollo completo de planos arquitectónicos, fachadas, cortes y detalles.
-    tasks:
-      - Desarrollo completo de planos arquitectónicos
-      - Fachadas, cortes y detalles generales
-      - Cuadro de áreas y especificaciones arquitectónicas
-      - Simbología, niveles y cotas generales
-      - Revisión técnica del plano con IA ARCHITECT
-      - Vincular análisis de plano del historial a esta etapa
-      - Subir PDF o imagen del proyecto arquitectónico
+    ai_ask: true
+    ai_plan_review: true
+    ai_plan_scope: planta_integral_2d
+    plan_review: true
     ai_hints:
       - revisión plano arquitectónico normativa habitabilidad
-    plan_review: true
+    sections:
+      - key: planos_arq
+        title: Planos arquitectónicos
+        description: Planta y documentación gráfica principal.
+        slots:
+          - key: planta
+            title: Planta arquitectónica
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: true
+            ai_plan_review: true
+          - key: fachadas_cortes
+            title: Fachadas y cortes
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
+            required: true
+          - key: detalles
+            title: Detalles generales
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".dwg", ".dxf"]
+            required: false
+      - key: areas_specs
+        title: Áreas y especificaciones
+        slots:
+          - key: cuadro_areas
+            title: Cuadro de áreas
+            accept: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
+            required: true
+          - key: especificaciones
+            title: Especificaciones arquitectónicas
+            accept: [".pdf", ".doc", ".docx"]
+            required: false
 
   - number: 6
     slug: proyecto_ejecutivo
     title: Proyecto Ejecutivo
     summary: Planos constructivos, instalaciones, estructura y especificaciones técnicas.
-    tasks:
-      - Planos constructivos y detalles ejecutivos
-      - Instalaciones hidráulicas, sanitarias y eléctricas
-      - Integración de proyecto estructural
-      - Especificaciones técnicas y memorias
-      - Catálogo de conceptos base para presupuesto
-      - Revisión de planos ejecutivos con IA ARCHITECT
-      - Vincular análisis de plano del historial a esta etapa
-      - Subir planos ejecutivos (PDF / CAD)
+    ai_ask: true
+    ai_plan_review: true
+    ai_plan_scope: planta_integral_2d
+    plan_review: true
     ai_hints:
       - plano ejecutivo instalaciones estructura
-    plan_review: true
+    sections:
+      - key: constructivo
+        title: Planos constructivos
+        slots:
+          - key: planta_constructiva
+            title: Planta constructiva
+            accept: [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".dwg", ".dxf"]
+            required: true
+            ai_plan_review: true
+          - key: detalles_ejecutivos
+            title: Detalles ejecutivos
+            accept: [".pdf", ".dwg", ".dxf", ".png", ".jpg", ".jpeg"]
+            required: false
+      - key: instalaciones
+        title: Instalaciones
+        slots:
+          - key: hidrosanitario
+            title: Hidráulico / sanitario
+            accept: [".pdf", ".dwg", ".dxf", ".png", ".jpg", ".jpeg"]
+            required: true
+          - key: electrico
+            title: Eléctrico
+            accept: [".pdf", ".dwg", ".dxf", ".png", ".jpg", ".jpeg"]
+            required: true
+      - key: estructura_memoria
+        title: Estructura y memorias
+        slots:
+          - key: estructural
+            title: Proyecto estructural
+            accept: [".pdf", ".dwg", ".dxf"]
+            required: true
+          - key: memorias
+            title: Memorias / especificaciones técnicas
+            accept: [".pdf", ".doc", ".docx"]
+            required: false
 
   - number: 7
     slug: presupuesto_programacion
     title: Presupuesto y Programación de Obra
     summary: Cálculo de costos y cronograma de actividades de construcción.
-    tasks:
-      - Cálculo de costos por partida y concepto
-      - Cronograma de actividades de obra
-      - Identificar proveedores y materiales principales
-      - Hitos de pago y entregables
-      - Alinear presupuesto con proyecto ejecutivo
-      - Subir presupuesto o cronograma (PDF / Excel)
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - presupuesto obra vivienda unifamiliar
       - cronograma construcción casa
+    sections:
+      - key: costos
+        title: Presupuesto
+        slots:
+          - key: presupuesto
+            title: Presupuesto por partidas
+            accept: [".xlsx", ".xls", ".pdf"]
+            required: true
+          - key: proveedores
+            title: Proveedores / materiales
+            accept: [".xlsx", ".xls", ".pdf", ".doc", ".docx"]
+            required: false
+      - key: programa_obra
+        title: Programación
+        slots:
+          - key: cronograma
+            title: Cronograma de obra
+            accept: [".xlsx", ".xls", ".pdf"]
+            required: true
+          - key: hitos_pago
+            title: Hitos de pago
+            accept: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
+            required: false
 
   - number: 8
     slug: construccion
     title: Construcción o Ejecución
     summary: Desarrollo de la obra con supervisión y control de calidad.
-    tasks:
-      - Desarrollo de la obra según proyecto ejecutivo
-      - Supervisión y control de calidad en sitio
-      - Bitácora de obra y minutas de visita
-      - Control de avance vs. cronograma
-      - Gestión de cambios y órdenes de trabajo
-      - Subir fotos de avance de obra
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - supervisión obra vivienda
       - control calidad construcción
+    sections:
+      - key: bitacora
+        title: Bitácora y supervisión
+        slots:
+          - key: bitacora
+            title: Bitácora / minutas
+            accept: [".pdf", ".doc", ".docx"]
+            required: true
+          - key: fotos_avance
+            title: Fotos de avance
+            accept: [".png", ".jpg", ".jpeg", ".webp", ".pdf"]
+            required: true
+      - key: cambios
+        title: Cambios de obra
+        slots:
+          - key: ordenes_cambio
+            title: Órdenes de cambio
+            accept: [".pdf", ".doc", ".docx"]
+            required: false
 
   - number: 9
     slug: entrega_evaluacion
     title: Entrega y Evaluación
     summary: Revisión final, entrega al cliente y cierre del proyecto.
-    tasks:
-      - Revisión final (punch list)
-      - Entrega al cliente con documentación completa
-      - Evaluación del resultado vs. objetivos iniciales
-      - Acta de entrega-recepción firmada
-      - Archivo del proyecto y lecciones aprendidas
-      - Cierre administrativo del proyecto
+    ai_ask: true
+    ai_plan_review: false
     ai_hints:
       - entrega obra vivienda checklist
       - cierre proyecto construcción
+    sections:
+      - key: cierre_tecnico
+        title: Cierre técnico
+        slots:
+          - key: punch_list
+            title: Punch list / pendientes
+            accept: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
+            required: true
+          - key: evaluacion
+            title: Evaluación vs objetivos
+            accept: [".pdf", ".doc", ".docx"]
+            required: false
+      - key: entrega_cliente
+        title: Entrega al cliente
+        slots:
+          - key: acta_entrega
+            title: Acta de entrega-recepción
+            accept: [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"]
+            required: true
+          - key: expediente_cierre
+            title: Expediente de cierre
+            accept: [".pdf", ".zip"]
+            required: false

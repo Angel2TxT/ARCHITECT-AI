@@ -12,6 +12,7 @@ export function formatUsage(sub) {
     return {
       planName: "Plan",
       usageLabel: "—",
+      asksLabel: "—",
       pct: 0,
       limitReached: false,
       isUnlimited: false,
@@ -22,11 +23,17 @@ export function formatUsage(sub) {
   const usage = sub.usage || {};
   const used = usage.analyses_used ?? 0;
   const unlimited = isPlanUnlimited(sub);
+  const asksUsed = usage.asks_used ?? 0;
+  const asksLimit = usage.asks_limit;
+  const asksUnlimited = asksLimit == null || asksLimit >= 9999 || unlimited;
 
   if (unlimited) {
     return {
       planName: plan.name || plan.slug || "Plan",
       usageLabel: `${used} análisis`,
+      asksLabel: asksUnlimited
+        ? `${asksUsed} preguntas`
+        : `${asksUsed} / ${asksLimit} preguntas`,
       pct: 8,
       limitReached: false,
       isUnlimited: true,
@@ -38,9 +45,12 @@ export function formatUsage(sub) {
   const pct = Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   return {
     planName: plan.name || plan.slug || "Plan",
-    usageLabel: `${used} / ${limit}`,
+    usageLabel: `${used} / ${limit} análisis`,
+    asksLabel: asksUnlimited
+      ? `${asksUsed} preguntas`
+      : `${asksUsed} / ${asksLimit} preguntas`,
     pct,
-    limitReached: !!usage.limit_reached,
+    limitReached: !!usage.limit_reached || !!usage.asks_limit_reached,
     isUnlimited: false,
     remaining: usage.analyses_remaining
   };
@@ -64,17 +74,30 @@ export function formatPlanPrice(cents) {
 }
 
 export function formatPlanLimit(limit) {
-  if (limit >= 9999) return "Uso alto incluido";
+  if (limit >= 9999) return "Análisis ilimitados";
   return `${limit} análisis/mes`;
 }
 
+export function formatPlanStorage(plan) {
+  const gb = Number(plan?.storage_gb ?? plan?.features?.storage_gb ?? 0);
+  if (!Number.isFinite(gb) || gb <= 0) return null;
+  return `${gb} GB de documentación`;
+}
+
 export function planFeatureLines(plan) {
+  const f = plan.features || {};
+  const custom = Array.isArray(f.benefits)
+    ? f.benefits.map((line) => String(line).trim()).filter(Boolean)
+    : [];
+  if (custom.length) return custom;
+
   const lines = [formatPlanLimit(plan.analyses_limit_monthly)];
+  const storage = formatPlanStorage(plan);
+  if (storage) lines.push(storage);
   lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
   lines.push(`Archivos hasta ${plan.max_file_mb} MB`);
-  const f = plan.features || {};
   if (f.export) lines.push("Exportar reportes");
-  if (f.api) lines.push("Acceso API");
+  if (f.mobile_app) lines.push("App móvil ARCHITECT");
   if (f.sla) lines.push("SLA dedicado");
   if (f.support) lines.push(`Soporte ${f.support}`);
   return lines;
@@ -167,8 +190,19 @@ export async function requestPlanChange(planSlug, token, returnUrl = "/app") {
   throw new Error("Respuesta de checkout inválida");
 }
 
-export function planActionLabel(plan, isCurrent) {
+export function planActionLabel(plan, isCurrent, currentPriceCents = 0) {
   if (isCurrent) return "Plan actual";
+  const target = Number(plan.price_monthly_cents || 0);
+  const current = Number(currentPriceCents || 0);
+  if (target < current) return "No disponible";
+  if (current > 0 && target > current) {
+    const due = Math.max(0, target - current);
+    return `Mejorar · +$${(due / 100).toFixed(0)}`;
+  }
   if (!plan.price_monthly_cents) return "Bajar a gratis";
   return "Ir a pagar";
+}
+
+export function isPlanDowngrade(plan, currentPriceCents = 0) {
+  return Number(plan.price_monthly_cents || 0) < Number(currentPriceCents || 0);
 }

@@ -12,7 +12,24 @@ En láminas como la tuya suele pasar esto:
 1. **Varias vistas en una sola imagen** (plantas + cortes + fachadas + croquis). YOLO fue entrenado con **una planta por imagen**; confunde símbolos, mobiliario y líneas de cotas con puertas/muros.
 2. **Confianza muy baja** (p. ej. 0.18): el modelo “adivina” para no quedarse en cero detecciones → falsos positivos.
 3. **Estilo distinto** al dataset CubiCasa5K (líneas, grosores, convenciones mexicanas).
-4. Solo **4 clases** (`door`, `window`, `wall`, `room`). Escaleras, rampas, sanitarios, etc. aún no existen en el modelo.
+4. Solo **4 clases** (`door`, `window`, `wall`, `room`). Escaleras, rampas, sanitarios tipados, etc. aún no existen en el modelo.
+
+### Ampliar clases (siguiente salto de detección)
+
+El motor de reglas y las guías de corrección ya cubren más dominios (circulación, checklists de MEP/estructura, etc.), pero **YOLO solo ve 4 clases**.
+
+Clases candidatas (comentadas en `config/data.yaml`):
+
+`stair`, `bathroom`, `kitchen`, `column`, `parking`, `corridor`
+
+Pasos:
+
+1. Etiquetar esas clases en planos mexicanos (una planta por imagen).
+2. Subir `nc` y `names` en `config/data.yaml`.
+3. `python scripts/train.py ...` → nuevo `best.pt`.
+4. Añadir checks tipados en `rules/holistic.py` / `rules/engine.py` (dejar de usar solo heurísticas por área).
+
+Hasta entonces, Casa hogar usa alcance **`planta_integral_2d`**: detecta lo posible + checklists + pasos `fix`/`fix_steps` por hallazgo.
 
 Mejorar detección = **más planos como los tuyos, bien etiquetados**, y analizar **una planta recortada** cuando sea posible.
 

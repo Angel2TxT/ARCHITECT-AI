@@ -31,6 +31,7 @@ services:
       # Solo correos/OAuth/Stripe; el checkout demo usa rutas relativas (/checkout).
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8000}
       MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
       MAIL_HOST: ${MAIL_HOST:-smtp-relay.brevo.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -45,6 +46,10 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_CURRENCY: ${STRIPE_CURRENCY:-mxn}
       WEB_SEARCH_ENABLED: ${WEB_SEARCH_ENABLED:-true}
+      LLM_PROVIDER: ${LLM_PROVIDER:-off}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
     ports:
       - "8000:8000"
     volumes:

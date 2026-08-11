@@ -15,9 +15,152 @@
   let activityLoading = false;
   let projectSearchQuery = "";
   let expandedSectionId = null;
-  let isProjectsDrawerOpen = false;
   let completionOverviewMode = false;
   let lastDetailView = "stage";
+  let assistChatOpen = false;
+  /** @type {Record<string, Array<{role: string, text: string}>>} */
+  let assistChatHistory = {};
+  let assistChatBusy = false;
+
+  function assistChatKey(projectId, stageNumber) {
+    return `${projectId}:${stageNumber}`;
+  }
+
+  function getAssistHistory(projectId, stageNumber) {
+    const key = assistChatKey(projectId, stageNumber);
+    if (!assistChatHistory[key]) assistChatHistory[key] = [];
+    return assistChatHistory[key];
+  }
+
+  function currentAssistContext() {
+    const project = projects.find((p) => p.id === activeId);
+    if (!project) return null;
+    const stageNum = viewedStage || project.current_stage || 1;
+    const stage = project.stages?.find((s) => s.stage_number === stageNum);
+    if (!stage || stage.ai_ask === false) return null;
+    const editable =
+      project.my_role === "owner" ||
+      project.my_role === "editor" ||
+      project.my_role === "admin";
+    return { project, stage, editable, stageNum };
+  }
+
+  function ensureAssistFab() {
+    let root = document.getElementById("homeAssistFabRoot");
+    if (root) return root;
+    root = document.createElement("div");
+    root.id = "homeAssistFabRoot";
+    root.className = "home-assist-fab-root";
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="home-assist-chat" id="homeAssistChat" hidden>
+        <header class="home-assist-chat-head">
+          <div>
+            <p class="home-assist-chat-title">Asistente IA</p>
+            <p class="home-assist-chat-sub" id="homeAssistChatSub">Dudas de esta etapa</p>
+          </div>
+          <div class="home-assist-chat-head-actions">
+            <span class="home-ai-scope-badge">Apoyo</span>
+            <button type="button" class="home-assist-chat-close" id="btnHomeAssistClose" aria-label="Cerrar chat">✕</button>
+          </div>
+        </header>
+        <div class="home-assist-chat-messages" id="homeAssistChatMessages" role="log" aria-live="polite"></div>
+        <p class="home-assist-chat-disclaimer">No lee el contenido de tus PDF/Office; usa el contexto de la etapa.</p>
+        <form class="home-assist-chat-composer" id="homeAssistChatForm">
+          <textarea id="homeAiQuestion" class="home-assist-chat-input" rows="2" maxlength="2000" placeholder="Pregunta sobre esta etapa…"></textarea>
+          <button type="submit" class="home-assist-chat-send" id="btnHomeAssist" aria-label="Enviar">
+            <span class="material-symbols-outlined" aria-hidden="true">send</span>
+          </button>
+        </form>
+      </div>
+      <button type="button" class="home-assist-fab" id="btnHomeAssistFab" aria-label="Abrir asistente IA" title="Asistente IA">
+        <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+        <span class="home-assist-fab-label">IA</span>
+      </button>
+    `;
+    document.body.appendChild(root);
+
+    root.querySelector("#btnHomeAssistFab")?.addEventListener("click", () => {
+      assistChatOpen = !assistChatOpen;
+      syncAssistChatUi();
+      if (assistChatOpen) {
+        root.querySelector("#homeAiQuestion")?.focus();
+      }
+    });
+    root.querySelector("#btnHomeAssistClose")?.addEventListener("click", () => {
+      assistChatOpen = false;
+      syncAssistChatUi();
+    });
+    root.querySelector("#homeAssistChatForm")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ctx = currentAssistContext();
+      if (!ctx || !ctx.editable) return;
+      askStageAssist(ctx.project.id, ctx.stageNum);
+    });
+    root.querySelector("#homeAiQuestion")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        root.querySelector("#homeAssistChatForm")?.requestSubmit();
+      }
+    });
+    return root;
+  }
+
+  function renderAssistMessages(projectId, stageNumber, stage) {
+    const box = document.getElementById("homeAssistChatMessages");
+    if (!box) return;
+    const history = getAssistHistory(projectId, stageNumber);
+    if (!history.length && stage?.ai_guidance) {
+      history.push({ role: "assistant", text: stage.ai_guidance });
+    }
+    if (!history.length) {
+      box.innerHTML = `
+        <div class="home-assist-msg home-assist-msg--bot">
+          <p>Hola. Puedo orientarte sobre esta etapa con normas y buenas prácticas. ¿Qué necesitas?</p>
+        </div>`;
+      return;
+    }
+    box.innerHTML = history
+      .map(
+        (m) => `
+      <div class="home-assist-msg home-assist-msg--${m.role === "user" ? "user" : "bot"}">
+        <p>${escapeHtml(m.text)}</p>
+      </div>`
+      )
+      .join("");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function syncAssistChatUi() {
+    const root = ensureAssistFab();
+    const inHome = document.body.classList.contains("home-projects-mode");
+    const ctx = currentAssistContext();
+    const show = inHome && !!activeId && !!ctx && detailView === "stage" && !completionOverviewMode;
+    root.hidden = !show;
+    if (!show) {
+      assistChatOpen = false;
+    }
+    const chat = root.querySelector("#homeAssistChat");
+    const fab = root.querySelector("#btnHomeAssistFab");
+    if (chat) chat.hidden = !assistChatOpen;
+    if (fab) {
+      fab.classList.toggle("is-open", assistChatOpen);
+      fab.setAttribute("aria-expanded", assistChatOpen ? "true" : "false");
+    }
+    if (show && ctx) {
+      const sub = root.querySelector("#homeAssistChatSub");
+      if (sub) {
+        sub.textContent = `Etapa ${ctx.stage.stage_number}: ${ctx.stage.title}`;
+      }
+      const input = root.querySelector("#homeAiQuestion");
+      const send = root.querySelector("#btnHomeAssist");
+      if (input) input.disabled = !ctx.editable || assistChatBusy;
+      if (send) send.disabled = !ctx.editable || assistChatBusy;
+      if (assistChatOpen) {
+        renderAssistMessages(ctx.project.id, ctx.stageNum, ctx.stage);
+      }
+    }
+  }
 
   function escapeHtml(s) {
     return String(s ?? "")
@@ -25,6 +168,25 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function apiErrorMessage(data, fallback) {
+    if (!data) return fallback;
+    if (typeof data.detail === "string") return data.detail;
+    if (data.detail?.message) return data.detail.message;
+    return fallback;
+  }
+
+  function planCaps() {
+    const sub = window.PlanoAuth?.getSubscription?.() || null;
+    const caps = sub?.plan?.capabilities || sub?.plan?.features || {};
+    return {
+      homeProjects: caps.home_projects !== false,
+      teamInvites: !!caps.team_invites,
+      maxProjects: Number(caps.max_projects ?? 1),
+      export: !!caps.export,
+      mobileApp: !!caps.mobile_app,
+    };
   }
 
   function formatBytes(n) {
@@ -49,13 +211,42 @@
 
   function sectionStatusLabel(status) {
     const map = {
-      pending: "Sin documentación",
+      pending: "Sin entregar",
       in_progress: "En revisión",
-      needs_details: "Con observaciones",
-      needs_correction: "Corrección requerida",
-      completed: "Correcto",
+      needs_details: "Faltan datos",
+      needs_correction: "Corregir",
+      completed: "Aprobado",
     };
     return map[status] || status;
+  }
+
+  function sectionReviewCriteria(sec, stage) {
+    const slots = (sec?.slots || []).filter((s) => s.key !== "_other");
+    if (slots.length) {
+      return slots.map((s) => (s.required ? `${s.title} (obligatorio)` : s.title));
+    }
+    const title = (sec?.title || "").toLowerCase();
+    const stageTitle = (stage?.title || "").toLowerCase();
+    const base = ["Archivo correcto", "Info completa", "Cuadra con la etapa"];
+    if (title.includes("necesidad") || title.includes("programa") || title.includes("cliente")) {
+      return ["Espacios documentados", "Restricciones / plazos", "Acuerdo del cliente"];
+    }
+    if (title.includes("terreno") || title.includes("sitio") || title.includes("foto")) {
+      return ["Evidencia del sitio", "Accesos / servicios", "Restricciones del predio"];
+    }
+    if (title.includes("plano") || title.includes("planta") || stageTitle.includes("arquitect")) {
+      return ["Planta legible", "Cotas suficientes", "IA de planta si aplica"];
+    }
+    if (title.includes("presupuesto") || title.includes("cronograma") || title.includes("costo")) {
+      return ["Partidas claras", "Alineado al ejecutivo", "Montos / fechas"];
+    }
+    return base;
+  }
+
+  function renderCriteriaChips(sec, stage) {
+    return `<div class="home-review-chips" aria-label="Criterios">${sectionReviewCriteria(sec, stage)
+      .map((c) => `<span class="home-review-chip">${escapeHtml(c)}</span>`)
+      .join("")}</div>`;
   }
 
   function sectionMatchesFilter(sec) {
@@ -83,7 +274,7 @@
 
   const EVENT_LABELS = {
     section_assigned: "asignó un responsable",
-    section_status_changed: "cambió el estado de revisión",
+    section_status_changed: "cambió el estado de revisión del equipo",
     section_reopened: "reabrió un apartado",
     section_comment_added: "añadió un comentario",
     section_comment_deleted: "eliminó un comentario",
@@ -95,6 +286,8 @@
     stage_completed: "completó una etapa",
     stage_reopened: "reabrió una etapa",
     stage_advanced: "avanzó a la siguiente etapa",
+    ai_review_created: "lanzó una revisión IA de plano",
+    ai_finding_updated: "actualizó un hallazgo de IA",
   };
 
   function formatEventLine(ev) {
@@ -203,65 +396,119 @@
       </div>`;
   }
 
-  function renderReviewBlock(project, sec, editable) {
-    if (!sectionHasDocuments(sec)) {
-      return `<p class="text-xs opacity-50 mt-3 pt-3 border-t border-[var(--border)]">Sube documentación para habilitar la revisión y los comentarios.</p>`;
-    }
+  function sectionPlanReviewDocs(sec, stage) {
+    if (!(stage?.ai_plan_review || stage?.plan_review)) return [];
+    return (sec.documents || []).filter((d) => isPlanReviewableDoc(d.filename));
+  }
 
+  function renderSectionAiAssistBar(sec, stage, editable) {
+    if (!editable || stage?.ai_ask === false) return "";
+    const planDocs = sectionPlanReviewDocs(sec, stage);
+    const planBtn = planDocs.length
+      ? `<button type="button" class="home-ai-tool home-section-ai-plan" data-section-id="${sec.id}" data-doc-id="${planDocs[0].id}" title="Revisar planta 2D">
+          <span class="material-symbols-outlined" aria-hidden="true">architecture</span>
+          Plano
+        </button>`
+      : "";
+    return `
+      <div class="home-section-ai-bar">
+        <span class="home-section-ai-bar-label">IA</span>
+        <div class="home-section-ai-bar-actions">
+          <button type="button" class="home-ai-tool home-section-ai-ask" data-section-id="${sec.id}" title="Orientación sobre este apartado">
+            <span class="material-symbols-outlined" aria-hidden="true">psychology</span>
+            Orientar
+          </button>
+          <button type="button" class="home-ai-tool home-section-ai-draft" data-section-id="${sec.id}" title="Borrador de comentario">
+            <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+            Borrador
+          </button>
+          ${planBtn}
+        </div>
+      </div>`;
+  }
+
+  function renderReviewBlock(project, sec, editable, stage) {
     const history = renderCommentsHistory(project, sec);
     const canReopen = canReopenSection(project);
+    const hasDocs = sectionHasDocuments(sec);
+    const chips = renderCriteriaChips(sec, stage);
+    const aiBar = renderSectionAiAssistBar(sec, stage, editable);
+
+    if (!hasDocs) {
+      return `
+        <section class="home-review-panel">
+          <div class="home-review-panel-head home-review-panel-head--row">
+            <p class="home-review-panel-title">Decisión</p>
+            <p class="home-review-panel-hint">Sube un archivo para validar</p>
+          </div>
+          ${chips}
+          ${aiBar}
+        </section>`;
+    }
 
     if (sec.status === "completed" && canReopen) {
       return `
-        <div class="home-review-block home-reopen-block mt-3 pt-3 border-t border-[var(--border)]" data-section-id="${sec.id}">
-          <p class="text-xs font-semibold uppercase tracking-wide opacity-50 mb-2">Apartado completado</p>
-          <p class="text-xs opacity-70 mb-2">Solo el propietario o un administrador pueden reabrirlo.</p>
-          <label class="text-xs opacity-70 block mb-1">Nuevo estado</label>
-          <select class="home-section-reopen-status rounded-lg border px-2 py-1.5 text-xs w-full max-w-sm" data-section-id="${sec.id}">
-            <option value="in_progress">En revisión</option>
-            <option value="needs_details">Con observaciones</option>
-            <option value="needs_correction">Corrección requerida</option>
-          </select>
-          <label class="text-xs opacity-70 block mt-2 mb-1">Motivo de reapertura (obligatorio)</label>
-          <textarea class="home-section-reopen-reason rounded-lg border px-2 py-1.5 text-xs w-full" data-section-id="${sec.id}" rows="2" maxlength="4000" placeholder="Explica por qué se reabre este apartado (mín. 10 caracteres)"></textarea>
-          <button type="button" class="btn-secondary text-xs py-1.5 px-2.5 mt-2 home-section-reopen-submit" data-section-id="${sec.id}">Reabrir apartado</button>
+        <section class="home-review-panel home-reopen-block" data-section-id="${sec.id}">
+          <div class="home-review-panel-head home-review-panel-head--row">
+            <p class="home-review-panel-title">Aprobado</p>
+            <p class="home-review-panel-hint">Reabrir si hace falta</p>
+          </div>
+          <div class="home-review-action-row home-review-action-row--compact" role="group" aria-label="Reabrir apartado">
+            <button type="button" class="home-review-pill home-section-reopen-choice is-active" data-status="in_progress" data-section-id="${sec.id}">En revisión</button>
+            <button type="button" class="home-review-pill home-section-reopen-choice" data-status="needs_details" data-section-id="${sec.id}">Faltan datos</button>
+            <button type="button" class="home-review-pill home-section-reopen-choice is-warn" data-status="needs_correction" data-section-id="${sec.id}">Corregir</button>
+          </div>
+          <input type="hidden" class="home-section-reopen-status" value="in_progress" data-section-id="${sec.id}" />
+          <textarea class="home-section-reopen-reason home-review-comment" data-section-id="${sec.id}" rows="2" maxlength="4000" placeholder="Motivo de reapertura (mín. 10)"></textarea>
+          <button type="button" class="btn-secondary text-xs py-1.5 px-2.5 mt-2 home-section-reopen-submit" data-section-id="${sec.id}">Reabrir</button>
           ${history}
-        </div>`;
-    }
-
-    if (!editable) {
-      return `
-        <div class="home-review-block mt-3 pt-3 border-t border-[var(--border)]">
-          <p class="text-xs opacity-70">Estado de revisión: <strong>${sectionStatusLabel(sec.status)}</strong></p>
-          ${history}
-        </div>`;
+        </section>`;
     }
 
     if (sec.status === "completed") {
       return `
-        <div class="home-review-block mt-3 pt-3 border-t border-[var(--border)]">
-          <p class="text-xs opacity-70">Estado de revisión: <strong>${sectionStatusLabel(sec.status)}</strong></p>
-          <p class="text-xs opacity-50 mt-1">Apartado cerrado. Contacta al propietario para reabrirlo.</p>
+        <section class="home-review-panel">
+          <div class="home-review-panel-head home-review-panel-head--row">
+            <p class="home-review-panel-title">Aprobado</p>
+            <p class="home-review-panel-hint">Cerrado</p>
+          </div>
           ${history}
-        </div>`;
+        </section>`;
+    }
+
+    if (!editable) {
+      return `
+        <section class="home-review-panel">
+          <div class="home-review-panel-head home-review-panel-head--row">
+            <p class="home-review-panel-title">Decisión</p>
+            <p class="home-review-panel-hint">${sectionStatusLabel(sec.status)}</p>
+          </div>
+          ${chips}
+          ${history}
+        </section>`;
     }
 
     return `
-      <div class="home-review-block mt-3 pt-3 border-t border-[var(--border)]" data-section-id="${sec.id}">
-        <p class="text-xs font-semibold uppercase tracking-wide opacity-50 mb-2">Revisión documental</p>
-        <label class="text-xs opacity-70 block mb-1">Estado</label>
-        <select class="home-section-review-status rounded-lg border px-2 py-1.5 text-xs w-full max-w-sm" data-section-id="${sec.id}">
-          <option value="in_progress" ${sec.status === "in_progress" ? "selected" : ""}>En revisión</option>
-          <option value="needs_details" ${sec.status === "needs_details" ? "selected" : ""}>Con observaciones</option>
-          <option value="needs_correction" ${sec.status === "needs_correction" ? "selected" : ""}>Corrección requerida</option>
-          <option value="completed" ${sec.status === "completed" ? "selected" : ""}>Correcto</option>
-        </select>
-        <label class="text-xs opacity-70 block mt-2 mb-1">Comentario</label>
-        <textarea class="home-section-review-comment rounded-lg border px-2 py-1.5 text-xs w-full" data-section-id="${sec.id}" rows="2" maxlength="4000" placeholder="Añade aquí el comentario de revisión, corrección o aprobación. Usa @correo para mencionar."></textarea>
-        <button type="button" class="btn-primary text-xs py-1.5 px-2.5 mt-2 home-section-review-submit" data-section-id="${sec.id}">Guardar revisión</button>
+      <section class="home-review-panel home-review-block" data-section-id="${sec.id}">
+        <div class="home-review-panel-head home-review-panel-head--row">
+          <p class="home-review-panel-title">Decisión</p>
+          ${aiBar}
+        </div>
+        ${chips}
+        <input type="hidden" class="home-section-review-status" value="${escapeHtml(sec.status === "pending" ? "in_progress" : sec.status)}" data-section-id="${sec.id}" />
+        <div class="home-review-action-row home-review-action-row--compact" role="group" aria-label="Decisión">
+          <button type="button" class="home-review-pill home-review-choice ${sec.status === "completed" ? "is-active" : ""}" data-status="completed" data-section-id="${sec.id}">Aprobar</button>
+          <button type="button" class="home-review-pill home-review-choice ${sec.status === "needs_details" ? "is-active" : ""}" data-status="needs_details" data-section-id="${sec.id}">Pedir datos</button>
+          <button type="button" class="home-review-pill home-review-choice is-warn ${sec.status === "needs_correction" ? "is-active" : ""}" data-status="needs_correction" data-section-id="${sec.id}">Corregir</button>
+          <button type="button" class="home-review-pill home-review-choice ${sec.status === "in_progress" || sec.status === "pending" ? "is-active" : ""}" data-status="in_progress" data-section-id="${sec.id}">En revisión</button>
+        </div>
+        <textarea id="homeReviewComment-${sec.id}" class="home-section-review-comment home-review-comment" data-section-id="${sec.id}" rows="2" maxlength="4000" placeholder="Comentario… (@correo para mencionar)"></textarea>
+        <div class="home-review-submit-row">
+          <button type="button" class="btn-primary text-xs py-2 px-3 home-section-review-submit" data-section-id="${sec.id}">Registrar</button>
+        </div>
         ${history}
-        ${sec.comments_count > (sec.comments || []).length ? `<button type="button" class="btn-secondary text-xs py-1 px-2 mt-2 home-section-load-comments" data-section-id="${sec.id}">Ver todos los comentarios (${sec.comments_count})</button>` : ""}
-      </div>`;
+        ${sec.comments_count > (sec.comments || []).length ? `<button type="button" class="btn-secondary text-xs py-1 px-2 mt-2 home-section-load-comments" data-section-id="${sec.id}">Ver comentarios (${sec.comments_count})</button>` : ""}
+      </section>`;
   }
 
   function sectionHasDocuments(sec) {
@@ -520,6 +767,14 @@
     );
   }
 
+  function canDeleteThisSection(project, sec) {
+    if (!project || !sec) return false;
+    if (canDeleteSection(project)) return true;
+    // Editores pueden borrar apartados creados a mano (no catálogo).
+    if (sec.is_catalog) return false;
+    return !!(project.permissions?.can_edit || project.my_role === "editor");
+  }
+
   function canReopenSection(project) {
     return (
       project?.permissions?.can_reopen_section ??
@@ -560,6 +815,18 @@
     }
   }
 
+  function setSidebarHomeMode(active) {
+    const panel = $("#sidebarHomeProjects");
+    if (!panel) return;
+    if (active) {
+      panel.classList.remove("hidden");
+      panel.removeAttribute("hidden");
+    } else {
+      panel.classList.add("hidden");
+      panel.setAttribute("hidden", "");
+    }
+  }
+
   function open() {
     const hasToken = typeof PlanoAuth?.getToken === "function" && PlanoAuth.getToken();
     if ((typeof window.getIsGuestMode === "function" && window.getIsGuestMode()) || !hasToken) {
@@ -574,9 +841,11 @@
     $("#chatArea")?.classList.add("hidden");
     $("#composerDock")?.classList.add("hidden");
     document.body.classList.add("home-projects-mode");
-    closeProjectsDrawer();
+    setSidebarHomeMode(true);
     window.setNavActive?.("home-projects");
+    ensureAssistFab();
     loadProjects();
+    syncAssistChatUi();
   }
 
   function close() {
@@ -587,31 +856,13 @@
     $("#chatArea")?.classList.remove("hidden");
     $("#composerDock")?.classList.remove("hidden");
     document.body.classList.remove("home-projects-mode");
-    closeProjectsDrawer();
+    setSidebarHomeMode(false);
+    assistChatOpen = false;
+    syncAssistChatUi();
   }
 
   function isMobileViewport() {
     return window.matchMedia("(max-width: 900px)").matches;
-  }
-
-  function openProjectsDrawer() {
-    if (!isMobileViewport()) return;
-    const mainSidebarOpen = !document.body.classList.contains("sidebar-collapsed");
-    if (mainSidebarOpen) {
-      document.querySelector("#btnMenu")?.click();
-    }
-    isProjectsDrawerOpen = true;
-    $("#homeProjectsPanel")?.classList.add("is-drawer-open");
-  }
-
-  function closeProjectsDrawer() {
-    isProjectsDrawerOpen = false;
-    $("#homeProjectsPanel")?.classList.remove("is-drawer-open");
-  }
-
-  function toggleProjectsDrawer() {
-    if (isProjectsDrawerOpen) closeProjectsDrawer();
-    else openProjectsDrawer();
   }
 
   async function ensureAnalysesPicker() {
@@ -724,27 +975,303 @@
     syncHomeProjectsUrl(true, id);
     renderList();
     renderDetail(project || null);
-    closeProjectsDrawer();
+    if (isMobileViewport() && !document.body.classList.contains("sidebar-collapsed")) {
+      document.querySelector("#btnMenu")?.click();
+    }
   }
 
-  function renderDocList(docs, projectId, editable) {
+  function isPlanReviewableDoc(filename) {
+    const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
+    return ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff", "pdf"].includes(ext);
+  }
+
+  function renderDocList(docs, projectId, editable, stage, opts) {
+    const options = opts || {};
     if (!docs.length) {
-      return '<li class="text-xs opacity-50 py-1">Sin archivos aún</li>';
+      return `<li class="text-xs opacity-50 py-1">${escapeHtml(options.emptyHint || "Sin archivos aún")}</li>`;
     }
+    const allowAi = !!(
+      stage?.ai_plan_review ||
+      stage?.plan_review ||
+      options.aiPlan
+    );
     return docs
-      .map(
-        (d) => `
+      .map((d) => {
+        const canAi = allowAi && editable && isPlanReviewableDoc(d.filename);
+        return `
         <li class="home-doc-item">
           <button type="button" class="home-doc-name" data-dl-url="${escapeHtml(d.download_url)}" data-dl-name="${escapeHtml(d.filename)}">${escapeHtml(d.filename)}</button>
           <span class="home-doc-meta">${formatBytes(d.file_size)}</span>
+          ${
+            canAi
+              ? `<button type="button" class="btn-secondary text-xs py-1 px-2 home-doc-ai-review" data-doc-id="${d.id}" data-section-id="${d.section_id || ""}" title="Revisar planta 2D con IA">Revisar con IA</button>`
+              : ""
+          }
           ${
             editable
               ? `<button type="button" class="home-doc-delete" data-doc-id="${d.id}" title="Eliminar">×</button>`
               : ""
           }
-        </li>`
-      )
+        </li>`;
+      })
       .join("");
+  }
+
+  function slotAcceptAttr(accept) {
+    const list = Array.isArray(accept) ? accept.filter(Boolean) : [];
+    if (!list.length) {
+      return ".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.doc,.docx,.xls,.xlsx,.dxf,.dwg";
+    }
+    return list.join(",");
+  }
+
+  function renderSectionSlots(sec, project, editable, stage) {
+    const slots = sec.slots || [];
+    const manageBar = editable
+      ? `<div class="home-slots-manage">
+          <button type="button" class="btn-secondary text-xs py-1.5 px-2.5 home-slot-add" data-section-id="${sec.id}">+ Agregar espacio</button>
+        </div>`
+      : "";
+    if (!slots.length) {
+      const docs = sec.documents || [];
+      return `
+        <ul class="home-doc-list home-doc-list--panel">${renderDocList(docs, project.id, editable, stage)}</ul>
+        ${
+          editable
+            ? `<div class="home-section-actions flex flex-wrap gap-2 items-center mt-2">
+                <label class="home-doc-upload btn-secondary text-xs py-1.5 px-2.5 inline-flex cursor-pointer">
+                  <input type="file" class="home-section-file-input" data-section-id="${sec.id}" accept="${slotAcceptAttr([])}" hidden />
+                  Subir archivo
+                </label>
+              </div>`
+            : ""
+        }
+        ${manageBar}`;
+    }
+    const named = slots.filter((s) => s.key !== "_other");
+    const filled = named.filter((s) => s.filled).length;
+    const requiredTotal = named.filter((s) => s.required).length;
+    const requiredFilled = named.filter((s) => s.required && s.filled).length;
+    const hint =
+      requiredTotal > 0
+        ? `${requiredFilled}/${requiredTotal} obligatorios · ${filled} con archivo`
+        : `${filled}/${named.length} con archivo`;
+    const rows = slots
+      .map((slot) => {
+        const docs = slot.documents || [];
+        const canUpload = editable && slot.key !== "_other";
+        const canRemoveSlot = editable && slot.key !== "_other";
+        const statusLabel = slot.filled ? "Listo" : slot.required ? "Falta" : "Opcional";
+        const acceptLabel = (slot.accept || []).join(", ") || "varios formatos";
+        return `
+        <div class="home-slot-row ${slot.filled ? "is-filled" : ""} ${slot.required && !slot.filled ? "is-missing" : ""}" data-slot-key="${escapeHtml(slot.key)}">
+          <div class="home-slot-head">
+            <div>
+              <p class="home-slot-title">${escapeHtml(slot.title)}${slot.required ? " *" : ""}</p>
+              <p class="home-slot-formats">${escapeHtml(acceptLabel)}</p>
+            </div>
+            <div class="home-slot-head-actions">
+              <span class="home-slot-status">${statusLabel}</span>
+              ${
+                canRemoveSlot
+                  ? `<button type="button" class="home-slot-delete" data-section-id="${sec.id}" data-slot-key="${escapeHtml(slot.key)}" data-slot-title="${escapeHtml(slot.title)}" title="Eliminar espacio">×</button>`
+                  : ""
+              }
+            </div>
+          </div>
+          <ul class="home-doc-list home-doc-list--panel">${renderDocList(docs, project.id, editable, stage, {
+            emptyHint: "Aún sin archivo",
+            aiPlan: !!slot.ai_plan_review,
+          })}</ul>
+          ${
+            canUpload
+              ? `<label class="home-doc-upload btn-secondary text-xs py-1.5 px-2.5 inline-flex cursor-pointer mt-2">
+                  <input type="file" class="home-section-file-input" data-section-id="${sec.id}" data-slot-key="${escapeHtml(slot.key)}" accept="${escapeHtml(slotAcceptAttr(slot.accept))}" hidden />
+                  Subir aquí
+                </label>`
+              : ""
+          }
+        </div>`;
+      })
+      .join("");
+    return `
+      <p class="home-review-panel-hint home-slots-hint">${escapeHtml(hint)}</p>
+      <div class="home-slots-list">${rows}</div>
+      ${manageBar}`;
+  }
+
+  function renderFindingActions(reviewId, finding, editable) {
+    if (!editable || finding.status !== "open") {
+      const st =
+        finding.status === "accepted"
+          ? "Aceptado (corregir)"
+          : finding.status === "dismissed"
+            ? "Descartado"
+            : finding.status || "";
+      return st ? `<span class="home-ai-finding-status">${escapeHtml(st)}</span>` : "";
+    }
+    return `
+      <div class="home-ai-finding-actions">
+        <button type="button" class="btn-secondary text-xs py-1 px-2 home-ai-finding-accept" data-review-id="${reviewId}" data-finding-id="${escapeHtml(finding.id)}">Aceptar</button>
+        <button type="button" class="btn-secondary text-xs py-1 px-2 home-ai-finding-dismiss" data-review-id="${reviewId}" data-finding-id="${escapeHtml(finding.id)}">Descartar</button>
+      </div>`;
+  }
+
+  function shortFilename(name, max) {
+    const text = String(name || "");
+    const limit = max || 36;
+    if (text.length <= limit) return text;
+    const ext = text.includes(".") ? text.slice(text.lastIndexOf(".")) : "";
+    const base = text.slice(0, Math.max(8, limit - ext.length - 1));
+    return `${base}…${ext}`;
+  }
+
+  function renderAiReviewsBlock(stage, editable) {
+    if (!(stage.ai_plan_review || stage.plan_review)) return "";
+    const scope = stage.ai_plan_scope || {};
+    const covers = (scope.covers || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("");
+    const exclusions = (scope.exclusions || [])
+      .map((c) => `<li>${escapeHtml(c)}</li>`)
+      .join("");
+    const reviews = stage.ai_reviews || [];
+    const openFindings = Number(stage.open_ai_findings || 0);
+    const reviewsHtml = reviews.length
+      ? `<div class="home-ai-reviews-list">${reviews
+          .map((r) => {
+            const verdict = r.verdict || {};
+            const openCount = Number(r.open_findings || 0);
+            const findings = (r.findings || [])
+              .map((f) => {
+                const steps = Array.isArray(f.fix_steps) ? f.fix_steps : [];
+                const fixBlock =
+                  f.fix || steps.length
+                    ? `<div class="home-ai-finding-fix">
+                        ${f.fix ? `<p class="home-ai-finding-fix-sum">${escapeHtml(f.fix)}</p>` : ""}
+                        ${
+                          steps.length
+                            ? `<ol class="home-ai-finding-fix-steps">${steps
+                                .map((s) => `<li>${escapeHtml(s)}</li>`)
+                                .join("")}</ol>`
+                            : ""
+                        }
+                      </div>`
+                    : "";
+                return `
+              <li class="home-ai-finding home-ai-finding--${escapeHtml(f.severity || "info")} home-ai-finding--${escapeHtml(f.status || "open")}">
+                <div class="home-ai-finding-top">
+                  <p class="home-ai-finding-label">${escapeHtml(f.label || f.code || "Hallazgo")}</p>
+                  <span class="home-ai-finding-sev">${escapeHtml((f.severity || "info").toUpperCase())}</span>
+                </div>
+                <p class="home-ai-finding-msg">${escapeHtml(f.message || "")}</p>
+                ${f.norm_ref ? `<p class="home-ai-finding-ref">${escapeHtml(f.norm_ref)}</p>` : ""}
+                ${fixBlock}
+                ${renderFindingActions(r.id, f, editable)}
+              </li>`;
+              })
+              .join("");
+            return `
+            <article class="home-ai-review-card">
+              <div class="home-ai-review-card-head">
+                <div>
+                  <p class="home-ai-review-card-title">Revisión #${r.id}</p>
+                  <p class="home-ai-review-card-sub">${escapeHtml(verdict.headline || "Sin veredicto")}</p>
+                </div>
+                <div class="home-ai-review-card-meta">
+                  <span class="home-ai-chip ${openCount ? "is-warn" : "is-ok"}">${openCount} abiertos</span>
+                  <span class="home-ai-chip">${escapeHtml(r.status || "open")}</span>
+                </div>
+              </div>
+              <div class="home-ai-review-card-actions">
+                <a class="home-ai-review-link" href="${escapeHtml(r.workspace_url || "/legacy-app")}" rel="noopener">Abrir en Revisión IA</a>
+              </div>
+              ${findings ? `<ul class="home-ai-findings">${findings}</ul>` : `<p class="home-ai-empty-inline">Sin hallazgos.</p>`}
+            </article>`;
+          })
+          .join("")}</div>`
+      : `<div class="home-ai-empty">
+          <p class="home-ai-empty-title">Sin revisiones aún</p>
+          <p class="home-ai-empty-copy">Sube una planta (imagen o PDF) en un entregable y usa <strong>Revisar con IA</strong> en ese archivo.</p>
+        </div>`;
+
+    return `
+      <section class="home-ai-panel">
+        <header class="home-ai-panel-head">
+          <div>
+            <p class="home-ai-panel-kicker">Apoyo IA</p>
+            <h3 class="home-ai-panel-title">Revisiones de plano</h3>
+            <p class="home-ai-panel-sub">${escapeHtml(scope.title || "Habitabilidad en planta 2D")}</p>
+          </div>
+          <div class="home-ai-panel-stats">
+            <span class="home-ai-chip">${reviews.length} revisión${reviews.length === 1 ? "" : "es"}</span>
+            ${
+              openFindings
+                ? `<span class="home-ai-chip is-warn">${openFindings} abiertos</span>`
+                : `<span class="home-ai-chip is-muted">Sin abiertos</span>`
+            }
+          </div>
+        </header>
+        <details class="home-ai-scope">
+          <summary class="home-ai-scope-summary">
+            <span>Alcance de la revisión</span>
+            <span class="home-ai-scope-chevron" aria-hidden="true">▾</span>
+          </summary>
+          <div class="home-ai-scope-grid">
+            <div class="home-ai-scope-col">
+              <p class="home-ai-scope-label is-ok">Qué sí revisa</p>
+              <ul>${covers || "<li>Planta 2D</li>"}</ul>
+            </div>
+            <div class="home-ai-scope-col">
+              <p class="home-ai-scope-label is-off">Qué no revisa</p>
+              <ul>${exclusions || "<li>Fuera de alcance</li>"}</ul>
+            </div>
+          </div>
+        </details>
+        ${
+          openFindings
+            ? `<p class="home-ai-alert">Hay <strong>${openFindings}</strong> hallazgo(s) abiertos. Acéptalos o descártalos antes de avanzar, o confirma al cerrar la etapa.</p>`
+            : ""
+        }
+        ${reviewsHtml}
+        ${renderAnalysisLinkLegacy(stage, editable)}
+      </section>`;
+  }
+
+  function renderAnalysisLinkLegacy(stage, editable) {
+    if (!editable) return "";
+    const linked = stage.analysis;
+    const options = analysesPicker
+      .map((a) => {
+        const label = `${shortFilename(a.filename, 42)} · ${a.counts?.errors || 0} err / ${a.counts?.warnings || 0} adv`;
+        return `<option value="${a.id}" ${stage.analysis_id === a.id ? "selected" : ""}>${escapeHtml(label)}</option>`;
+      })
+      .join("");
+    return `
+      <details class="home-ai-link" ${linked ? "open" : ""}>
+        <summary class="home-ai-link-summary">
+          <span>${linked ? "Análisis vinculado del workspace" : "Vincular análisis del workspace"}</span>
+          <span class="home-ai-scope-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="home-ai-link-body">
+          ${
+            linked
+              ? `<div class="home-ai-linked">
+                  <div>
+                    <p class="home-ai-linked-name" title="${escapeHtml(linked.filename)}">${escapeHtml(shortFilename(linked.filename, 48))}</p>
+                    <p class="home-ai-linked-meta">${linked.errors || 0} errores · ${linked.warnings || 0} advertencias</p>
+                  </div>
+                  <button type="button" class="btn-secondary text-xs py-1.5 px-2.5" id="btnUnlinkAnalysis">Quitar</button>
+                </div>`
+              : `<p class="home-ai-link-hint">Opcional: conecta un análisis ya hecho en Revisión IA.</p>`
+          }
+          <div class="home-ai-link-row">
+            <select class="home-analysis-select" id="homeAnalysisSelect" aria-label="Análisis del workspace">
+              <option value="">— Elegir análisis —</option>
+              ${options}
+            </select>
+            <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnLinkAnalysis">${linked ? "Cambiar" : "Vincular"}</button>
+          </div>
+        </div>
+      </details>`;
   }
 
   function renderSectionsBlock(stage, project, editable) {
@@ -778,6 +1305,12 @@
             const docsCount = sec.documents_count ?? (sec.documents || []).length;
             const commentsCount = sec.comments_count ?? (sec.comments || []).length;
             const assigneeName = sec.assigned_to?.full_name || null;
+            const namedSlots = (sec.slots || []).filter((s) => s.key !== "_other");
+            const filesLabel = namedSlots.length
+              ? `${namedSlots.filter((s) => s.filled).length}/${namedSlots.length} entregables`
+              : docsCount
+                ? `${docsCount} archivo${docsCount === 1 ? "" : "s"}`
+                : "Subir documento";
             const accentCls =
               sec.status === "completed"
                 ? "is-success"
@@ -787,22 +1320,20 @@
             return `
             <article class="home-section-card home-module-card ${needsAttention ? "needs-attention" : ""} ${accentCls}" data-section-id="${sec.id}">
               <header class="home-section-card-head">
-                <div class="flex-1 min-w-0">
+                <div class="home-section-card-topline">
                   <h5 class="home-section-card-title">${escapeHtml(sec.title)}</h5>
-                  ${
-                    sec.description
-                      ? `<p class="home-section-card-desc is-truncated">${escapeHtml(sec.description)}</p>`
-                      : ""
-                  }
-                  <div class="home-module-meta-row home-module-meta-stack">
-                    <span class="home-module-files">${docsCount ? `${docsCount} archivo${docsCount === 1 ? "" : "s"}` : "Subir documento"}</span>
-                    <span class="home-module-assignee">${assigneeName ? `Asignado: ${escapeHtml(assigneeName)}` : "Sin asignar"}</span>
-                    <span class="home-module-comments">${commentsCount} comentario${commentsCount === 1 ? "" : "s"}</span>
-                  </div>
-                </div>
-                <div class="home-module-right">
-                  <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
                   <button type="button" class="home-module-expand-btn" data-open-section="${sec.id}" aria-label="Abrir apartado">⋯</button>
+                </div>
+                <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
+                ${
+                  sec.description
+                    ? `<p class="home-section-card-desc is-truncated">${escapeHtml(sec.description)}</p>`
+                    : ""
+                }
+                <div class="home-module-meta-row home-module-meta-stack">
+                  <span class="home-module-files">${filesLabel}</span>
+                  <span class="home-module-assignee">${assigneeName ? `Asignado: ${escapeHtml(assigneeName)}` : "Sin asignar"}</span>
+                  <span class="home-module-comments">${commentsCount} comentario${commentsCount === 1 ? "" : "s"}</span>
                 </div>
               </header>
             </article>`;
@@ -812,23 +1343,23 @@
 
     return `
       <div class="home-sections-block">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div>
+        <div class="home-sections-toolbar">
+          <div class="home-sections-toolbar-copy">
             <p class="home-sections-heading">Apartados documentales</p>
-            <p class="text-xs opacity-60 mt-1">${progress.done}/${progress.total} completados · ${progress.with_files} con archivos · ${progress.needs_action || 0} requieren acción · ${progress.without_docs || 0} sin docs</p>
+            <p class="home-sections-progress"><span class="hp-progress-full">${progress.done}/${progress.total} completados · ${progress.with_files} con archivos · ${progress.needs_action || 0} requieren acción · ${progress.without_docs || 0} sin docs</span><span class="hp-progress-short">${progress.done}/${progress.total} listos · ${progress.without_docs || 0} sin docs</span></p>
           </div>
           ${
             editable
-              ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnAddSection">Nuevo</button>`
+              ? `<button type="button" class="btn-primary home-sections-new-btn" id="btnAddSection">Nuevo</button>`
               : ""
           }
         </div>
-        <div class="home-section-filters flex flex-wrap gap-2 mb-3">
+        <div class="home-section-filters" role="toolbar" aria-label="Filtros de apartados">
           ${[
             ["all", `Todos (${counts.all})`],
-            ["no_docs", `Sin documentación (${counts.no_docs})`],
+            ["no_docs", `Sin entregar (${counts.no_docs})`],
             ["in_review", `En revisión (${counts.in_review})`],
-            ["corrections", `Correcciones (${counts.corrections})`],
+            ["corrections", `Corregir (${counts.corrections})`],
             ["completed", `Aprobado (${counts.completed})`],
           ]
             .map(
@@ -851,81 +1382,69 @@
       </div>`;
   }
 
-  function renderModuleOverlay(project, openSection, editable) {
+  function renderModuleOverlay(project, openSection, editable, stage) {
     if (!openSection) return "";
     const sectionWorkable = canWorkSection(project, openSection);
-    const canDeleteSec = canDeleteSection(project);
+    const canDeleteSec = canDeleteThisSection(project, openSection);
+    const docs = openSection.documents || [];
+    const docsCount = docs.length;
+    const slots = openSection.slots || [];
+    const stageLabel = stage
+      ? `Etapa ${stage.stage_number} · ${stage.title}`
+      : `Etapa ${openSection.stage_number || "?"}`;
+    const deliverableHint = slots.length
+      ? "Sube cada archivo en su espacio · puedes agregar o quitar espacios"
+      : docsCount
+        ? `${docsCount} archivo(s) listo(s) para validar`
+        : "Aún no hay archivo en este apartado";
     return `<div class="home-module-overlay" id="homeModuleOverlay">
-      <article class="home-module-float" data-section-id="${openSection.id}" role="dialog" aria-modal="true">
+      <article class="home-module-float home-module-float--review" data-section-id="${openSection.id}" role="dialog" aria-modal="true">
         <div class="home-module-float-head">
           <div>
-            <p class="home-module-float-kicker">Apartado</p>
+            <p class="home-module-float-kicker">${escapeHtml(stageLabel)} · Entregable</p>
             <h4 class="home-module-float-title">${escapeHtml(openSection.title)}</h4>
           </div>
           <div class="home-module-float-actions">
             <span class="home-section-status is-${openSection.status}">${sectionStatusLabel(openSection.status)}</span>
+            ${
+              editable && canDeleteSec
+                ? `<details class="home-module-more">
+                    <summary class="home-module-more-btn" aria-label="Más opciones">⋯</summary>
+                    <div class="home-module-more-menu" role="menu">
+                      <button type="button" class="home-section-delete home-module-more-danger" data-section-id="${openSection.id}" role="menuitem">Eliminar apartado</button>
+                    </div>
+                  </details>`
+                : ""
+            }
             <button type="button" class="home-module-close-btn" id="btnCloseModuleOverlay" aria-label="Cerrar">✕</button>
           </div>
         </div>
         ${
           openSection.description
             ? `<p class="home-module-float-desc">${escapeHtml(openSection.description)}</p>`
-            : ""
+            : `<p class="home-module-float-desc">Archivos separados por tipo de entregable + decisión del equipo.</p>`
         }
         <div class="home-module-details">
           ${
             !sectionWorkable
-              ? `<p class="text-xs opacity-70 mb-2">Sin responsable asignado: solo la persona propietaria del proyecto puede trabajar este apartado hasta asignar responsable.</p>`
+              ? `<p class="home-module-banner">Sin responsable asignado: solo el propietario puede trabajar este apartado hasta asignar a alguien.</p>`
               : ""
           }
-          ${renderLastReview(openSection)}
-          ${renderAssigneeSelect(project, openSection, canAssign(project))}
-          <ul class="home-doc-list space-y-1 mb-2 mt-2">${renderDocList(openSection.documents || [], project.id, editable)}</ul>
-          ${
-            editable && sectionWorkable
-              ? `<div class="home-section-actions flex flex-wrap gap-2 items-center">
-                  <label class="home-doc-upload btn-secondary text-xs py-1.5 px-2.5 inline-flex cursor-pointer">
-                    <input type="file" class="home-section-file-input" data-section-id="${openSection.id}" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.tif,.tiff,.doc,.docx,.xls,.xlsx" hidden />
-                    Subir archivo
-                  </label>
-                  <button type="button" class="btn-secondary text-xs py-1.5 px-2.5 text-red-600 home-section-delete" data-section-id="${openSection.id}" ${canDeleteSec ? "" : "hidden"}>Eliminar apartado</button>
-                </div>`
-              : ""
-          }
-          ${renderReviewBlock(project, openSection, canReview(project) && sectionWorkable)}
+          <section class="home-deliverable-panel">
+            <div class="home-deliverable-head">
+              <div>
+                <p class="home-review-panel-title">Entregables</p>
+                <p class="home-review-panel-hint">${escapeHtml(deliverableHint)}</p>
+              </div>
+            </div>
+            ${renderAssigneeSelect(project, openSection, canAssign(project))}
+            ${renderLastReview(openSection)}
+            ${renderSectionSlots(openSection, project, editable && sectionWorkable, stage)}
+          </section>
+          ${renderReviewBlock(project, openSection, canReview(project) && sectionWorkable, stage)}
         </div>
       </article>
     </div>`;
-  }
-
-  function renderAnalysisBlock(stage) {
-    if (!stage.plan_review) return "";
-    const linked = stage.analysis;
-    const options = analysesPicker
-      .map(
-        (a) =>
-          `<option value="${a.id}" ${stage.analysis_id === a.id ? "selected" : ""}>${escapeHtml(a.filename)} (${a.counts?.errors || 0} err / ${a.counts?.warnings || 0} adv)</option>`
-      )
-      .join("");
-    return `
-      <div class="home-analysis-block p-3 rounded-xl border border-dashed">
-        <p class="home-section-title">Revisión de planos</p>
-        ${
-          linked
-            ? `<p class="text-sm mb-2 mt-2"><strong>${escapeHtml(linked.filename)}</strong><br/>
-               <span class="text-xs opacity-65">${linked.errors || 0} errores · ${linked.warnings || 0} advertencias</span></p>
-               <a class="text-xs underline opacity-80" href="/legacy-app" rel="noopener">Abrir en Revisión IA</a>`
-            : `<p class="text-xs opacity-65 mt-2 mb-2">Analiza un plano en Revisión IA y vincúlalo aquí.</p>`
-        }
-        <label class="block text-xs font-semibold mt-3 mb-1">Vincular análisis</label>
-        <div class="flex flex-wrap gap-2 items-center">
-          <select class="home-analysis-select flex-1 min-w-[12rem] rounded-lg border px-2 py-2 text-sm" id="homeAnalysisSelect">
-            <option value="">— Sin vincular —</option>
-            ${options}
-          </select>
-          <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnLinkAnalysis">Vincular</button>
-        </div>
-      </div>`;
   }
 
   function renderTeamBlock(project, editable) {
@@ -958,7 +1477,9 @@
           </div>
           ${
             editable
-              ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnInviteMember">Invitar</button>`
+              ? planCaps().teamInvites
+                ? `<button type="button" class="btn-primary text-xs py-2 px-3" id="btnInviteMember">Invitar</button>`
+                : `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnInviteUpgrade">Invitar (Enterprise)</button>`
               : ""
           }
         </div>
@@ -1002,16 +1523,48 @@
       </div>`;
   }
 
+  function homeFooterMarkup() {
+    return `
+      <footer class="home-projects-footer" id="homeProjectsFooter">
+        <div class="home-projects-footer-inner">
+          <div class="home-projects-footer-brand">
+            <img src="/static/brand/architect-logo.png?v=3" alt="ARCHITECT" class="brand-logo-img brand-logo-img--footer" />
+            <p class="home-projects-footer-desc">
+              Gestión de vivienda unifamiliar por etapas, documentos y equipo. Herramienta de apoyo; no reemplaza proyecto ejecutivo firmado.
+            </p>
+            <p class="home-projects-footer-copy">© 2026 ARCHITECT</p>
+          </div>
+          <nav class="home-projects-footer-links" aria-label="Enlaces de Casa hogar">
+            <div class="home-projects-footer-col">
+              <h4>Plataforma</h4>
+              <a href="#" data-home-footer="workspace">Revisión IA</a>
+              <a href="#" data-home-footer="home" aria-current="page">Casa hogar</a>
+              <a href="/docs" target="_blank" rel="noopener" class="home-footer-link--desktop">API</a>
+            </div>
+            <div class="home-projects-footer-col">
+              <h4>Cuenta</h4>
+              <a href="#" data-home-footer="plans">Planes</a>
+              <a href="#" data-home-footer="account">Mi cuenta</a>
+              <a href="/" class="home-footer-link--desktop">Landing</a>
+            </div>
+          </nav>
+        </div>
+      </footer>`;
+  }
+
   function renderDetail(project) {
     const detail = $("#homeProjectsDetail");
     const empty = $("#homeProjectsEmpty");
     if (!detail) return;
     if (!project) {
-      detail.innerHTML = "";
-      if (empty) {
-        empty.classList.remove("hidden");
-        detail.appendChild(empty);
-      }
+      detail.innerHTML = `
+        <div class="home-project-scroll home-project-scroll--empty" id="homeProjectDetailScroll">
+          <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
+            <span class="material-symbols-outlined text-4xl mb-2">home_work</span>
+            <p class="text-sm">Selecciona un proyecto o crea uno nuevo</p>
+          </div>
+          ${homeFooterMarkup()}
+        </div>`;
       return;
     }
     if (empty) empty.classList.add("hidden");
@@ -1065,38 +1618,42 @@
           : "";
       mainContent = `
         ${completionBanner}
-        <article class="glass-card home-stage-card p-4 md:p-5">
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Etapa ${stage.stage_number} de ${project.stages.length}</p>
-          <h4 class="text-xl font-semibold mt-1">${escapeHtml(stage.title)}</h4>
-          <p class="text-sm opacity-70 mt-2 leading-relaxed">${escapeHtml(stage.summary || "")}</p>
-          <p class="mt-3 text-xs font-semibold uppercase tracking-wide opacity-50">Estado: ${statusLabel(stage.status)} · ${stage.sections_progress?.done || 0}/${stage.sections_progress?.total || 0} apartados</p>
+        <article class="home-stage-card">
+          <p class="home-stage-kicker">Etapa ${stage.stage_number} de ${project.stages.length}</p>
+          <h4 class="home-stage-title">${escapeHtml(stage.title)}</h4>
+          <p class="home-stage-summary">${escapeHtml(stage.summary || "")}</p>
+          <p class="home-stage-status-line">Estado: ${statusLabel(stage.status)} · ${stage.sections_progress?.done || 0}/${stage.sections_progress?.total || 0} apartados</p>
 
-          <div class="home-section mt-5">${renderSectionsBlock(stage, project, editable)}</div>
+          <div class="home-section home-section--apartados">${renderSectionsBlock(stage, project, editable)}</div>
 
           ${
             (stage.documents || []).length
-              ? `<div class="home-section mt-5">
+              ? `<div class="home-section">
                   <p class="home-section-title">Archivos generales de etapa</p>
-                  <ul class="home-doc-list space-y-1 mb-2">${renderDocList(stage.documents, project.id, editable)}</ul>
+                  <ul class="home-doc-list">${renderDocList(stage.documents, project.id, editable, stage)}</ul>
                 </div>`
               : ""
           }
 
-          ${stage.plan_review && editable ? `<div class="home-section mt-5">${renderAnalysisBlock(stage)}</div>` : ""}
+          ${
+            stage.ai_plan_review || stage.plan_review
+              ? `<div class="home-section">${renderAiReviewsBlock(stage, editable)}</div>`
+              : ""
+          }
 
-          <div class="home-section home-notes-section mt-5">
-            <label class="home-notes-title block">Notas de etapa</label>
-            <textarea class="home-notes-input home-notes-textarea mt-2 w-full border p-3 text-sm min-h-[88px]" id="homeStageNotes" placeholder="Añade notas, observaciones o requerimientos especiales para esta etapa del proyecto..." ${editable ? "" : "readonly"}>${escapeHtml(stage.notes || "")}</textarea>
+          <div class="home-section home-notes-section">
+            <label class="home-notes-title" for="homeStageNotes">Notas de etapa</label>
+            <textarea class="home-notes-input home-notes-textarea" id="homeStageNotes" placeholder="Añade notas, observaciones o requerimientos especiales para esta etapa..." ${editable ? "" : "readonly"}>${escapeHtml(stage.notes || "")}</textarea>
           </div>
 
           ${
             editable
-              ? `<div class="home-notes-actions flex flex-wrap gap-2 mt-5 pt-4 border-t border-black/10 dark:border-white/10">
-                  <button type="button" class="btn-secondary home-notes-btn-secondary text-xs py-2 px-4" id="btnMarkInProgress">Marcar en curso</button>
-                  <button type="button" class="btn-primary home-notes-btn-primary text-xs py-2 px-4" id="btnSaveStage">Guardar notas</button>
+              ? `<div class="home-notes-actions">
+                  <button type="button" class="btn-secondary home-notes-btn-secondary" id="btnMarkInProgress"><span class="hp-btn-full">Marcar en curso</span><span class="hp-btn-short">En curso</span></button>
+                  <button type="button" class="btn-primary home-notes-btn-primary" id="btnSaveStage"><span class="hp-btn-full">Guardar notas</span><span class="hp-btn-short">Guardar</span></button>
                   ${
                     stageReopenable && stage.status === "completed"
-                      ? `<button type="button" class="btn-secondary text-xs py-2 px-4" id="btnReopenStage">Reabrir etapa</button>`
+                      ? `<button type="button" class="btn-secondary home-notes-btn-secondary" id="btnReopenStage">Reabrir etapa</button>`
                       : ""
                   }
                 </div>`
@@ -1106,11 +1663,12 @@
     }
 
     detail.innerHTML = `
+      <div class="home-project-scroll" id="homeProjectDetailScroll">
       <header class="home-project-header mb-0">
         <div class="home-project-header-top">
           <div class="home-project-header-copy">
             <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Proyecto · ${project.my_role === "admin" ? "Administrador" : project.my_role === "owner" ? "Propietario" : project.my_role === "editor" ? "Editor" : "Lector"}</p>
-            <h3 class="home-project-title text-2xl font-semibold tracking-tight">${escapeHtml(project.name)}</h3>
+            <h3 class="home-project-title font-semibold tracking-tight">${escapeHtml(project.name)}</h3>
             <div class="home-project-header-meta">
               <p class="home-project-subtitle text-sm opacity-65">${escapeHtml(project.client_name || "Cliente no indicado")}${project.location ? " · " + escapeHtml(project.location) : ""}</p>
               ${
@@ -1121,11 +1679,11 @@
             </div>
           </div>
           <div class="flex flex-wrap gap-2 home-header-actions">
-            <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnBackToIA">Volver a IA</button>
+            <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnBackToIA"><span class="hp-btn-full">Volver a IA</span><span class="hp-btn-short">Volver</span></button>
             ${
               isCompleted
-                ? `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnCompletionOverviewHeader">Resumen de cierre</button>`
-                : `<button type="button" class="btn-secondary text-xs py-2 px-3 ${stageAdvanceable ? "" : "home-action-disabled"}" id="btnAdvanceStage" ${stageAdvanceable ? "" : "disabled"} title="${stageAdvanceable ? "Completar etapa actual" : "Solo propietario o administrador"}">Completar etapa</button>`
+                ? `<button type="button" class="btn-secondary text-xs py-2 px-3" id="btnCompletionOverviewHeader"><span class="hp-btn-full">Resumen de cierre</span><span class="hp-btn-short">Resumen</span></button>`
+                : `<button type="button" class="btn-secondary text-xs py-2 px-3 ${stageAdvanceable ? "" : "home-action-disabled"}" id="btnAdvanceStage" ${stageAdvanceable ? "" : "disabled"} title="${stageAdvanceable ? "Completar etapa actual" : "Solo propietario o administrador"}"><span class="hp-btn-full">Completar etapa</span><span class="hp-btn-short">Completar</span></button>`
             }
             <button type="button" class="btn-secondary text-xs py-2 px-3 text-red-600 dark:text-red-400 ${projectDeletable ? "" : "home-action-disabled"}" id="btnDeleteProject" ${projectDeletable ? "" : "disabled"} title="${projectDeletable ? "Eliminar proyecto" : "Solo propietario o administrador"}">Eliminar</button>
           </div>
@@ -1161,8 +1719,10 @@
           : ""
       }
 
-      <div class="home-stage-layout" id="homeProjectDetailScroll">${mainContent}</div>
-      ${detailView === "stage" && !completionOverviewMode ? renderModuleOverlay(project, openSection, editable) : ""}`;
+      <div class="home-stage-layout">${mainContent}</div>
+      ${homeFooterMarkup()}
+      </div>
+      ${detailView === "stage" && !completionOverviewMode ? renderModuleOverlay(project, openSection, editable, stage) : ""}`;
 
     const track = detail.querySelector("#homeStageTrack");
     if (track) {
@@ -1172,8 +1732,14 @@
         totalStages > 1
           ? Math.max(0, Math.min(100, ((progressStage - 1) / (totalStages - 1)) * 100))
           : 0;
-      track.style.gridTemplateColumns = `repeat(${totalStages}, minmax(0, 1fr))`;
       track.style.setProperty("--hp-stage-progress", String(pct / 100));
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        track.style.display = "flex";
+        track.style.removeProperty("grid-template-columns");
+      } else {
+        track.style.display = "";
+        track.style.gridTemplateColumns = `repeat(${totalStages}, minmax(0, 1fr))`;
+      }
     }
 
     detail.querySelectorAll(".home-view-tab").forEach((btn) => {
@@ -1219,7 +1785,10 @@
     bindClick("#btnSaveStage", () => saveStage(project.id, stage.stage_number));
     bindClick("#btnMarkInProgress", () =>
       patchStage(project.id, stage.stage_number, { status: "in_progress" }));
-    bindClick("#btnBackToIA", () => close());
+    bindClick("#btnBackToIA", () => {
+      if (typeof window.goToWorkspace === "function") window.goToWorkspace();
+      else close();
+    });
     bindClick("#btnAdvanceStage", () => advanceStage(project.id));
     bindClick("#btnCompletionOverview", () => {
       completionOverviewMode = true;
@@ -1250,6 +1819,10 @@
     bindClick("#btnReopenStage", () => reopenStage(project.id, stage.stage_number));
     bindClick("#btnDeleteProject", () => deleteProject(project.id));
     bindClick("#btnInviteMember", () => openInviteModal(project.id));
+    bindClick("#btnInviteUpgrade", () => {
+      window.showToast?.("Las invitaciones de equipo están en el plan Enterprise.");
+      document.getElementById("btnPlans")?.click();
+    });
     bindClick("#btnAddSection", () => openSectionModal(project.id, stage.stage_number));
     bindClick("#homeCreateSectionCard", () => openSectionModal(project.id, stage.stage_number));
     bindClick("#btnCloseModuleOverlay", () => {
@@ -1311,21 +1884,90 @@
       const val = sel?.value;
       patchStage(project.id, stage.stage_number, { analysis_id: val ? Number(val) : 0 });
     });
+    bindClick("#btnUnlinkAnalysis", () => {
+      patchStage(project.id, stage.stage_number, { analysis_id: 0 });
+    });
+
+    detail.querySelectorAll(".home-doc-ai-review").forEach((btn) => {
+      btn.onclick = () => {
+        const docId = Number(btn.dataset.docId);
+        const sectionId = btn.dataset.sectionId ? Number(btn.dataset.sectionId) : null;
+        if (docId) runDocAiReview(project.id, stage.stage_number, docId, sectionId);
+      };
+    });
+
+    detail.querySelectorAll(".home-ai-finding-accept").forEach((btn) => {
+      btn.onclick = () =>
+        updateAiFinding(
+          project.id,
+          Number(btn.dataset.reviewId),
+          btn.dataset.findingId,
+          "accept"
+        );
+    });
+
+    detail.querySelectorAll(".home-ai-finding-dismiss").forEach((btn) => {
+      btn.onclick = async () => {
+        const note = await PlanoDialog.prompt({
+          title: "Descartar hallazgo",
+          message: "Indica el motivo para descartarlo:",
+          placeholder: "Motivo…",
+          minLength: 5,
+          multiline: true,
+          confirmLabel: "Descartar",
+        });
+        if (note == null) return;
+        updateAiFinding(
+          project.id,
+          Number(btn.dataset.reviewId),
+          btn.dataset.findingId,
+          "dismiss",
+          note
+        );
+      };
+    });
 
     detail.querySelectorAll(".home-section-file-input").forEach((input) => {
       input.addEventListener("change", (e) => {
         const file = e.target.files?.[0];
         const sectionId = Number(input.dataset.sectionId);
-        if (file && sectionId) uploadDocument(project.id, stage.stage_number, file, sectionId);
+        const slotKey = input.dataset.slotKey || null;
+        if (file && sectionId) {
+          uploadDocument(project.id, stage.stage_number, file, sectionId, slotKey);
+        }
         e.target.value = "";
       });
+    });
+
+    detail.querySelectorAll(".home-slot-add").forEach((btn) => {
+      btn.onclick = () => {
+        const sectionId = Number(btn.dataset.sectionId);
+        openSlotModal(project.id, sectionId);
+      };
+    });
+
+    detail.querySelectorAll(".home-slot-delete").forEach((btn) => {
+      btn.onclick = async () => {
+        const sectionId = Number(btn.dataset.sectionId);
+        const slotKey = btn.dataset.slotKey;
+        const slotTitle = btn.dataset.slotTitle || "este espacio";
+        if (
+          !(await PlanoDialog.confirm(
+            `¿Eliminar el espacio «${slotTitle}» y sus archivos?`,
+            { title: "Eliminar espacio", variant: "danger", confirmLabel: "Eliminar" }
+          ))
+        ) {
+          return;
+        }
+        deleteSectionSlot(project.id, sectionId, slotKey);
+      };
     });
 
     detail.querySelectorAll(".home-section-delete").forEach((btn) => {
       btn.onclick = async () => {
         if (
           !(await PlanoDialog.confirm(
-            "¿Eliminar este apartado y sus archivos? Solo el propietario o un administrador pueden hacerlo.",
+            "¿Eliminar este apartado y todos sus archivos? Esta acción no se puede deshacer.",
             { title: "Eliminar apartado", variant: "danger", confirmLabel: "Eliminar" }
           ))
         ) {
@@ -1339,7 +1981,8 @@
       btn.onclick = async () => {
         const sectionId = Number(btn.dataset.sectionId);
         const block = btn.closest(".home-reopen-block");
-        const status = block?.querySelector(".home-section-reopen-status")?.value || "in_progress";
+        const status =
+          block?.querySelector(".home-section-reopen-status")?.value || "in_progress";
         const reason = (block?.querySelector(".home-section-reopen-reason")?.value || "").trim();
         if (reason.length < 10) {
           window.showToast?.("Indica el motivo de reapertura (mínimo 10 caracteres)");
@@ -1357,6 +2000,61 @@
         patchSection(project.id, sectionId, {
           status,
           reopen_reason: reason,
+        });
+      };
+    });
+
+    detail.querySelectorAll(".home-review-choice").forEach((btn) => {
+      btn.onclick = () => {
+        const block = btn.closest(".home-review-block");
+        const statusInput = block?.querySelector(".home-section-review-status");
+        const status = btn.dataset.status || "in_progress";
+        if (statusInput) statusInput.value = status;
+        block?.querySelectorAll(".home-review-choice").forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
+        });
+        const commentEl = block?.querySelector(".home-section-review-comment");
+        if (
+          (status === "needs_details" || status === "needs_correction") &&
+          commentEl &&
+          !commentEl.value.trim()
+        ) {
+          commentEl.focus();
+        }
+      };
+    });
+
+    detail.querySelectorAll(".home-section-ai-ask").forEach((btn) => {
+      btn.onclick = () => {
+        const sectionId = Number(btn.dataset.sectionId);
+        const sec = (stage.sections || []).find((s) => s.id === sectionId);
+        if (sec) openAssistForSection(project, stage, sec);
+      };
+    });
+
+    detail.querySelectorAll(".home-section-ai-draft").forEach((btn) => {
+      btn.onclick = () => {
+        const sectionId = Number(btn.dataset.sectionId);
+        const sec = (stage.sections || []).find((s) => s.id === sectionId);
+        if (sec) suggestReviewComment(project, stage, sec);
+      };
+    });
+
+    detail.querySelectorAll(".home-section-ai-plan").forEach((btn) => {
+      btn.onclick = () => {
+        const docId = Number(btn.dataset.docId);
+        const sectionId = Number(btn.dataset.sectionId);
+        if (docId) runDocAiReview(project.id, stage.stage_number, docId, sectionId);
+      };
+    });
+
+    detail.querySelectorAll(".home-section-reopen-choice").forEach((btn) => {
+      btn.onclick = () => {
+        const block = btn.closest(".home-reopen-block");
+        const statusInput = block?.querySelector(".home-section-reopen-status");
+        if (statusInput) statusInput.value = btn.dataset.status || "in_progress";
+        block?.querySelectorAll(".home-section-reopen-choice").forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
         });
       };
     });
@@ -1388,16 +2086,14 @@
           !reviewComment
         ) {
           window.showToast?.(
-            "Añade un comentario explicando qué se debe corregir u observar"
+            "Añade un comentario explicando qué falta o qué hay que corregir"
           );
           commentEl?.focus();
           return;
         }
         const payload = { status };
         if (reviewComment) payload.review_comment = reviewComment;
-        patchSection(project.id, sectionId, payload).then(() => {
-          if (commentEl) commentEl.value = "";
-        });
+        patchSection(project.id, sectionId, payload);
       };
     });
 
@@ -1457,7 +2153,7 @@
       };
     });
 
-    if (stage.plan_review && editable && !analysesLoaded) {
+    if ((stage.ai_plan_review || stage.plan_review) && editable && !analysesLoaded) {
       ensureAnalysesPicker().then(() => {
         const latest = projects.find((p) => p.id === project.id);
         if (latest && activeId === project.id) renderDetail(latest);
@@ -1466,6 +2162,7 @@
 
     if (shouldResetScroll) resetDetailScroll();
     lastDetailView = detailView;
+    syncAssistChatUi();
   }
 
   function rerenderDetailPreservingScroll(project) {
@@ -1582,7 +2279,7 @@
         payload.assigned_to_user_id == null ? "Responsable quitado" : "Responsable asignado"
       );
     } else if (payload.status || payload.review_comment) {
-      window.showToast?.("Revisión guardada");
+      window.showToast?.("Decisión registrada", { variant: "success" });
     } else {
       window.showToast?.("Cambios guardados");
     }
@@ -1598,10 +2295,50 @@
       window.showToast?.(data.detail || "No se pudo eliminar");
       return;
     }
+    if (expandedSectionId === sectionId) expandedSectionId = null;
     const idx = projects.findIndex((p) => p.id === projectId);
     if (idx >= 0) projects[idx] = data;
     renderDetail(projects[idx]);
     window.showToast?.("Apartado eliminado");
+  }
+
+  async function addSectionSlot(projectId, sectionId, title, opts) {
+    const options = opts || {};
+    const res = await PlanoAuth.apiFetch(
+      `/api/home-projects/${encodeURIComponent(projectId)}/sections/${sectionId}/slots`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          required: !!options.required,
+        }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      window.showToast?.(data.detail || "No se pudo agregar el espacio");
+      return;
+    }
+    const idx = projects.findIndex((p) => p.id === projectId);
+    if (idx >= 0) projects[idx] = data;
+    renderDetail(projects[idx]);
+    window.showToast?.("Espacio agregado");
+  }
+
+  async function deleteSectionSlot(projectId, sectionId, slotKey) {
+    const res = await PlanoAuth.apiFetch(
+      `/api/home-projects/${encodeURIComponent(projectId)}/sections/${sectionId}/slots/${encodeURIComponent(slotKey)}`,
+      { method: "DELETE" }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      window.showToast?.(data.detail || "No se pudo eliminar el espacio");
+      return;
+    }
+    const idx = projects.findIndex((p) => p.id === projectId);
+    if (idx >= 0) projects[idx] = data;
+    renderDetail(projects[idx]);
+    window.showToast?.("Espacio eliminado");
   }
 
   async function addComment(projectId, sectionId, body) {
@@ -1636,10 +2373,11 @@
     window.showToast?.("Comentario eliminado");
   }
 
-  async function uploadDocument(projectId, stageNumber, file, sectionId) {
+  async function uploadDocument(projectId, stageNumber, file, sectionId, slotKey) {
     const fd = new FormData();
     fd.append("file", file);
     if (sectionId) fd.append("section_id", String(sectionId));
+    if (slotKey) fd.append("slot_key", String(slotKey));
     try {
       const res = await PlanoAuth.apiFetch(
         `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}/documents`,
@@ -1672,22 +2410,279 @@
     window.showToast?.("Archivo eliminado");
   }
 
-  async function advanceStage(projectId) {
+  function stripAssistDisclaimer(text) {
+    return String(text || "")
+      .replace(/\n*—\n*\*\*Alcance del asistente:[\s\S]*$/i, "")
+      .replace(/\*\*Revisión de plano[\s\S]*$/i, "")
+      .trim();
+  }
+
+  function openAssistForSection(project, stage, sec) {
+    ensureAssistFab();
+    assistChatOpen = true;
+    syncAssistChatUi();
+    const criteria = sectionReviewCriteria(sec, stage).map((c) => `- ${c}`).join("\n");
+    const files = (sec.documents || []).map((d) => d.filename).filter(Boolean).join(", ");
+    const question =
+      `Ayúdame a revisar el apartado «${sec.title}» de la etapa ${stage.stage_number} (${stage.title}).\n` +
+      `Criterios a validar:\n${criteria}\n` +
+      (files ? `Archivos subidos (solo nombres): ${files}.\n` : "") +
+      `No leíste el contenido del archivo. Dime checklist práctico de qué mirar y señales de que falta info o hay que corregir.`;
+    const input = document.getElementById("homeAiQuestion");
+    if (input) {
+      input.value = question;
+      input.focus();
+    }
+    askStageAssist(project.id, stage.stage_number);
+  }
+
+  async function suggestReviewComment(project, stage, sec) {
+    const panel = document.querySelector(`.home-review-block[data-section-id="${sec.id}"]`);
+    const status =
+      panel?.querySelector(".home-section-review-status")?.value ||
+      sec.status ||
+      "in_progress";
+    const commentEl = panel?.querySelector(".home-section-review-comment");
+    const draftBtn = panel?.querySelector(".home-section-ai-draft");
+    const actionLabel =
+      status === "completed"
+        ? "aprobar"
+        : status === "needs_details"
+          ? "pedir datos faltantes"
+          : status === "needs_correction"
+            ? "pedir corrección"
+            : "seguir revisando";
+    const criteria = sectionReviewCriteria(sec, stage).join("; ");
+    const files = (sec.documents || []).map((d) => d.filename).filter(Boolean).join(", ");
+    const question =
+      `Redacta un comentario breve de revisión humana (máx. 4 frases, tono profesional, en español) ` +
+      `para ${actionLabel} el apartado «${sec.title}» (etapa ${stage.stage_number}). ` +
+      `Criterios: ${criteria}. ` +
+      (files ? `Archivo(s): ${files}. ` : "") +
+      `No inventes contenido del documento (no lo leíste). ` +
+      `Si la acción es pedir datos o corrección, indica qué evidencia debería aportar el equipo. ` +
+      `Devuelve solo el texto del comentario, sin markdown ni disclaimers.`;
+
+    if (draftBtn) draftBtn.disabled = true;
+    window.showToast?.("Generando borrador…", { duration: 2500 });
+    try {
+      const res = await PlanoAuth.apiFetch(
+        `/api/home-projects/${encodeURIComponent(project.id)}/stages/${stage.stage_number}/assist`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        window.showToast?.(apiErrorMessage(data, "No se pudo sugerir comentario"));
+        return;
+      }
+      const draft = stripAssistDisclaimer(data.guidance || "");
+      if (!draft) {
+        window.showToast?.("La IA no devolvió un borrador útil");
+        return;
+      }
+      if (commentEl) {
+        commentEl.value = draft.slice(0, 4000);
+        commentEl.focus();
+      }
+      const history = getAssistHistory(project.id, stage.stage_number);
+      history.push({ role: "user", text: `Sugerir comentario para «${sec.title}» (${actionLabel})` });
+      history.push({ role: "assistant", text: draft });
+      if (history.length > 8) {
+        assistChatHistory[assistChatKey(project.id, stage.stage_number)] = history.slice(-8);
+      }
+      window.showToast?.("Borrador listo: revísalo antes de registrar", {
+        variant: "success",
+      });
+    } catch (err) {
+      window.showToast?.(err.message || "Error al sugerir comentario");
+    } finally {
+      if (draftBtn) draftBtn.disabled = false;
+    }
+  }
+
+  async function askStageAssist(projectId, stageNumber) {
+    const input = document.getElementById("homeAiQuestion");
+    const btn = document.getElementById("btnHomeAssist");
+    const question = (input?.value || "").trim();
+    if (!question) {
+      window.showToast?.("Escribe una pregunta");
+      input?.focus();
+      return;
+    }
+    if (assistChatBusy) return;
+
+    const history = getAssistHistory(projectId, stageNumber);
+    history.push({ role: "user", text: question });
+    if (input) input.value = "";
+    assistChatOpen = true;
+    assistChatBusy = true;
+    syncAssistChatUi();
+    const box = document.getElementById("homeAssistChatMessages");
+    if (box) {
+      box.insertAdjacentHTML(
+        "beforeend",
+        `<div class="home-assist-msg home-assist-msg--bot home-assist-msg--pending"><p>Pensando…</p></div>`
+      );
+      box.scrollTop = box.scrollHeight;
+    }
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await PlanoAuth.apiFetch(
+        `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}/assist`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        history.pop();
+        window.showToast?.(apiErrorMessage(data, "No se pudo consultar al asistente"));
+        const idx = projects.findIndex((p) => p.id === projectId);
+        const st = idx >= 0 ? projects[idx].stages?.find((s) => s.stage_number === stageNumber) : null;
+        renderAssistMessages(projectId, stageNumber, st);
+        return;
+      }
+      const answer = data.guidance || "Sin respuesta.";
+      history.push({ role: "assistant", text: answer });
+      // Mantén historial corto por etapa (últimos 8 mensajes).
+      if (history.length > 8) {
+        assistChatHistory[assistChatKey(projectId, stageNumber)] = history.slice(-8);
+      }
+      const idx = projects.findIndex((p) => p.id === projectId);
+      if (idx >= 0) {
+        const st = projects[idx].stages?.find((s) => s.stage_number === stageNumber);
+        if (st) st.ai_guidance = answer;
+      }
+      renderAssistMessages(
+        projectId,
+        stageNumber,
+        idx >= 0 ? projects[idx].stages?.find((s) => s.stage_number === stageNumber) : null
+      );
+    } catch (err) {
+      history.pop();
+      window.showToast?.(err.message || "Error al consultar");
+      renderAssistMessages(projectId, stageNumber, null);
+    } finally {
+      assistChatBusy = false;
+      syncAssistChatUi();
+      input?.focus();
+    }
+  }
+
+  async function runDocAiReview(projectId, stageNumber, documentId, sectionId) {
     if (
       !(await PlanoDialog.confirm(
-        "¿Marcar la etapa actual como completada y avanzar a la siguiente? Solo el propietario o un administrador pueden hacerlo.",
-        { title: "Completar etapa", confirmLabel: "Completar" }
+        "Se revisará solo la planta 2D (puertas, ventanas, muros, recintos). No cubre CAD, cortes, estructura ni instalaciones. ¿Continuar?",
+        { title: "Revisar plano con IA", confirmLabel: "Revisar" }
       ))
     ) {
       return;
     }
+    window.showToast?.("Analizando plano…", { duration: 4000 });
+    const res = await PlanoAuth.apiFetch(
+      `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}/ai-reviews`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_id: documentId,
+          section_id: sectionId || null,
+          message: "",
+        }),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detail = data.detail;
+      window.showToast?.(
+        typeof detail === "string" ? detail : detail?.message || "No se pudo revisar el plano"
+      );
+      return;
+    }
+    if (data.project) {
+      const idx = projects.findIndex((p) => p.id === projectId);
+      if (idx >= 0) projects[idx] = data.project;
+      renderList();
+      renderDetail(projects[idx] || data.project);
+    }
+    const openN = data.review?.open_findings || 0;
+    window.showToast?.(
+      openN ? `Revisión lista · ${openN} hallazgo(s) abiertos` : "Revisión lista · sin hallazgos abiertos",
+      { variant: "success", icon: "fact_check" }
+    );
+  }
+
+  async function updateAiFinding(projectId, reviewId, findingId, action, note = "") {
+    const res = await PlanoAuth.apiFetch(
+      `/api/home-projects/${encodeURIComponent(projectId)}/ai-reviews/${reviewId}/findings/${encodeURIComponent(findingId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, note }),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.showToast?.(data.detail || "No se pudo actualizar el hallazgo");
+      return;
+    }
+    if (data.project) {
+      const idx = projects.findIndex((p) => p.id === projectId);
+      if (idx >= 0) projects[idx] = data.project;
+      renderDetail(projects[idx] || data.project);
+    }
+    window.showToast?.(
+      action === "accept" ? "Hallazgo aceptado" : action === "dismiss" ? "Hallazgo descartado" : "Hallazgo actualizado",
+      { variant: "success" }
+    );
+  }
+
+  async function advanceStage(projectId, acknowledgeOpenFindings = false) {
+    if (!acknowledgeOpenFindings) {
+      if (
+        !(await PlanoDialog.confirm(
+          "¿Marcar la etapa actual como completada y avanzar a la siguiente? Solo el propietario o un administrador pueden hacerlo.",
+          { title: "Completar etapa", confirmLabel: "Completar" }
+        ))
+      ) {
+        return;
+      }
+    }
     const res = await PlanoAuth.apiFetch(
       `/api/home-projects/${encodeURIComponent(projectId)}/advance`,
-      { method: "POST" }
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acknowledge_open_findings: acknowledgeOpenFindings }),
+      }
     );
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      const detail = data.detail || {};
+      const msg =
+        detail.message ||
+        "Hay hallazgos de revisión IA abiertos. ¿Avanzar de todas formas?";
+      if (
+        await PlanoDialog.confirm(msg, {
+          title: "Hallazgos IA abiertos",
+          confirmLabel: "Avanzar igual",
+        })
+      ) {
+        return advanceStage(projectId, true);
+      }
+      return;
+    }
     if (!res.ok) {
-      window.showToast?.(data.detail || "No se pudo avanzar");
+      window.showToast?.(
+        typeof data.detail === "string" ? data.detail : "No se pudo avanzar"
+      );
       return;
     }
     const idx = projects.findIndex((p) => p.id === projectId);
@@ -1768,6 +2763,8 @@
   let pendingSectionProjectId = null;
   let pendingSectionStage = null;
   let pendingInviteProjectId = null;
+  let pendingSlotProjectId = null;
+  let pendingSlotSectionId = null;
 
   function openSectionModal(projectId, stageNumber) {
     pendingSectionProjectId = projectId;
@@ -1787,6 +2784,42 @@
     if (!dlg) return;
     if (typeof dlg.close === "function") dlg.close();
     else dlg.removeAttribute("open");
+  }
+
+  function openSlotModal(projectId, sectionId) {
+    pendingSlotProjectId = projectId;
+    pendingSlotSectionId = sectionId;
+    if ($("#homeSlotTitle")) $("#homeSlotTitle").value = "";
+    if ($("#homeSlotRequired")) $("#homeSlotRequired").checked = false;
+    const dlg = $("#homeSlotModal");
+    if (!dlg) return;
+    if (typeof dlg.showModal === "function") dlg.showModal();
+    else dlg.setAttribute("open", "");
+    setTimeout(() => $("#homeSlotTitle")?.focus(), 30);
+  }
+
+  function closeSlotModal() {
+    pendingSlotProjectId = null;
+    pendingSlotSectionId = null;
+    const dlg = $("#homeSlotModal");
+    if (!dlg) return;
+    if (typeof dlg.close === "function") dlg.close();
+    else dlg.removeAttribute("open");
+  }
+
+  async function createSlotFromForm(event) {
+    event.preventDefault();
+    const title = ($("#homeSlotTitle")?.value || "").trim();
+    const required = !!$("#homeSlotRequired")?.checked;
+    if (!pendingSlotProjectId || !pendingSlotSectionId) return;
+    if (title.length < 2) {
+      window.showToast?.("El nombre debe tener al menos 2 caracteres");
+      return;
+    }
+    const projectId = pendingSlotProjectId;
+    const sectionId = pendingSlotSectionId;
+    closeSlotModal();
+    await addSectionSlot(projectId, sectionId, title, { required });
   }
 
   async function createSectionFromForm(event) {
@@ -1873,6 +2906,11 @@
   }
 
   function openInviteModal(projectId) {
+    if (!planCaps().teamInvites) {
+      window.showToast?.("Las invitaciones de equipo están en el plan Enterprise.");
+      document.getElementById("btnPlans")?.click();
+      return;
+    }
     pendingInviteProjectId = projectId;
     resetInviteModal();
     const dlg = $("#homeInviteModal");
@@ -1902,7 +2940,7 @@
     );
     const data = await res.json();
     if (!res.ok) {
-      window.showToast?.(data.detail || "No se pudo invitar");
+      window.showToast?.(apiErrorMessage(data, "No se pudo invitar"));
       return;
     }
     if (data.status === "invite_created") {
@@ -1964,7 +3002,8 @@
     });
     const data = await res.json();
     if (!res.ok) {
-      window.showToast?.(data.detail || "No se pudo crear el proyecto");
+      window.showToast?.(apiErrorMessage(data, "No se pudo crear el proyecto"));
+      if (res.status === 402) document.getElementById("btnPlans")?.click();
       return;
     }
     closeCreateModal();
@@ -1983,6 +3022,9 @@
   $("#btnCloseHomeSection")?.addEventListener("click", closeSectionModal);
   $("#btnCancelHomeSection")?.addEventListener("click", closeSectionModal);
   $("#homeSectionForm")?.addEventListener("submit", createSectionFromForm);
+  $("#btnCloseHomeSlot")?.addEventListener("click", closeSlotModal);
+  $("#btnCancelHomeSlot")?.addEventListener("click", closeSlotModal);
+  $("#homeSlotForm")?.addEventListener("submit", createSlotFromForm);
 
   $("#btnCloseHomeInvite")?.addEventListener("click", closeInviteModal);
   $("#btnCancelHomeInvite")?.addEventListener("click", closeInviteModal);
@@ -1995,30 +3037,28 @@
     renderList();
   });
 
-  $("#btnSwitchToMainSidebar")?.addEventListener("click", () => {
-    const isCollapsed = document.body.classList.contains("sidebar-collapsed");
-    if (!isCollapsed) {
-      window.showToast?.("El panel principal ya está abierto");
-      return;
-    }
-    closeProjectsDrawer();
-    document.querySelector("#btnMenuFloat")?.click();
-  });
-  $("#btnHomeProjectsDrawerToggle")?.addEventListener("click", toggleProjectsDrawer);
-  $("#homeProjectsDrawerBackdrop")?.addEventListener("click", closeProjectsDrawer);
-  $("#btnMenu")?.addEventListener("click", () => {
-    const isCollapsed = document.body.classList.contains("sidebar-collapsed");
-    if (isMobileViewport() && isCollapsed) {
-      closeProjectsDrawer();
+  $("#btnHomeBackToWorkspace")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof window.goToWorkspace === "function") {
+      window.goToWorkspace();
+    } else {
+      close();
+      window.setNavActive?.("workspace");
     }
   });
-  $("#btnMenuFloat")?.addEventListener("click", () => {
-    if (isMobileViewport()) {
-      closeProjectsDrawer();
+
+  $("#homeProjectsDetail")?.addEventListener("click", (e) => {
+    const link = e.target.closest("[data-home-footer]");
+    if (!link) return;
+    e.preventDefault();
+    const action = link.getAttribute("data-home-footer");
+    if (action === "workspace") {
+      $("#btnHomeBackToWorkspace")?.click();
+    } else if (action === "plans") {
+      document.getElementById("btnPlans")?.click();
+    } else if (action === "account") {
+      document.getElementById("btnAccount")?.click();
     }
-  });
-  window.addEventListener("resize", () => {
-    if (!isMobileViewport()) closeProjectsDrawer();
   });
 
   handlePendingInvite();
