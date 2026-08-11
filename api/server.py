@@ -38,6 +38,8 @@ from api.routes import (  # noqa: E402
     guest,
     home_projects,
     knowledge,
+    mobile,
+    mobile_home_projects,
     norms,
     support,
 )
@@ -111,6 +113,8 @@ app.include_router(feedback.router)
 app.include_router(analyses.router)
 app.include_router(ask.router)
 app.include_router(knowledge.router)
+app.include_router(mobile.router)
+app.include_router(mobile_home_projects.router)
 app.include_router(norms.router)
 app.include_router(home_projects.router)
 

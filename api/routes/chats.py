@@ -36,10 +36,22 @@ def _chat_out(chat: Chat, message_count: int = 0) -> ChatOut:
 
 
 def _message_out(m: Message) -> MessageOut:
+    raw = m.content
+    if isinstance(raw, dict):
+        content = dict(raw)
+        # Evita respuestas gigantes; la app usa analysis_id si hace falta la imagen.
+        if content.get("image_base64"):
+            content["image_base64"] = None
+            content["has_image"] = True
+    elif isinstance(raw, str):
+        content = {"text": raw}
+    else:
+        content = {"text": ""}
+
     return MessageOut(
         id=m.id,
-        role=m.role,
-        content=m.content,
+        role=m.role or "user",
+        content=content,
         created_at=m.created_at.isoformat() if m.created_at else None,
     )
 
@@ -91,23 +103,35 @@ def get_chat(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    chat = (
-        db.query(Chat)
-        .filter(Chat.id == chat_id, Chat.user_id == user.id)
-        .first()
-    )
-    if not chat:
-        raise HTTPException(404, "Chat no encontrado")
-    messages = (
-        db.query(Message)
-        .filter(Message.chat_id == chat_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
-    return {
-        "chat": _chat_out(chat),
-        "messages": [_message_out(m) for m in messages],
-    }
+    try:
+        chat = (
+            db.query(Chat)
+            .filter(Chat.id == chat_id, Chat.user_id == user.id)
+            .first()
+        )
+        if not chat:
+            raise HTTPException(404, "Chat no encontrado")
+        message_ids = [
+            row[0]
+            for row in db.query(Message.id)
+            .filter(Message.chat_id == chat_id)
+            .order_by(Message.id.asc())
+            .all()
+        ]
+        messages = (
+            db.query(Message).filter(Message.id.in_(message_ids)).all()
+            if message_ids
+            else []
+        )
+        messages.sort(key=lambda m: m.id)
+        return {
+            "chat": _chat_out(chat, len(messages)),
+            "messages": [_message_out(m) for m in messages],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise http_db_error(exc) from exc
 
 
 @router.delete("/{chat_id}")
