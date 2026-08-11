@@ -15,14 +15,18 @@ from api.db_errors import http_db_error
 from api.deps import get_current_user
 from api.schemas import (
     AuthResponse,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    UpdateProfileRequest,
     UserOut,
 )
 from db.database import get_db
 from db.models import Plan, Subscription, SubscriptionStatus, User, UserRole
+from services.account_service import change_password, delete_own_account, update_profile
 from services.auth_service import create_access_token, hash_password, verify_password
 from services.avatar_service import delete_user_avatar, save_user_avatar
 from services.google_oauth_service import (
@@ -60,6 +64,8 @@ def _user_out(user: User) -> UserOut:
         full_name=user.full_name,
         role=user.role.value,
         avatar_url=user.avatar_url,
+        has_password=bool(user.password_hash),
+        oauth_provider=user.oauth_provider,
     )
 
 
@@ -203,6 +209,61 @@ def me(
         "user": _user_out(user),
         "subscription": subscription_payload(db, user),
     }
+
+
+@router.patch("/me")
+def patch_me(
+    body: UpdateProfileRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        updated = update_profile(db, user, full_name=body.full_name)
+        return {"ok": True, "user": _user_out(updated)}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise http_db_error(exc) from exc
+
+
+@router.post("/me/password")
+def post_change_password(
+    body: ChangePasswordRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        updated = change_password(
+            db,
+            user,
+            current_password=body.current_password,
+            new_password=body.new_password,
+        )
+        return {"ok": True, "user": _user_out(updated)}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise http_db_error(exc) from exc
+
+
+@router.delete("/me")
+def delete_me(
+    body: DeleteAccountRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        delete_own_account(
+            db,
+            user,
+            password=body.password,
+            confirm_email=body.confirm_email,
+        )
+        return {"ok": True, "deleted": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise http_db_error(exc) from exc
 
 
 @router.post("/me/avatar")

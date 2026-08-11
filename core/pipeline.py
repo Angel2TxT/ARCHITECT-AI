@@ -25,6 +25,7 @@ from core.measures_report import build_measures_report
 from core.verdict import build_plan_verdict
 from rules import DEFAULT_RULES, ISSUE_LABELS, NORM_BUNDLE_TITLE, ValidationEngine
 from rules.holistic import construction_coverage_report
+from rules.remediation import enrich_issue_dict
 
 try:
     from services.knowledge_service import find_references, references_for_issues
@@ -122,6 +123,19 @@ def _draw_clean_overlay(
         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (30, 30, 30), 1, cv2.LINE_AA,
     )
     return out
+
+
+def _serialize_issue(issue) -> dict:
+    return enrich_issue_dict(
+        {
+            "code": issue.code,
+            "label": ISSUE_LABELS.get(issue.code, issue.code),
+            "message": issue.message,
+            "severity": issue.severity,
+            "class": issue.related_class,
+            "norm_ref": issue.norm_ref,
+        }
+    )
 
 
 def summarize_issues(issues: list[ValidationIssue]) -> list[dict]:
@@ -325,17 +339,7 @@ def revalidate_analysis(
             }
             for f in custom_findings
         ],
-        "issues": [
-            {
-                "code": i.code,
-                "label": ISSUE_LABELS.get(i.code, i.code),
-                "message": i.message,
-                "severity": i.severity,
-                "class": i.related_class,
-                "norm_ref": i.norm_ref,
-            }
-            for i in display_issues
-        ],
+        "issues": [_serialize_issue(i) for i in display_issues],
         "issues_summary": issues_summary,
         "construction_coverage": construction_coverage,
         "knowledge_references": knowledge_refs,
@@ -612,17 +616,7 @@ def analyze_plano_json(
             }
             for f in custom_findings
         ],
-        "issues": [
-            {
-                "code": i.code,
-                "label": ISSUE_LABELS.get(i.code, i.code),
-                "message": i.message,
-                "severity": i.severity,
-                "class": i.related_class,
-                "norm_ref": i.norm_ref,
-            }
-            for i in display_issues
-        ],
+        "issues": [_serialize_issue(i) for i in display_issues],
         "issues_summary": issues_summary,
         "construction_coverage": construction_coverage,
         "knowledge_references": knowledge_refs,

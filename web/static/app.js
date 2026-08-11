@@ -24,15 +24,15 @@ let guestTrial = null;
 
 const GUEST_CHAT_ID = "guest-local";
 const SESSION_CHAT_ID = "session-ephemeral";
-/** Desactivado: no persistir ni listar chats en servidor. */
-const CHAT_PERSISTENCE_ENABLED = false;
+const LAST_CHAT_KEY = "plano_ia_last_chat_id";
+/** Persistencia de chats en servidor (historial en sidebar). */
+const CHAT_PERSISTENCE_ENABLED = true;
 
-const TOOL_MODES = {
-  default: "Revisión estructural · IA",
-  errors: "Análisis de errores · IA",
-  doors: "Revisión de puertas · IA",
-  measures: "Cotas y medidas · IA",
-};
+/** Texto pendiente de reenviar tras fallo de red. */
+let pendingAskRetry = null;
+let connectionWatchBound = false;
+
+const TOOL_MODES = new Set(["default", "errors", "doors", "measures"]);
 
 const PLANO_EXTENSIONS = [
   ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
@@ -102,9 +102,7 @@ function showToast(msg, optionsOrMs) {
 }
 
 function setToolMode(mode) {
-  currentToolMode = TOOL_MODES[mode] ? mode : "default";
-  const el = document.getElementById("modelName");
-  if (el) el.textContent = TOOL_MODES[currentToolMode];
+  currentToolMode = TOOL_MODES.has(mode) ? mode : "default";
 }
 
 function setNavActive(which) {
@@ -157,12 +155,8 @@ async function loadConfig() {
 
     modelReady = cfg.weights_exists;
     const banner = $("#setupBanner");
-    const sub = $("#welcomeSub");
     if (!modelReady) {
       banner.hidden = false;
-      sub.hidden = false;
-      sub.textContent =
-        "Sin modelo aún. Ejecuta python scripts/train_demo.py y recarga la página.";
       banner.innerHTML =
         '<strong class="font-semibold">Sin modelo entrenado.</strong> ' +
         "<span>Terminal: <code class=\"rounded bg-black/10 px-1\">python scripts/train_demo.py</code></span>";
@@ -170,9 +164,6 @@ async function loadConfig() {
       if (statusEl) statusEl.textContent = "SYSTEM WAIT: modelo no cargado";
     } else {
       banner.hidden = true;
-      sub.hidden = false;
-      sub.textContent =
-        "Pregunta sobre construcción (medidas, normativa, etc.) o sube un plano para revisarlo.";
       const statusEl = document.getElementById("systemStatusText");
       if (statusEl) statusEl.textContent = "SYSTEM READY: plano_ia_engine_v3.0";
     }
@@ -202,8 +193,28 @@ function applyTheme(theme) {
 
 function updateLayoutMode() {
   const chat = getCurrentChat();
-  const active = !!(chat && chat.messages.length);
+  const messagesEl = $("#messages");
+  const welcomeEl = $("#welcome");
+  const hasMessages = !!(chat && Array.isArray(chat.messages) && chat.messages.length > 0);
+  const messagesVisible = !!(messagesEl && !messagesEl.hidden);
+  const welcomeHidden = !!(welcomeEl && welcomeEl.hidden);
+  const active = hasMessages || (messagesVisible && welcomeHidden);
   document.body.classList.toggle("chat-active", active);
+  document.body.classList.toggle(
+    "composer-centered",
+    !active && !document.body.classList.contains("home-projects-mode"),
+  );
+  if (!active) {
+    try {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const area = $("#chatArea");
+      if (area) area.scrollTop = 0;
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function syncCalibrationInputs() {
@@ -231,15 +242,26 @@ function syncCalibrationInputs() {
 }
 
 function saveSettings() {
-  settings.weights = $("#weightsPath").value.trim();
-  settings.autoCalibrate = $("#autoCalibrate")?.checked ?? true;
-  if (!settings.autoCalibrate) {
-    settings.ppm = parseFloat($("#ppmInput").value) || 100;
-    settings.conf = parseFloat($("#confInput").value) || 0.25;
+  const isAdmin = PlanoAuth.getUser()?.role === "admin";
+  if (isAdmin) {
+    const weightsEl = $("#weightsPath");
+    if (weightsEl) settings.weights = weightsEl.value.trim() || settings.weights;
+    settings.autoCalibrate = $("#autoCalibrate")?.checked ?? true;
+    if (!settings.autoCalibrate) {
+      settings.ppm = parseFloat($("#ppmInput").value) || 100;
+      settings.conf = parseFloat($("#confInput").value) || 0.25;
+    }
   }
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  syncCalibrationInputs();
-  showToast("Ajustes guardados");
+  showToast("Configuración guardada");
+}
+
+function syncSettingsAdminVisibility() {
+  const block = document.getElementById("settingsAdminBlock");
+  if (!block) return;
+  const isAdmin = PlanoAuth.getUser()?.role === "admin";
+  block.classList.toggle("hidden", !isAdmin);
+  block.hidden = !isAdmin;
 }
 
 function rememberAutoCalibration(data) {
@@ -371,7 +393,9 @@ function mapMessageFromApi(m) {
       analysisId: c.analysis_id || m.analysis_id || null,
       localSources: c.local_sources || null,
       webSources: c.web_sources || null,
+      thresholds: c.thresholds || null,
       municipality: c.municipality || null,
+      llmUsed: !!c.llm_used,
       conversionNote: c.conversion_note || null,
       detectionsList: c.detections_list || c.detections || [],
       correctionsCount: c.corrections_count || 0,
@@ -419,26 +443,82 @@ function applyAskCapabilitiesUI() {
       ? "Pregunta a ARCHITECT…"
       : "Pregunta sobre arquitectura, normativa u obra…";
   }
-  const hero = document.querySelector(".welcome-hero h2");
-  if (hero && !isGuestMode) {
-    hero.textContent = "¿En qué te ayudamos hoy?";
-  }
-  const welcomeSub = $("#welcomeSub");
-  const setupBanner = $("#setupBanner");
-  if (welcomeSub && (!setupBanner || setupBanner.hidden)) {
-    if (isGuestMode) {
-      welcomeSub.textContent =
-        "Prueba gratis: pregunta lo que quieras o sube un plano. ARCHITECT responde con la información que ya tiene indexada.";
-    } else if (modelReady !== false) {
-      welcomeSub.textContent = hasLibrary
-        ? "ARCHITECT responde con tus manuales, normas de Chiapas y fuentes indexadas. También puedes subir planos."
-        : "ARCHITECT usa normas de Chiapas y búsqueda web. Indexa PDF en data/knowledge/raw para ampliar respuestas.";
-    }
-  }
   const badge = $("#assistantModeBadge");
   if (badge) {
     badge.hidden = !aiOn;
     badge.textContent = hasLibrary ? "IA ARCHITECT activa" : "IA ARCHITECT (normas + web)";
+  }
+}
+
+const WELCOME_HERO_LINES = [
+  { text: "¿En qué te ayudamos hoy?", tone: "cyan" },
+  { text: "¿Qué plano revisamos hoy?", tone: "ice" },
+  { text: "Normativa, medidas u obra: pregunta", tone: "mint" },
+  { text: "Sube un plano y lo revisamos juntos", tone: "lime" },
+  { text: "Tu estudio de revisión con IA", tone: "aqua" },
+  { text: "¿Listo para la siguiente revisión?", tone: "cyan" },
+  { text: "Cuéntame qué necesitas revisar", tone: "mint" },
+  { text: "Puertas, ventanas, normas… aquí estoy", tone: "ice" },
+];
+
+const WELCOME_SEQ_KEY = "plano_ia_welcome_seq";
+
+function hashWelcomeIndex(seed) {
+  const s = String(seed || "");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % WELCOME_HERO_LINES.length;
+}
+
+function takeNextWelcomeIndex() {
+  let seq = 0;
+  try {
+    seq = Number(sessionStorage.getItem(WELCOME_SEQ_KEY) || "0") || 0;
+  } catch {
+    seq = 0;
+  }
+  const idx = seq % WELCOME_HERO_LINES.length;
+  try {
+    sessionStorage.setItem(WELCOME_SEQ_KEY, String(seq + 1));
+  } catch {
+    /* ignore */
+  }
+  return idx;
+}
+
+function refreshWelcomeHero({ chatId = null, advance = false, animate = true } = {}) {
+  const hero = $("#welcomeHero") || document.querySelector(".welcome-hero");
+  const title = $("#welcomeHeroTitle") || hero?.querySelector("h2");
+  if (!hero || !title) return;
+
+  let idx;
+  if (advance) idx = takeNextWelcomeIndex();
+  else if (chatId) idx = hashWelcomeIndex(chatId);
+  else {
+    try {
+      const seq = Number(sessionStorage.getItem(WELCOME_SEQ_KEY) || "0") || 0;
+      idx = Math.max(0, (seq - 1 + WELCOME_HERO_LINES.length) % WELCOME_HERO_LINES.length);
+    } catch {
+      idx = 0;
+    }
+  }
+
+  const line = WELCOME_HERO_LINES[idx] || WELCOME_HERO_LINES[0];
+  hero.dataset.neon = line.tone;
+  title.textContent = line.text;
+
+  if (animate) {
+    hero.classList.remove("is-animating");
+    // reflow para reiniciar animación
+    void hero.offsetWidth;
+    hero.classList.add("is-animating");
+    window.clearTimeout(hero._welcomeAnimTimer);
+    hero._welcomeAnimTimer = window.setTimeout(() => {
+      hero.classList.remove("is-animating");
+    }, 800);
   }
 }
 
@@ -559,26 +639,25 @@ function updateGuestUI() {
   if (nameEl) nameEl.textContent = "Modo prueba";
   const roleEl = document.getElementById("userRole");
   if (roleEl) roleEl.textContent = "Sin cuenta";
-  const welcomeSub = document.getElementById("welcomeSub");
-  if (welcomeSub) {
-    welcomeSub.textContent =
-      "Prueba gratis: pregunta lo que quieras o sube un plano. ARCHITECT responde con la información que ya tiene indexada.";
-  }
+  syncSidebarRail();
 }
 
 async function initGuestApp(skipWorkspace = false) {
   isGuestMode = true;
+  bindConnectionWatch();
   updateGuestUI();
   await checkBackendHealth();
   await Promise.allSettled([loadConfig(), loadAskCapabilities()]);
   await loadGuestTrialStatus();
   ensureGuestChat();
-  if (!skipWorkspace) goToWorkspace();
+  if (!skipWorkspace) await goToWorkspace({ restore: false });
   updateSendButton();
+  updateConnectionBanner();
 }
 
 async function initAuthenticatedApp(skipWorkspace = false) {
   isGuestMode = false;
+  bindConnectionWatch();
   await checkBackendHealth();
   try {
     await PlanoAuth.refreshMe();
@@ -595,10 +674,14 @@ async function initAuthenticatedApp(skipWorkspace = false) {
   await Promise.allSettled(bootTasks);
   applyAskCapabilitiesUI();
   setAttachment(null);
-  currentChatId = null;
-  if (!skipWorkspace) goToWorkspace();
+  if (!skipWorkspace) {
+    await goToWorkspace({ restore: true });
+  } else {
+    currentChatId = null;
+  }
   updateSendButton();
   updateLayoutMode();
+  updateConnectionBanner();
   measureLatency();
   setInterval(measureLatency, 15000);
 }
@@ -662,6 +745,7 @@ async function ensureChat() {
     };
     chats.unshift(chat);
     currentChatId = chat.id;
+    rememberActiveChat(chat.id);
     saveChats();
     return chat;
   })();
@@ -682,6 +766,7 @@ async function newChat(showNotice = true) {
     $("#messages").innerHTML = "";
     setAttachment(null);
     updateLayoutMode();
+    refreshWelcomeHero({ advance: true, animate: true });
     if (showNotice) showToast("Nueva sesión");
     return;
   }
@@ -694,6 +779,7 @@ async function newChat(showNotice = true) {
     setAttachment(null);
     updateLayoutMode();
     renderChatList();
+    refreshWelcomeHero({ advance: true, animate: true });
     if (showNotice) showToast("Nueva prueba en este chat");
     return;
   }
@@ -712,6 +798,7 @@ async function newChat(showNotice = true) {
     };
     chats.unshift(chat);
     currentChatId = chat.id;
+    rememberActiveChat(chat.id);
     saveChats();
     $("#welcome").hidden = false;
     $("#messages").hidden = true;
@@ -719,13 +806,59 @@ async function newChat(showNotice = true) {
     setAttachment(null);
     updateLayoutMode();
     renderChatList();
+    refreshWelcomeHero({ advance: true, animate: true, chatId: chat.id });
     if (showNotice) showToast("Nuevo chat creado");
   } catch (err) {
     showToast(err.message || "Error al crear chat");
   }
 }
 
-function goToWorkspace() {
+function rememberActiveChat(chatId) {
+  if (!CHAT_PERSISTENCE_ENABLED || isGuestMode) return;
+  try {
+    const url = new URL(window.location.href);
+    if (chatId) {
+      localStorage.setItem(LAST_CHAT_KEY, chatId);
+      if (url.searchParams.get("chat") !== chatId) {
+        url.searchParams.set("chat", chatId);
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    } else {
+      localStorage.removeItem(LAST_CHAT_KEY);
+      if (url.searchParams.has("chat")) {
+        url.searchParams.delete("chat");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    }
+  } catch {
+    /* storage/URL no disponible */
+  }
+}
+
+function readRememberedChatId() {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("chat");
+    if (fromUrl) return fromUrl;
+    return localStorage.getItem(LAST_CHAT_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function showWelcomeView() {
+  const welcome = $("#welcome");
+  const messages = $("#messages");
+  if (welcome) welcome.hidden = false;
+  if (messages) {
+    messages.hidden = true;
+    messages.innerHTML = "";
+  }
+  updateLayoutMode();
+  refreshWelcomeHero({ chatId: currentChatId, animate: true });
+}
+
+async function goToWorkspace(options = {}) {
+  const restore = options.restore !== false;
   window.HomeProjectsUI?.close?.();
   const url = new URL(window.location.href);
   url.searchParams.delete("home-projects");
@@ -735,14 +868,23 @@ function goToWorkspace() {
     window.history.replaceState({}, "", next);
   }
   setNavActive("workspace");
-  $("#welcome").hidden = false;
-  $("#messages").hidden = true;
-  $("#messages").innerHTML = "";
   setAttachment(null);
   pendingPrompt = null;
-  updateLayoutMode();
-  renderChatList();
   setToolMode("default");
+
+  if (restore && CHAT_PERSISTENCE_ENABLED && !isGuestMode) {
+    const targetId = readRememberedChatId();
+    const chat = targetId ? chats.find((c) => c.id === targetId) : null;
+    if (chat) {
+      await showChat(chat);
+      return;
+    }
+    if (targetId) rememberActiveChat(null);
+  }
+
+  currentChatId = null;
+  showWelcomeView();
+  renderChatList();
 }
 window.goToWorkspace = goToWorkspace;
 
@@ -776,6 +918,7 @@ function getCurrentChat() {
 
 async function showChat(chat) {
   currentChatId = chat.id;
+  rememberActiveChat(chat.id);
   const welcome = $("#welcome");
   const messages = $("#messages");
 
@@ -784,6 +927,7 @@ async function showChat(chat) {
       welcome.hidden = false;
       messages.hidden = true;
       messages.innerHTML = "";
+      refreshWelcomeHero({ chatId: chat.id, animate: true });
     } else {
       welcome.hidden = true;
       messages.hidden = false;
@@ -800,6 +944,7 @@ async function showChat(chat) {
       welcome.hidden = false;
       messages.hidden = true;
       messages.innerHTML = "";
+      refreshWelcomeHero({ chatId: chat.id, animate: true });
     } else {
       welcome.hidden = true;
       messages.hidden = false;
@@ -826,6 +971,7 @@ async function showChat(chat) {
     welcome.hidden = false;
     messages.hidden = true;
     messages.innerHTML = "";
+    refreshWelcomeHero({ chatId: chat.id, animate: true });
   } else {
     welcome.hidden = true;
     messages.hidden = false;
@@ -837,24 +983,128 @@ async function showChat(chat) {
   renderChatList();
 }
 
+function inlineFormatHtml(text) {
+  const safe = escapeHtml(text || "");
+  return safe
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code class=\"msg-inline-code\">$1</code>");
+}
+
+function isBulletLine(line) {
+  return /^([•\-\*\u2013\u2014]|\d+[.)])\s+/.test(line.trim());
+}
+
+function stripListMarker(line) {
+  return line.trim().replace(/^([•\-\*\u2013\u2014]|\d+[.)])\s+/, "");
+}
+
+/** Renderiza respuestas del asistente con jerarquía: lead, listas, párrafos. */
+function buildAssistantAnswerBlock(text) {
+  const block = document.createElement("div");
+  block.className = "msg-text msg-answer";
+
+  const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+  let i = 0;
+  let leadDone = false;
+
+  const flushParagraph = (rawLines) => {
+    const content = rawLines.map((l) => l.trim()).filter(Boolean).join(" ");
+    if (!content) return;
+    const p = document.createElement("p");
+    if (!leadDone) {
+      p.className = "msg-answer-lead";
+      leadDone = true;
+    }
+    p.innerHTML = inlineFormatHtml(content);
+    block.appendChild(p);
+  };
+
+  while (i < lines.length) {
+    const raw = lines[i];
+    if (!raw.trim()) {
+      i += 1;
+      continue;
+    }
+
+    if (isBulletLine(raw)) {
+      const numbered = /^\d+[.)]\s+/.test(raw.trim());
+      const list = document.createElement(numbered ? "ol" : "ul");
+      list.className = numbered ? "msg-answer-ol" : "msg-answer-ul";
+      while (i < lines.length && isBulletLine(lines[i])) {
+        const li = document.createElement("li");
+        li.innerHTML = inlineFormatHtml(stripListMarker(lines[i]));
+        list.appendChild(li);
+        i += 1;
+        leadDone = true;
+      }
+      block.appendChild(list);
+      continue;
+    }
+
+    // Encabezado corto tipo "Alcance:" o línea en negrita sola
+    const trimmed = raw.trim();
+    if (
+      (/^.{2,48}:$/.test(trimmed) && !trimmed.includes("://")) ||
+      (/^\*\*.+\*\*$/.test(trimmed) && trimmed.length < 80)
+    ) {
+      const h = document.createElement("p");
+      h.className = "msg-answer-heading";
+      h.innerHTML = inlineFormatHtml(trimmed.replace(/^\*\*(.+)\*\*$/, "$1"));
+      block.appendChild(h);
+      leadDone = true;
+      i += 1;
+      continue;
+    }
+
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !isBulletLine(lines[i])) {
+      const t = lines[i].trim();
+      if (/^.{2,48}:$/.test(t) && !t.includes("://")) break;
+      if (/^\*\*.+\*\*$/.test(t) && t.length < 80) break;
+      para.push(lines[i]);
+      i += 1;
+    }
+    flushParagraph(para);
+  }
+
+  if (!block.childNodes.length) {
+    const p = document.createElement("p");
+    p.className = "msg-answer-lead";
+    p.textContent = text || "";
+    block.appendChild(p);
+  }
+
+  return block;
+}
+
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text ?? "";
   return div.innerHTML;
 }
 
-async function deleteChat(chatId, listItem) {
+const CHAT_SWIPE_OPEN = 76;
+const CHAT_SWIPE_DELETE = 132;
+
+async function deleteChat(chatId, listItem, { skipConfirm = false } = {}) {
   if (!listItem || listItem.classList.contains("is-removing")) return;
   if (
+    !skipConfirm &&
     !(await PlanoDialog.confirm("¿Eliminar este chat y todo su historial?", {
       title: "Eliminar chat",
       variant: "danger",
       confirmLabel: "Eliminar",
     }))
   ) {
+    resetChatSwipe(listItem);
     return;
   }
 
+  const content = listItem.querySelector(".chat-swipe-content");
+  if (content) {
+    content.style.transition = "transform 0.22s ease";
+    content.style.transform = `translateX(-${Math.max(listItem.clientWidth || 280, 280)}px)`;
+  }
   listItem.classList.add("is-removing");
   listItem.style.pointerEvents = "none";
 
@@ -866,6 +1116,7 @@ async function deleteChat(chatId, listItem) {
   } catch (err) {
     listItem.classList.remove("is-removing");
     listItem.style.pointerEvents = "";
+    resetChatSwipe(listItem);
     showToast(err.message || "No se pudo eliminar el chat");
     return;
   }
@@ -880,6 +1131,7 @@ async function deleteChat(chatId, listItem) {
     }
     listItem.classList.remove("is-removing");
     listItem.style.pointerEvents = "";
+    resetChatSwipe(listItem);
     showToast(detail);
     return;
   }
@@ -892,10 +1144,8 @@ async function deleteChat(chatId, listItem) {
       await showChat(chats[0]);
     } else {
       currentChatId = null;
-      $("#welcome").hidden = false;
-      $("#messages").hidden = true;
-      $("#messages").innerHTML = "";
-      updateLayoutMode();
+      rememberActiveChat(null);
+      showWelcomeView();
     }
   }
 
@@ -904,81 +1154,303 @@ async function deleteChat(chatId, listItem) {
   showToast("Chat eliminado");
 }
 
-function renderChatList() {
-  if (!CHAT_PERSISTENCE_ENABLED) return;
-  const list = $("#chatList");
-  if (!list) return;
-  const q = ($("#searchChats").value || "").toLowerCase();
-  list.innerHTML = "";
-  chats
-    .filter((c) => !q || c.title.toLowerCase().includes(q))
-    .forEach((c) => {
-      const li = document.createElement("li");
-      li.className = "chat-item";
-      li.dataset.chatId = c.id;
-      if (c.id === currentChatId) li.classList.add("active");
+function setChatSwipeX(li, x, { animate = false } = {}) {
+  const content = li.querySelector(".chat-swipe-content");
+  const trash = li.querySelector(".chat-swipe-delete");
+  if (!content) return;
+  const clamped = Math.min(0, Math.max(-Math.max(li.clientWidth * 0.85, CHAT_SWIPE_DELETE + 40), x));
+  li._swipeX = clamped;
+  content.style.transition = animate ? "transform 0.22s cubic-bezier(0.25, 0.1, 0.25, 1)" : "none";
+  content.style.transform = `translateX(${clamped}px)`;
 
-      const row = document.createElement("div");
-      row.className = "chat-item-row";
+  const progress = Math.min(1, Math.max(0, -clamped / CHAT_SWIPE_OPEN));
+  if (trash) {
+    trash.style.transition = animate
+      ? "opacity 0.18s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)"
+      : "none";
+    trash.style.opacity = String(progress);
+    trash.style.transform = `scale(${0.55 + 0.45 * progress})`;
+  }
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "chat-item-btn";
-      const meta =
-        c.messageCount > 0
-          ? `<span class="chat-meta">${c.messageCount} mensaje${c.messageCount === 1 ? "" : "s"}</span>`
-          : "";
-      btn.innerHTML = `<span class="chat-name">${escapeHtml(c.title)}</span>${meta}`;
-      btn.onclick = () => showChat(c);
+  li.classList.toggle("is-swiped", clamped <= -CHAT_SWIPE_OPEN * 0.4);
+}
 
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "chat-item-delete";
-      del.title = "Eliminar chat";
-      del.setAttribute("aria-label", "Eliminar chat");
-      del.innerHTML = '<span class="material-symbols-outlined">close</span>';
-      del.onclick = (e) => {
-        e.stopPropagation();
-        deleteChat(c.id, li);
-      };
+function resetChatSwipe(li) {
+  if (!li) return;
+  setChatSwipeX(li, 0, { animate: true });
+  li.classList.remove("is-swiped", "is-dragging");
+}
 
-      row.appendChild(btn);
-      row.appendChild(del);
-      li.appendChild(row);
-      list.appendChild(li);
+function closeAllChatSwipes(except = null) {
+  document.querySelectorAll(".chat-item.is-swiped, .chat-item.is-dragging").forEach((el) => {
+    if (el === except) return;
+    resetChatSwipe(el);
+  });
+}
+
+function bindChatSwipe(li, chat) {
+  const content = li.querySelector(".chat-swipe-content");
+  const main = li.querySelector(".chat-swipe-main");
+  const trash = li.querySelector(".chat-swipe-delete");
+  if (!content || !main || !trash) return;
+
+  li._swipeX = 0;
+  setChatSwipeX(li, 0);
+
+  let origin = 0;
+  let moved = false;
+  let suppressClick = false;
+
+  const finishOpenOrClose = (x, velocityX = 0) => {
+    li.classList.remove("is-dragging");
+    // Flick fuerte a la izquierda → eliminar
+    if (x <= -CHAT_SWIPE_DELETE || (x <= -CHAT_SWIPE_OPEN && velocityX < -0.65)) {
+      deleteChat(chat.id, li);
+      return;
+    }
+    if (x <= -CHAT_SWIPE_OPEN * 0.45 || (x < 0 && velocityX < -0.35)) {
+      setChatSwipeX(li, -CHAT_SWIPE_OPEN, { animate: true });
+      li.classList.add("is-swiped");
+    } else {
+      resetChatSwipe(li);
+    }
+  };
+
+  if (typeof Hammer !== "undefined") {
+    if (li._hammer) {
+      try {
+        li._hammer.destroy();
+      } catch {
+        /* ignore */
+      }
+    }
+    const mc = new Hammer.Manager(content, {
+      touchAction: "pan-y",
+      recognizers: [[Hammer.Pan, { direction: Hammer.DIRECTION_HORIZONTAL, threshold: 6 }]],
     });
+    li._hammer = mc;
+
+    mc.on("panstart", () => {
+      closeAllChatSwipes(li);
+      origin = li._swipeX || 0;
+      moved = false;
+      suppressClick = false;
+      li.classList.add("is-dragging");
+      content.style.transition = "none";
+    });
+
+    mc.on("panmove", (ev) => {
+      if (Math.abs(ev.deltaX) > 4) {
+        moved = true;
+        suppressClick = true;
+      }
+      setChatSwipeX(li, origin + ev.deltaX);
+    });
+
+    mc.on("panend pancancel", (ev) => {
+      if (!moved && Math.abs(ev.deltaX) < 8) {
+        li.classList.remove("is-dragging");
+        return;
+      }
+      finishOpenOrClose(li._swipeX || 0, ev.velocityX || 0);
+    });
+  } else {
+    // Fallback sin Hammer: pointer events
+    let startX = 0;
+    let startY = 0;
+    let dragging = false;
+    let axis = null;
+
+    content.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest(".chat-swipe-delete")) return;
+      closeAllChatSwipes(li);
+      startX = e.clientX;
+      startY = e.clientY;
+      origin = li._swipeX || 0;
+      dragging = true;
+      axis = null;
+      moved = false;
+      suppressClick = false;
+      try {
+        content.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    });
+
+    content.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!axis) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+          if (axis === "y") {
+            dragging = false;
+            return;
+          }
+          li.classList.add("is-dragging");
+        }
+        if (axis !== "x") return;
+        moved = true;
+        suppressClick = true;
+        e.preventDefault();
+        setChatSwipeX(li, origin + dx);
+      },
+      { passive: false },
+    );
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      if (!moved) {
+        li.classList.remove("is-dragging");
+        return;
+      }
+      finishOpenOrClose(li._swipeX || 0, 0);
+    };
+    content.addEventListener("pointerup", onUp);
+    content.addEventListener("pointercancel", onUp);
+  }
+
+  trash.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deleteChat(chat.id, li);
+  });
+
+  main.addEventListener("click", (e) => {
+    if (suppressClick || moved || Math.abs(li._swipeX || 0) > 8) {
+      e.preventDefault();
+      e.stopPropagation();
+      resetChatSwipe(li);
+      suppressClick = false;
+      moved = false;
+      return;
+    }
+    showChat(chat);
+  });
+}
+
+function renderChatList() {
+  const list = $("#chatList");
+  const empty = $("#chatListEmpty");
+  const panel = $("#sidebarChats");
+  if (!list) return;
+
+  if (!CHAT_PERSISTENCE_ENABLED || isGuestMode) {
+    if (panel) panel.hidden = true;
+    list.innerHTML = "";
+    if (empty) empty.hidden = true;
+    return;
+  }
+  if (panel) panel.hidden = false;
+
+  const q = ($("#searchChats")?.value || "").toLowerCase().trim();
+  const filtered = chats.filter((c) => !q || (c.title || "").toLowerCase().includes(q));
+  list.innerHTML = "";
+
+  if (!filtered.length) {
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = q
+        ? "Ningún chat coincide con la búsqueda."
+        : "Aún no hay chats. Escribe una pregunta o crea uno nuevo.";
+    }
+    return;
+  }
+  if (empty) empty.hidden = true;
+
+  filtered.forEach((c, i) => {
+    const li = document.createElement("li");
+    li.className = "chat-item is-enter";
+    li.dataset.chatId = c.id;
+    li.style.animationDelay = `${Math.min(i, 10) * 35}ms`;
+    if (c.id === currentChatId) li.classList.add("active");
+
+    const when = c.updatedAt ? formatChatWhen(c.updatedAt) : "";
+    const metaBits = [];
+    if (c.messageCount > 0) {
+      metaBits.push(`${c.messageCount} mensaje${c.messageCount === 1 ? "" : "s"}`);
+    }
+    if (when) metaBits.push(when);
+    const meta = metaBits.length
+      ? `<span class="chat-meta">${escapeHtml(metaBits.join(" · "))}</span>`
+      : "";
+
+    li.innerHTML = `
+      <div class="chat-swipe-row">
+        <div class="chat-swipe-actions">
+          <button type="button" class="chat-swipe-delete" title="Eliminar chat" aria-label="Eliminar chat">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+        <div class="chat-swipe-content">
+          <button type="button" class="chat-swipe-main">
+            <span class="chat-name">${escapeHtml(c.title || "Chat")}</span>
+            ${meta}
+          </button>
+        </div>
+      </div>
+    `;
+    list.appendChild(li);
+    bindChatSwipe(li, c);
+  });
+}
+
+function formatChatWhen(ts) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  ) {
+    return "Ayer";
+  }
+  return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 }
 
 function buildResultsPanel(msg) {
   const panel = document.createElement("div");
-  panel.className = "results-panel";
+  panel.className = "results-panel results-panel--compact";
 
-  if (msg.verdict?.headline) {
-    const box = document.createElement("div");
-    box.className = `verdict-banner verdict-banner--${msg.verdict.tone || "caution"}`;
-    box.innerHTML = `<strong>${escapeHtml(msg.verdict.headline)}</strong>`;
-    if (msg.verdict.detail) {
-      const det = document.createElement("p");
-      det.className = "verdict-detail";
-      det.textContent = msg.verdict.detail;
-      box.appendChild(det);
-    }
-    panel.appendChild(box);
-  } else if (msg.analysisIntent?.title) {
-    const focus = document.createElement("p");
-    focus.className = "results-focus";
-    focus.textContent = `Enfoque: ${msg.analysisIntent.title}`;
-    panel.appendChild(focus);
+  if (msg.stats) {
+    const summary = document.createElement("div");
+    summary.className = "results-summary";
+    const tone =
+      msg.stats.errors > 0 ? "fail" : msg.stats.warnings > 0 ? "warn" : "ok";
+    summary.innerHTML = `
+      <div class="results-stat results-stat--${tone}">
+        <strong>${msg.stats.errors}</strong><span>errores</span>
+      </div>
+      <div class="results-stat results-stat--warn">
+        <strong>${msg.stats.warnings}</strong><span>avisos</span>
+      </div>
+      <div class="results-stat">
+        <strong>${msg.stats.detections}</strong><span>detectados</span>
+      </div>
+    `;
+    panel.appendChild(summary);
   }
 
   if (msg.customFindings?.length) {
     const cfSec = document.createElement("div");
     cfSec.className = "results-section";
-    const cfTitle = document.createElement("h4");
-    cfTitle.className = "results-section-title";
-    cfTitle.textContent = "Tu pregunta";
-    cfSec.appendChild(cfTitle);
-    msg.customFindings.forEach((cf) => {
+    msg.customFindings.slice(0, 3).forEach((cf) => {
       const row = document.createElement("p");
       row.className = `custom-finding custom-finding--${cf.severity || "info"}`;
       row.textContent = (cf.severity === "ok" ? "✓ " : "• ") + (cf.message || "");
@@ -987,113 +1459,73 @@ function buildResultsPanel(msg) {
     panel.appendChild(cfSec);
   }
 
-  if (msg.stats) {
-    const summary = document.createElement("div");
-    summary.className = "results-summary";
-    const verdict =
-      msg.stats.errors > 0
-        ? "fail"
-        : msg.stats.warnings > 0
-          ? "warn"
-          : "ok";
-    summary.innerHTML = `
-      <div class="results-verdict results-verdict--${verdict}">
-        <span class="results-verdict-num">${msg.stats.errors}</span>
-        <span class="results-verdict-label">errores</span>
-      </div>
-      <div class="results-verdict results-verdict--warn">
-        <span class="results-verdict-num">${msg.stats.warnings}</span>
-        <span class="results-verdict-label">avisos</span>
-      </div>
-      <div class="results-verdict results-verdict--neutral">
-        <span class="results-verdict-num">${msg.stats.detections}</span>
-        <span class="results-verdict-label">detecciones</span>
-      </div>
-    `;
-    panel.appendChild(summary);
-  }
+  const issues = msg.issuesSummary || [];
+  if (issues.length) {
+    const issSec = document.createElement("div");
+    issSec.className = "results-section";
+    const issTitle = document.createElement("h4");
+    issTitle.className = "results-section-title";
+    issTitle.textContent = "Incidencias clave";
+    issSec.appendChild(issTitle);
 
-  if (msg.autoCalibration?.summary) {
-    const cal = document.createElement("p");
-    cal.className = "results-calibration";
-    cal.textContent = msg.autoCalibration.summary;
-    panel.appendChild(cal);
-  }
-
-  if (msg.scaleHint) {
-    const hint = document.createElement("p");
-    hint.className = "results-hint";
-    hint.textContent = msg.scaleHint;
-    panel.appendChild(hint);
-  }
-
-  if (msg.knowledgeReferences?.length) {
-    const refSec = document.createElement("div");
-    refSec.className = "results-section knowledge-refs";
-    const refTitle = document.createElement("h4");
-    refTitle.className = "results-section-title";
-    refTitle.textContent = "Referencias de tus documentos";
-    refSec.appendChild(refTitle);
-    const list = document.createElement("ul");
-    list.className = "knowledge-ref-list";
-    msg.knowledgeReferences.forEach((r) => {
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>${escapeHtml(r.doc_title || "Manual")}</strong> (pág. ${r.page})<br><span>${escapeHtml(r.snippet || "")}</span>`;
-      list.appendChild(li);
+    const list = document.createElement("div");
+    list.className = "issue-groups";
+    // Errores primero, luego avisos; máximo 5
+    const ranked = [...issues].sort((a, b) => {
+      const rank = (s) => (s === "error" ? 0 : s === "warning" ? 1 : 2);
+      return rank(a.severity) - rank(b.severity);
     });
-    refSec.appendChild(list);
-    panel.appendChild(refSec);
-  }
-
-  if (msg.constructionCoverage?.length) {
-    const okN = msg.constructionCoverage.filter((d) => d.status === "revisado").length;
-    const incN = msg.constructionCoverage.filter((d) => d.status === "incidencias").length;
-    const manN = msg.constructionCoverage.filter(
-      (d) => d.status !== "revisado" && d.status !== "incidencias",
-    ).length;
-
-    const covSec = document.createElement("details");
-    covSec.className = "results-section construction-coverage construction-coverage--folded";
-    const summary = document.createElement("summary");
-    summary.className = "construction-coverage-summary";
-    summary.textContent =
-      incN > 0
-        ? `Ámbitos de construcción (${okN} OK, ${incN} con incidencias, ${manN} solo manual) — clic para ver`
-        : `Ámbitos de construcción (${okN} revisados en planta, ${manN} requieren revisión manual) — clic para ver`;
-    covSec.appendChild(summary);
-
-    const hint = document.createElement("p");
-    hint.className = "construction-coverage-hint";
-    hint.textContent =
-      "Las tarjetas «Manual» no se validan solo con la imagen; confirma en cortes, instalaciones o memoria de cálculo.";
-    covSec.appendChild(hint);
-
-    const grid = document.createElement("div");
-    grid.className = "construction-grid";
-    msg.constructionCoverage.forEach((d) => {
-      const item = document.createElement("div");
-      const st = d.status || "manual";
-      item.className = `construction-item construction-item--${st}`;
+    ranked.slice(0, 5).forEach((g) => {
+      const row = document.createElement("div");
+      row.className = `issue-group issue-group--${g.severity}`;
       const badge =
-        st === "revisado" ? "OK" : st === "incidencias" ? "Incidencia" : "Manual";
-      item.innerHTML = `<span class="construction-badge">${badge}</span><strong>${escapeHtml(d.title)}</strong><span class="construction-scope">${escapeHtml(d.scope)}</span>`;
-      grid.appendChild(item);
+        g.severity === "error"
+          ? "Error"
+          : g.severity === "info"
+            ? "Info"
+            : "Aviso";
+      const countLabel = g.count > 1 ? ` ×${g.count}` : "";
+      const msgText = String(g.sample_message || "").slice(0, 120);
+      row.innerHTML = `
+        <div class="issue-group-head">
+          <span class="issue-group-badge">${badge}</span>
+          <span class="issue-group-title">${escapeHtml(g.label || g.code)}${countLabel}</span>
+        </div>
+        ${msgText ? `<p class="issue-group-msg">${escapeHtml(msgText)}${String(g.sample_message || "").length > 120 ? "…" : ""}</p>` : ""}
+      `;
+      list.appendChild(row);
     });
-    covSec.appendChild(grid);
-    if (incN > 0) covSec.open = true;
-    panel.appendChild(covSec);
+    if (ranked.length > 5) {
+      const more = document.createElement("p");
+      more.className = "results-more";
+      more.textContent = `+${ranked.length - 5} más en el plano marcado`;
+      list.appendChild(more);
+    }
+    issSec.appendChild(list);
+    panel.appendChild(issSec);
+  }
+
+  if (msg.detectionsSummary?.length) {
+    const chips = document.createElement("div");
+    chips.className = "det-chips";
+    msg.detectionsSummary.forEach((d) => {
+      const chip = document.createElement("span");
+      chip.className = "det-chip";
+      chip.textContent = `${d.label || d.class} ${d.count}`;
+      chips.appendChild(chip);
+    });
+    panel.appendChild(chips);
   }
 
   if (msg.measuresReport?.items?.length) {
-    const mSec = document.createElement("div");
-    mSec.className = "results-section measures-table-section";
-    const mTitle = document.createElement("h4");
-    mTitle.className = "results-section-title";
-    mTitle.textContent = "Medidas por elemento";
-    mSec.appendChild(mTitle);
+    const mSec = document.createElement("details");
+    mSec.className = "results-fold";
+    const sum = document.createElement("summary");
+    sum.textContent = `Medidas (${msg.measuresReport.items.length})`;
+    mSec.appendChild(sum);
     const table = document.createElement("div");
     table.className = "measures-table";
-    msg.measuresReport.items.forEach((it) => {
+    msg.measuresReport.items.slice(0, 20).forEach((it) => {
       const row = document.createElement("div");
       row.className = "measures-row";
       row.innerHTML = `
@@ -1108,120 +1540,14 @@ function buildResultsPanel(msg) {
     panel.appendChild(mSec);
   }
 
-  if (msg.detectionsSummary?.length) {
-    const detSec = document.createElement("div");
-    detSec.className = "results-section";
-    const detTitle = document.createElement("h4");
-    detTitle.className = "results-section-title";
-    detTitle.textContent = "Elementos detectados";
-    detSec.appendChild(detTitle);
-    const chips = document.createElement("div");
-    chips.className = "det-chips";
-    msg.detectionsSummary.forEach((d) => {
-      const chip = document.createElement("span");
-      chip.className = "det-chip";
-      chip.textContent = `${d.label || d.class}: ${d.count}`;
-      chips.appendChild(chip);
-    });
-    detSec.appendChild(chips);
-    panel.appendChild(detSec);
-  }
-
-  if (msg.analysisId && msg.detectionsList?.length && !isGuestMode) {
-    const corrSec = document.createElement("div");
-    corrSec.className = "results-section corrections-section";
-    const corrTitle = document.createElement("h4");
-    corrTitle.className = "results-section-title";
-    corrTitle.textContent = "¿Algo está mal? Corrige y el sistema aprende";
-    corrSec.appendChild(corrTitle);
-
-    const corrHint = document.createElement("p");
-    corrHint.className = "corrections-hint";
-    corrHint.textContent =
-      "Si el modelo se equivocó (por ejemplo ventana donde hay muro), marca la detección. También puedes escribir en el chat: «esa ventana no es ventana, ahí hay muro».";
-    corrSec.appendChild(corrHint);
-
-    if (msg.correctionsCount > 0) {
-      const saved = document.createElement("p");
-      saved.className = "corrections-saved";
-      saved.textContent = `${msg.correctionsCount} corrección(es) guardada(s) en este plano.`;
-      corrSec.appendChild(saved);
-    }
-
-    const list = document.createElement("div");
-    list.className = "corrections-list";
-    msg.detectionsList.forEach((det) => {
-      const row = document.createElement("div");
-      row.className = "correction-row";
-      const conf = Math.round((det.confidence || 0) * 100);
-      row.innerHTML = `
-        <div class="correction-row-meta">
-          <strong>${escapeHtml(det.label || det.class)}</strong>
-          <span>${conf}% · ${Math.round(det.width_px || 0)}×${Math.round(det.height_px || 0)} px</span>
-        </div>
-      `;
-      const actions = document.createElement("div");
-      actions.className = "correction-row-actions";
-
-      const rejectBtn = document.createElement("button");
-      rejectBtn.type = "button";
-      rejectBtn.className = "correction-btn correction-btn--reject";
-      rejectBtn.textContent = "No es correcto";
-      rejectBtn.onclick = () =>
-        applyDetectionCorrection(msg.analysisId, det.idx, "reject", null, row);
-
-      actions.appendChild(rejectBtn);
-      CORRECTION_RELABEL_OPTIONS.forEach((opt) => {
-        if (opt.class === det.class) return;
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "correction-btn";
-        b.textContent = opt.label;
-        b.onclick = () =>
-          applyDetectionCorrection(msg.analysisId, det.idx, "relabel", opt.class, row);
-        actions.appendChild(b);
-      });
-
-      row.appendChild(actions);
-      list.appendChild(row);
-    });
-    corrSec.appendChild(list);
-    panel.appendChild(corrSec);
-  }
-
-  if (msg.issuesSummary?.length) {
-    const issSec = document.createElement("div");
-    issSec.className = "results-section";
-    const issTitle = document.createElement("h4");
-    issTitle.className = "results-section-title";
-    issTitle.textContent = "Incidencias por regla";
-    issSec.appendChild(issTitle);
-
-    const list = document.createElement("div");
-    list.className = "issue-groups";
-    msg.issuesSummary.forEach((g) => {
-      const row = document.createElement("div");
-      row.className = `issue-group issue-group--${g.severity}`;
-      const badge =
-        g.severity === "error"
-          ? "Error"
-          : g.severity === "info"
-            ? "Revisión"
-            : "Aviso";
-      const countLabel = g.count > 1 ? ` ×${g.count}` : "";
-      const norm = g.norm_ref ? `<span class="issue-group-norm">${escapeHtml(g.norm_ref)}</span>` : "";
-      row.innerHTML = `
-        <div class="issue-group-head">
-          <span class="issue-group-badge">${badge}</span>
-          <span class="issue-group-title">${escapeHtml(g.label || g.code)}${countLabel}</span>
-        </div>
-        <p class="issue-group-msg">${escapeHtml(g.sample_message || "")}</p>
-        ${norm}
-      `;
-      list.appendChild(row);
-    });
-    issSec.appendChild(list);
-    panel.appendChild(issSec);
+  const incN = (msg.constructionCoverage || []).filter(
+    (d) => d.status === "incidencias",
+  ).length;
+  if (incN > 0) {
+    const line = document.createElement("p");
+    line.className = "results-meta-line";
+    line.textContent = `${incN} ámbito${incN === 1 ? "" : "s"} con incidencia en planta (ver marcas en el plano).`;
+    panel.appendChild(line);
   }
 
   return panel;
@@ -1446,24 +1772,45 @@ function appendMessageDOM(msg, scroll = true) {
   const body = document.createElement("div");
   body.className = "msg-body";
 
-  if (msg.text) {
-    const block = document.createElement("div");
-    block.className = "msg-text";
-    msg.text.split("\n").forEach((line) => {
-      if (!line.trim()) return;
-      const p = document.createElement("p");
-      p.textContent = line;
-      block.appendChild(p);
-    });
-    body.appendChild(block);
+  const modeLabel = assistantModeLabel(msg.assistantMode);
+  if (msg.role === "assistant" && (modeLabel || msg.llmUsed)) {
+    const meta = document.createElement("div");
+    meta.className = "msg-answer-meta";
+    if (modeLabel) {
+      const badge = document.createElement("span");
+      badge.className = `msg-mode-badge msg-mode-badge--${msg.assistantMode === "llm" ? "llm" : "architect"}`;
+      badge.textContent = modeLabel;
+      meta.appendChild(badge);
+    }
+    if (msg.llmUsed) {
+      const chip = document.createElement("span");
+      chip.className = "msg-mode-badge msg-mode-badge--reasoned";
+      chip.textContent = "Razonada";
+      meta.appendChild(chip);
+    }
+    if (msg.municipality) {
+      const chip = document.createElement("span");
+      chip.className = "msg-mode-badge msg-mode-badge--place";
+      chip.textContent = msg.municipality;
+      meta.appendChild(chip);
+    }
+    body.appendChild(meta);
   }
 
-  const modeLabel = assistantModeLabel(msg.assistantMode);
-  if (msg.role === "assistant" && modeLabel) {
-    const badge = document.createElement("span");
-    badge.className = `msg-mode-badge msg-mode-badge--${msg.assistantMode === "llm" ? "llm" : "architect"}`;
-    badge.textContent = modeLabel;
-    body.appendChild(badge);
+  if (msg.text) {
+    if (msg.role === "assistant") {
+      body.appendChild(buildAssistantAnswerBlock(msg.text));
+    } else {
+      const block = document.createElement("div");
+      block.className = "msg-text";
+      msg.text.split("\n").forEach((line) => {
+        if (!line.trim()) return;
+        const p = document.createElement("p");
+        p.textContent = line;
+        block.appendChild(p);
+      });
+      body.appendChild(block);
+    }
   }
 
   if (msg.steps?.length) {
@@ -1539,20 +1886,8 @@ function appendMessageDOM(msg, scroll = true) {
   el.appendChild(avatar);
   el.appendChild(body);
   wrap.appendChild(el);
+  updateLayoutMode();
   if (scroll) scrollToBottom();
-}
-
-function showTyping() {
-  const wrap = $("#messages");
-  const el = document.createElement("div");
-  el.className = "msg assistant";
-  el.id = "typingIndicator";
-  el.innerHTML = `
-    <div class="msg-avatar">IA</div>
-    <div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div>
-  `;
-  wrap.appendChild(el);
-  scrollToBottom();
 }
 
 function hideTyping() {
@@ -1774,68 +2109,135 @@ function updateSendButton() {
   btn.disabled = isLoading || attachPreviewLoading || (!attachedFile && !hasText);
 }
 
-function appendSourcesToBody(body, msg) {
-  const sources = [...(msg.localSources || []), ...(msg.webSources || [])];
-  if (!sources.length) return;
+function appendThresholdsToBody(body, msg) {
+  const rows = msg.thresholds || [];
+  if (!rows.length) return;
 
-  const sec = document.createElement("div");
-  sec.className = "msg-sources";
-  const title = document.createElement("p");
-  title.className = "msg-sources-title";
-  title.textContent =
-    msg.webSources?.length && msg.localSources?.length
-      ? "Fuentes (manuales y web)"
-      : msg.webSources?.length
-        ? "Fuentes web"
-        : "Tus manuales";
-  sec.appendChild(title);
+  const sec = document.createElement("details");
+  sec.className = "msg-panel msg-panel--thresholds";
+  sec.open = rows.length <= 4;
 
-  sources.slice(0, 6).forEach((s) => {
-    const row = document.createElement("div");
-    row.className = "msg-source-row";
-    if (s.url) {
-      row.innerHTML = `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || s.doc_title || "Enlace")}</a>`;
-      const sn = document.createElement("span");
-      sn.textContent = (s.snippet || "").slice(0, 180);
-      row.appendChild(sn);
-    } else {
-      row.innerHTML = `<strong>${escapeHtml(s.doc_title || "Manual")}</strong> (pág. ${s.page})`;
-      const sn = document.createElement("span");
-      sn.textContent = s.snippet || "";
-      row.appendChild(sn);
-    }
-    sec.appendChild(row);
+  const summary = document.createElement("summary");
+  summary.className = "msg-panel-summary";
+  summary.textContent = `Umbrales de referencia (${rows.length})`;
+  sec.appendChild(summary);
+
+  const list = document.createElement("ul");
+  list.className = "msg-threshold-list";
+  rows.slice(0, 6).forEach((t) => {
+    const li = document.createElement("li");
+    const unit = t.unit === "ratio" ? "proporción" : t.unit || "";
+    li.innerHTML =
+      `<span class="msg-threshold-label">${escapeHtml(t.label || t.code || "Umbral")}</span>` +
+      `<span class="msg-threshold-value">${escapeHtml(String(t.value))} ${escapeHtml(unit)}</span>` +
+      (t.source ? `<span class="msg-threshold-src">${escapeHtml(t.source)}</span>` : "");
+    list.appendChild(li);
   });
+  sec.appendChild(list);
   body.appendChild(sec);
 }
 
-async function askConstructionQuestion(text) {
+function appendSourcesToBody(body, msg) {
+  appendThresholdsToBody(body, msg);
+
+  const local = msg.localSources || [];
+  const web = msg.webSources || [];
+  if (!local.length && !web.length) return;
+
+  const sec = document.createElement("details");
+  sec.className = "msg-panel msg-panel--sources";
+  sec.open = false;
+
+  const summary = document.createElement("summary");
+  summary.className = "msg-panel-summary";
+  const parts = [];
+  if (local.length) parts.push(`${local.length} manual${local.length === 1 ? "" : "es"}`);
+  if (web.length) parts.push(`${web.length} web`);
+  summary.textContent = `Fuentes · ${parts.join(" · ")}`;
+  sec.appendChild(summary);
+
+  const stack = document.createElement("div");
+  stack.className = "msg-source-stack";
+
+  local.slice(0, 4).forEach((s) => {
+    const card = document.createElement("article");
+    card.className = "msg-source-card";
+    card.innerHTML =
+      `<header><span class="msg-source-kind">Manual</span>` +
+      `<strong>${escapeHtml(s.doc_title || "Documento")}</strong>` +
+      `<span class="msg-source-page">pág. ${escapeHtml(String(s.page ?? "?"))}</span></header>` +
+      (s.snippet
+        ? `<p>${escapeHtml(String(s.snippet).slice(0, 220))}${String(s.snippet).length > 220 ? "…" : ""}</p>`
+        : "");
+    stack.appendChild(card);
+  });
+
+  web.slice(0, 3).forEach((s) => {
+    const card = document.createElement("article");
+    card.className = "msg-source-card msg-source-card--web";
+    const title = escapeHtml(s.title || s.doc_title || "Enlace");
+    const link = s.url
+      ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${title}</a>`
+      : `<strong>${title}</strong>`;
+    card.innerHTML =
+      `<header><span class="msg-source-kind">Web</span>${link}</header>` +
+      (s.snippet
+        ? `<p>${escapeHtml(String(s.snippet).slice(0, 180))}${String(s.snippet).length > 180 ? "…" : ""}</p>`
+        : "");
+    stack.appendChild(card);
+  });
+
+  sec.appendChild(stack);
+  body.appendChild(sec);
+}
+
+async function askConstructionQuestion(text, options = {}) {
   if (!text) return;
+  const skipUserAppend = !!options.skipUserAppend;
   if (isGuestMode && guestTrial?.asks_remaining <= 0) {
     showTrialEndedModal();
     return;
   }
   try {
     await ensureChat();
-    const userMsg = { role: "user", text };
     const c = getCurrentChat();
-    c.messages.push(userMsg);
-    $("#welcome").hidden = true;
-    $("#messages").hidden = false;
-    appendMessageDOM(userMsg);
+    if (!c) throw new Error("No hay chat activo");
+
+    if (!skipUserAppend) {
+      const userMsg = { role: "user", text };
+      c.messages.push(userMsg);
+      $("#welcome").hidden = true;
+      $("#messages").hidden = false;
+      appendMessageDOM(userMsg);
+      updateLayoutMode();
+      c.updatedAt = Date.now();
+      saveChats();
+    }
 
     isLoading = true;
     setComposerDisabled(true);
+    removeAskRetryBanner();
     showTyping();
-
-    const formData = new FormData();
-    formData.append("message", text);
-    if (!isGuestMode && currentChatId) formData.append("chat_id", currentChatId);
+    updateTypingStatus("Consultando…");
 
     const askUrl = isGuestMode ? "/api/guest/ask" : "/api/ask";
-    const res = isGuestMode
-      ? await guestFetch(askUrl, { method: "POST", body: formData })
-      : await PlanoAuth.apiFetch(askUrl, { method: "POST", body: formData });
+    const res = await withNetworkRetry(
+      () => {
+        const formData = new FormData();
+        formData.append("message", text);
+        if (!isGuestMode && currentChatId) formData.append("chat_id", currentChatId);
+        return isGuestMode
+          ? guestFetch(askUrl, { method: "POST", body: formData })
+          : PlanoAuth.apiFetch(askUrl, { method: "POST", body: formData });
+      },
+      {
+        label: "la respuesta",
+        onRetry: (attempt, max) => {
+          updateTypingStatus(`Sin red · reintento ${attempt}/${max}…`);
+          updateConnectionBanner(true, `Reintentando respuesta (${attempt}/${max})…`);
+        },
+      },
+    );
     const data = await res.json();
     if (!res.ok) {
       if (isTrialExhaustedResponse(data, res.status)) {
@@ -1843,16 +2245,40 @@ async function askConstructionQuestion(text) {
         showTrialEndedModal();
         return;
       }
-      throw new Error(parseApiDetail(data, "No pude responder la pregunta"));
+      const detail = parseApiDetail(data, "No pude responder la pregunta");
+      if (res.status === 402 || /límite|preguntas|suscripción/i.test(detail)) {
+        showToast(detail);
+        openPlans?.();
+        return;
+      }
+      throw new Error(detail);
     }
 
     if (data.guest_trial) {
       guestTrial = data.guest_trial;
       updateGuestTrialUI();
     }
-    if (data.chat_id) currentChatId = data.chat_id;
+    if (data.subscription) {
+      localStorage.setItem("plano_ia_subscription", JSON.stringify(data.subscription));
+      updateUsageUI(data.subscription);
+    }
+    if (data.chat_id) {
+      currentChatId = data.chat_id;
+      rememberActiveChat(data.chat_id);
+      if (!chats.find((x) => x.id === data.chat_id)) {
+        chats.unshift({
+          id: data.chat_id,
+          title: text.slice(0, 80) || "Chat",
+          messages: c.messages,
+          messageCount: c.messages.length,
+          updatedAt: Date.now(),
+        });
+      }
+    }
 
     hideTyping();
+    pendingAskRetry = null;
+    updateConnectionBanner();
     const assistantMsg = {
       role: "assistant",
       text: data.text || "Sin respuesta.",
@@ -1862,32 +2288,205 @@ async function askConstructionQuestion(text) {
         url: w.url,
         snippet: w.snippet,
       })),
+      thresholds: (data.thresholds || []).map((t) => ({
+        code: t.code,
+        label: t.label || String(t.code || "").replace(/_/g, " "),
+        value: t.value,
+        unit: t.unit,
+        source: t.source,
+      })),
       municipality: data.municipality,
       assistantMode: data.assistant_mode || null,
+      llmUsed: !!data.llm_used,
     };
     c.messages.push(assistantMsg);
     if (c.title === "Nuevo chat") c.title = text.slice(0, 80);
+    c.messageCount = c.messages.length;
     c.updatedAt = Date.now();
     appendMessageDOM(assistantMsg);
     saveChats();
     renderChatList();
   } catch (err) {
     hideTyping();
-    showToast(err.message || "Error al consultar");
-    const errMsg = { role: "assistant", text: `No pude responder: ${err.message}` };
-    getCurrentChat()?.messages.push(errMsg);
-    appendMessageDOM(errMsg);
-    saveChats();
+    if (isNetworkError(err) || !navigator.onLine) {
+      pendingAskRetry = { text, chatId: currentChatId };
+      showAskRetryBanner(text);
+      updateConnectionBanner(true, "Sin conexión. Reintentaré al volver la red.");
+      showToast("Sin conexión — reintentaré automáticamente");
+    } else {
+      pendingAskRetry = null;
+      showToast(err.message || "Error al consultar");
+      const errMsg = { role: "assistant", text: `No pude responder: ${err.message}` };
+      getCurrentChat()?.messages.push(errMsg);
+      appendMessageDOM(errMsg);
+      saveChats();
+    }
   } finally {
     isLoading = false;
     setComposerDisabled(false);
     const input = $("#messageInput");
-    if (input) {
+    if (input && !options.keepInput) {
       input.value = "";
       resizeMessageInput();
     }
     updateSendButton();
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isNetworkError(err) {
+  if (!navigator.onLine) return true;
+  const name = err?.name || "";
+  const msg = String(err?.message || err || "").toLowerCase();
+  return (
+    name === "TypeError" ||
+    name === "AbortError" ||
+    /failed to fetch|networkerror|network request failed|load failed|fetch|timeout|timed out|err_network|err_internet/.test(
+      msg,
+    )
+  );
+}
+
+async function waitUntilOnline(timeoutMs = 45000) {
+  if (navigator.onLine) return true;
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("online", onOnline);
+      clearTimeout(timer);
+      resolve(ok);
+    };
+    const onOnline = () => finish(true);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    window.addEventListener("online", onOnline);
+  });
+}
+
+async function withNetworkRetry(doFetch, { retries = 4, label = "la solicitud", onRetry } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (!navigator.onLine) {
+      updateConnectionBanner(true);
+      const back = await waitUntilOnline(20000);
+      if (!back && attempt === retries) {
+        throw new Error("Sin conexión a internet");
+      }
+    }
+    try {
+      if (attempt > 0) onRetry?.(attempt, retries);
+      return await doFetch();
+    } catch (err) {
+      lastErr = err;
+      if (!isNetworkError(err) || attempt === retries) break;
+      onRetry?.(attempt + 1, retries);
+      await sleep(Math.min(8000, 900 * 2 ** attempt));
+    }
+  }
+  throw lastErr || new Error(`No se pudo completar ${label}`);
+}
+
+function updateTypingStatus(text) {
+  const tip = $("#typingIndicator .typing-status");
+  if (tip) tip.textContent = text || "";
+}
+
+function showTyping() {
+  const wrap = $("#messages");
+  const el = document.createElement("div");
+  el.className = "msg assistant";
+  el.id = "typingIndicator";
+  el.innerHTML = `
+    <div class="msg-avatar">IA</div>
+    <div class="msg-body">
+      <div class="typing"><span></span><span></span><span></span></div>
+      <p class="typing-status"></p>
+    </div>
+  `;
+  wrap.appendChild(el);
+  scrollToBottom();
+}
+
+function removeAskRetryBanner() {
+  $("#askRetryBanner")?.remove();
+}
+
+function showAskRetryBanner(text) {
+  removeAskRetryBanner();
+  const wrap = $("#messages");
+  if (!wrap) return;
+  const el = document.createElement("div");
+  el.className = "msg assistant";
+  el.id = "askRetryBanner";
+  el.innerHTML = `
+    <div class="msg-avatar">IA</div>
+    <div class="msg-body">
+      <div class="msg-text msg-answer msg-retry-card">
+        <p class="msg-answer-lead">No pude completar la respuesta por un problema de red.</p>
+        <p>Cuando vuelva internet lo intentaré de nuevo, o puedes reintentar ahora.</p>
+        <div class="msg-retry-actions">
+          <button type="button" class="btn-retry-ask" id="btnRetryAsk">Reintentar respuesta</button>
+        </div>
+      </div>
+    </div>
+  `;
+  wrap.appendChild(el);
+  $("#btnRetryAsk")?.addEventListener("click", () => {
+    retryPendingAsk();
+  });
+  scrollToBottom();
+  pendingAskRetry = { text, chatId: currentChatId };
+}
+
+async function retryPendingAsk() {
+  if (!pendingAskRetry?.text || isLoading) return;
+  const text = pendingAskRetry.text;
+  removeAskRetryBanner();
+  await askConstructionQuestion(text, { skipUserAppend: true });
+}
+
+function updateConnectionBanner(forceOffline = false, customText = "") {
+  const banner = $("#connectionBanner");
+  const textEl = $("#connectionBannerText");
+  const retryBtn = $("#btnConnectionRetry");
+  if (!banner) return;
+  const offline = forceOffline || !navigator.onLine;
+  if (offline) {
+    banner.hidden = false;
+    banner.classList.remove("hidden");
+    if (textEl) {
+      textEl.textContent =
+        customText ||
+        (pendingAskRetry
+          ? "Sin conexión. Reintentaré la respuesta al volver."
+          : "Sin conexión. El chat se sincronizará cuando vuelva la red.");
+    }
+    if (retryBtn) retryBtn.hidden = !pendingAskRetry;
+  } else {
+    banner.hidden = true;
+    banner.classList.add("hidden");
+    if (retryBtn) retryBtn.hidden = true;
+  }
+}
+
+function bindConnectionWatch() {
+  if (connectionWatchBound) return;
+  connectionWatchBound = true;
+  window.addEventListener("offline", () => {
+    updateConnectionBanner(true);
+  });
+  window.addEventListener("online", () => {
+    updateConnectionBanner(false);
+    showToast("Conexión restaurada");
+    if (pendingAskRetry?.text && !isLoading) {
+      setTimeout(() => retryPendingAsk(), 600);
+    }
+  });
+  $("#btnConnectionRetry")?.addEventListener("click", () => retryPendingAsk());
 }
 
 function detectToolFromPrompt(prompt) {
@@ -1917,121 +2516,18 @@ function runChipAction(prompt) {
 }
 
 function buildAssistantMessage(data) {
-  if (data.text) {
-    const detCount = data.counts?.detections ?? data.stats?.detections ?? 0;
-    const errors = data.counts?.errors ?? data.stats?.errors ?? 0;
-    const warnings = data.counts?.warnings ?? data.stats?.warnings ?? 0;
-    return {
-      role: "assistant",
-      text: data.text,
-      steps: data.steps || null,
-      imageUrl: data.image_base64
-        ? `data:image/jpeg;base64,${data.image_base64}`
-        : null,
-      stats: detCount > 0 ? { detections: detCount, errors, warnings } : data.stats || null,
-      issuesSummary: data.issues_summary || [],
-      detectionsSummary: data.detections_summary || [],
-      scaleHint: data.scale_hint || null,
-      autoCalibration: data.auto_calibration || null,
-      constructionCoverage: data.construction_coverage || null,
-      knowledgeReferences: data.knowledge_references || null,
-      verdict: data.verdict || null,
-      analysisIntent: data.analysis_intent || null,
-      customFindings: data.custom_findings || null,
-      measuresReport: data.measures_report || null,
-      analysisId: data.analysis_id || null,
-      conversionNote: data.conversion_note || null,
-      detectionsList: data.detections || data.detections_list || [],
-      correctionsCount: data.corrections_count || 0,
-      assistantMode: data.assistant_mode || null,
-    };
-  }
+  const errors = data.counts?.errors ?? data.stats?.errors ?? 0;
+  const warnings = data.counts?.warnings ?? data.stats?.warnings ?? 0;
+  const detCount = data.counts?.detections ?? data.stats?.detections ?? 0;
+  const llmUsed = !!data.llm_used;
 
-  const errors = data.counts?.errors ?? 0;
-  const warnings = data.counts?.warnings ?? 0;
-  const detCount = data.counts?.detections ?? 0;
-  const intentTitle = data.analysis_intent?.title || "Revisión integral";
-  const conversational = data.analysis_intent?.conversational;
-  const listMeasures = data.analysis_intent?.list_measures;
-  const measuresReport = data.measures_report;
-  const verdict = data.verdict || {};
-
-  let text;
-  if (listMeasures && measuresReport?.text) {
-    text = measuresReport.text;
-    if (data.auto_calibration?.summary) {
-      text = `${data.auto_calibration.summary}\n\n${text}`;
-    }
-    if (data.conversion_note) {
-      text = `${data.conversion_note}\n\n${text}`;
-    }
-  } else if (conversational && verdict.headline) {
-    text = verdict.headline;
-    if (verdict.detail) text += `\n${verdict.detail}`;
-    (verdict.suggestions || []).forEach((tip) => {
-      text += `\n→ ${tip}`;
-    });
-  } else {
-    text = `${intentTitle}\n${data.status || ""}`;
-  }
-  (data.custom_findings || []).forEach((cf) => {
-    if (cf.severity === "ok") text += `\n✓ ${cf.message}`;
-    else if (cf.message) text += `\n• ${cf.message}`;
-  });
-  if (data.auto_calibration?.summary) {
-    text = `${data.auto_calibration.summary}\n${text}`;
-  }
-  if (!listMeasures && data.knowledge_references?.length) {
-    text += "\n\nReferencias de tus manuales:";
-    data.knowledge_references.slice(0, 3).forEach((r) => {
-      text += `\n• ${r.doc_title} (pág. ${r.page}): ${(r.snippet || "").slice(0, 180)}`;
-    });
-  }
-  if (data.conversion_note) {
-    text = `${data.conversion_note}\n${text}`;
-  }
-  let steps = null;
-  if (conversational && verdict.headline && detCount > 0) {
-    /* veredicto ya en text */
-  } else if (detCount === 0) {
-    if (data.is_demo_model) {
-      text =
-        "No detecté puertas, ventanas ni muros en este plano.\n" +
-        "El modelo demo solo aprendió dibujos sintéticos; en planos reales como el tuyo no sirve.\n" +
-        "Entrena con CubiCasa5K para planos reales:";
-      steps = [
-        "python scripts/download_dataset.py --force",
-        "python scripts/cubicasa_to_yolo.py --input data/raw/dataset --max-samples 200",
-        "python scripts/train.py --epochs 50 --device cpu",
-      ];
-    } else {
-      text =
-        "No detecté elementos. Verifica la ruta a best.pt o desactiva calibración automática en Ajustes.";
-    }
-  } else if (!conversational) {
-    if (errors === 0 && warnings === 0) {
-      const hasOk = (data.custom_findings || []).some((c) => c.severity === "ok");
-      text = `En «${intentTitle}» no hay incidencias normativas pendientes.${hasOk ? " Ver uniformidad arriba." : ""}`;
-    } else {
-      const groups = data.issues_summary?.length ?? 0;
-      const juris = data.jurisdiction ? ` — ${data.jurisdiction}` : "";
-      text =
-        groups > 0
-          ? `«${intentTitle}»${juris}: ${errors} error(es) y ${warnings} aviso(s) (${groups} tipo(s)).`
-          : `«${intentTitle}»${juris}: ${errors} error(es) y ${warnings} aviso(s).`;
-    }
-  }
-
-  return {
+  const base = {
     role: "assistant",
-    text,
-    steps,
-    imageUrl: `data:image/jpeg;base64,${data.image_base64}`,
-    stats: detCount > 0 ? {
-      detections: detCount,
-      errors,
-      warnings,
-    } : null,
+    steps: data.steps || null,
+    imageUrl: data.image_base64
+      ? `data:image/jpeg;base64,${data.image_base64}`
+      : null,
+    stats: detCount > 0 ? { detections: detCount, errors, warnings } : data.stats || null,
     issuesSummary: data.issues_summary || [],
     detectionsSummary: data.detections_summary || [],
     scaleHint: data.scale_hint || null,
@@ -2047,7 +2543,62 @@ function buildAssistantMessage(data) {
     detectionsList: data.detections || data.detections_list || [],
     correctionsCount: data.corrections_count || 0,
     assistantMode: data.assistant_mode || null,
+    llmUsed,
   };
+
+  if (data.text) {
+    return { ...base, text: data.text };
+  }
+
+  // Fallback local (si el API no mandó text)
+  const intentTitle = data.analysis_intent?.title || "Revisión del plano";
+  const conversational = data.analysis_intent?.conversational;
+  const listMeasures = data.analysis_intent?.list_measures;
+  const measuresReport = data.measures_report;
+  const verdict = data.verdict || {};
+  let text;
+  let steps = null;
+
+  if (listMeasures && measuresReport?.text) {
+    text = measuresReport.text;
+    if (data.auto_calibration?.summary) text = `${data.auto_calibration.summary}\n\n${text}`;
+    if (data.conversion_note) text = `${data.conversion_note}\n\n${text}`;
+  } else if (detCount === 0) {
+    text = data.is_demo_model
+      ? "No pude reconocer elementos en este plano.\n\n- El modelo demo no sirve bien con láminas reales.\n- Sube una sola planta recortada y nítida.\n- Revisa el modelo en Ajustes si tienes plan de pago."
+      : "No detecté elementos claros.\n\n- Usa una planta en planta, bien recortada.\n- Prueba ajustar confianza o calibración en Ajustes.";
+  } else if (conversational && verdict.headline) {
+    text = verdict.headline;
+    if (verdict.detail) text += `\n\n${verdict.detail}`;
+    const tips = verdict.suggestions || [];
+    if (tips.length) {
+      text += "\n\nSiguiente paso:\n" + tips.map((t) => `- ${t}`).join("\n");
+    }
+  } else if (errors === 0 && warnings === 0) {
+    text =
+      `En «${intentTitle}» no encontré incidencias normativas pendientes.\n\n` +
+      `- Elementos detectados: ${detCount}\n` +
+      `- Confirma estructura e instalaciones en el proyecto completo.`;
+  } else {
+    const groups = data.issues_summary || [];
+    text =
+      `Revisión «${intentTitle}»: ${errors} error(es) y ${warnings} aviso(s).\n\n` +
+      (groups.length
+        ? "Lo principal:\n" +
+          groups
+            .slice(0, 5)
+            .map((g) => `- ${g.label || g.code} (${g.count || 1}×)`)
+            .join("\n")
+        : "- Revisa las marcas numeradas en el plano.") +
+      "\n\nSiguiente paso:\n- Corrige lo marcado y vuelve a analizar.";
+  }
+
+  (data.custom_findings || []).forEach((cf) => {
+    if (cf.severity === "ok") text += `\n- ✓ ${cf.message}`;
+    else if (cf.message) text += `\n- ${cf.message}`;
+  });
+
+  return { ...base, text, steps };
 }
 
 async function applyDetectionCorrection(analysisId, detectionIndex, action, newClass, rowEl) {
@@ -2082,7 +2633,10 @@ async function applyDetectionCorrection(analysisId, detectionIndex, action, newC
     const data = await res.json();
     if (!res.ok) throw new Error(parseApiDetail(data, "No se pudo guardar la corrección"));
 
-    if (data.chat_id) currentChatId = data.chat_id;
+    if (data.chat_id) {
+      currentChatId = data.chat_id;
+      rememberActiveChat(data.chat_id);
+    }
     const assistantMsg = buildAssistantMessage(data);
     chat.messages.push(assistantMsg);
     $("#welcome").hidden = true;
@@ -2140,7 +2694,10 @@ async function submitCorrectionMessage(msgText, analysisId) {
     const data = await res.json();
     if (!res.ok) throw new Error(parseApiDetail(data, "No entendí la corrección"));
 
-    if (data.chat_id) currentChatId = data.chat_id;
+    if (data.chat_id) {
+      currentChatId = data.chat_id;
+      rememberActiveChat(data.chat_id);
+    }
     hideTyping();
     const assistantMsg = buildAssistantMessage(data);
     chat.messages.push(assistantMsg);
@@ -2207,7 +2764,14 @@ async function analyzeFollowup(msgText, analysisId) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "No pude reanalizar el plano");
 
-    if (data.chat_id) currentChatId = data.chat_id;
+    if (data.chat_id) {
+      currentChatId = data.chat_id;
+      rememberActiveChat(data.chat_id);
+    }
+    if (data.subscription) {
+      localStorage.setItem("plano_ia_subscription", JSON.stringify(data.subscription));
+      updateUsageUI(data.subscription);
+    }
     if (data.analysis_id) chat.lastAnalysisId = data.analysis_id;
     hideTyping();
     rememberAutoCalibration(data);
@@ -2218,8 +2782,12 @@ async function analyzeFollowup(msgText, analysisId) {
     saveChats();
   } catch (err) {
     hideTyping();
-    showToast(err.message || "Error al reanalizar");
-    const errMsg = { role: "assistant", text: `No pude reanalizar: ${err.message}` };
+    const msg = err.message || "Error al reanalizar";
+    showToast(msg);
+    if (/límite|suscripción|402/i.test(msg)) {
+      openPlans?.();
+    }
+    const errMsg = { role: "assistant", text: `No pude reanalizar: ${msg}` };
     chat.messages.push(errMsg);
     appendMessageDOM(errMsg);
   } finally {
@@ -2328,6 +2896,7 @@ async function sendMessage(text) {
   $("#welcome").hidden = true;
   $("#messages").hidden = false;
   appendMessageDOM(userMsg);
+  updateLayoutMode();
   setToolMode(detectToolFromPrompt(msgText));
   saveChats();
 
@@ -2383,7 +2952,10 @@ async function sendMessage(text) {
       guestTrial = data.guest_trial;
       updateGuestTrialUI();
     }
-    if (data.chat_id) currentChatId = data.chat_id;
+    if (data.chat_id) {
+      currentChatId = data.chat_id;
+      rememberActiveChat(data.chat_id);
+    }
     if (data.analysis_id) {
       const c = getCurrentChat();
       if (c) c.lastAnalysisId = data.analysis_id;
@@ -2456,6 +3028,7 @@ function setComposerDisabled(disabled) {
   document.querySelectorAll(".chip, #btnAttach, #messageInput, #btnSend").forEach((el) => {
     el.disabled = disabled;
   });
+  $("#composerBeam")?.classList.toggle("is-busy", !!disabled);
   if (!disabled) updateSendButton();
 }
 
@@ -2565,11 +3138,16 @@ document.querySelectorAll(".chip").forEach((btn) => {
   btn.onclick = () => runChipAction(btn.dataset.prompt || "Analiza este plano");
 });
 
-document.querySelectorAll(".suggestion-card").forEach((card) => {
-  card.onclick = () => runChipAction(card.dataset.prompt || "Analiza este plano");
-});
-
 $("#searchChats")?.addEventListener("input", renderChatList);
+
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (e.target.closest(".chat-item")) return;
+    closeAllChatSwipes();
+  },
+  true,
+);
 
 async function loadNormsPanel() {
   const list = $("#normsThresholdsList");
@@ -2609,12 +3187,19 @@ async function loadNormsPanel() {
 
 const openSettings = () => {
   setNavActive("settings");
-  $("#weightsPath").value = settings.weights;
-  $("#ppmInput").value = settings.ppm;
-  $("#confInput").value = settings.conf;
-  const autoEl = $("#autoCalibrate");
-  if (autoEl) autoEl.checked = settings.autoCalibrate;
-  syncCalibrationInputs();
+  syncSettingsAdminVisibility();
+  const isAdmin = PlanoAuth.getUser()?.role === "admin";
+  if (isAdmin) {
+    const weightsEl = $("#weightsPath");
+    if (weightsEl) weightsEl.value = settings.weights;
+    const ppmEl = $("#ppmInput");
+    if (ppmEl) ppmEl.value = settings.ppm;
+    const confEl = $("#confInput");
+    if (confEl) confEl.value = settings.conf;
+    const autoEl = $("#autoCalibrate");
+    if (autoEl) autoEl.checked = settings.autoCalibrate;
+    syncCalibrationInputs();
+  }
   applyTheme(getTheme());
   loadNormsPanel();
   $("#settingsModal").showModal();
@@ -2622,7 +3207,7 @@ const openSettings = () => {
 $("#btnSettings").onclick = (e) => { e.preventDefault(); openSettings(); };
 $("#btnWorkspace")?.addEventListener("click", (e) => {
   e.preventDefault();
-  goToWorkspace();
+  goToWorkspace({ restore: true });
 });
 $("#btnHomeProjects")?.addEventListener("click", (e) => {
   e.preventDefault();
@@ -2646,6 +3231,40 @@ const SUPPORT_STATUS_LABELS = {
   closed: "Cerrado",
 };
 
+function supportStatusBadge(status) {
+  const label = SUPPORT_STATUS_LABELS[status] || status;
+  return `<span class="support-status-badge support-status-badge--${escapeHtml(status || "open")}">${escapeHtml(label)}</span>`;
+}
+
+function supportHelpFormatWhen(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
+function setSupportHelpThreadFocus(on) {
+  const box = document.querySelector("#supportHelpModal .support-help-box");
+  box?.classList.toggle("is-thread-focus", !!on);
+}
+
+function supportHelpEmptyThread() {
+  return `<div class="support-help-empty-state">
+    <span class="material-symbols-outlined">forum</span>
+    <strong>Selecciona un ticket</strong>
+    <p>Verás aquí la conversación y podrás responder.</p>
+  </div>`;
+}
+
 async function refreshSupportHelpList() {
   const list = document.getElementById("supportHelpList");
   if (!list || !PlanoAuth.getToken()) return;
@@ -2656,16 +3275,24 @@ async function refreshSupportHelpList() {
     if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudieron cargar tickets"));
     const items = data.items || [];
     if (!items.length) {
-      list.innerHTML = "<p class='support-help-empty'>Aún no tienes tickets.</p>";
+      list.innerHTML = `<div class="support-help-empty-state support-help-empty-state--compact">
+        <span class="material-symbols-outlined">inbox</span>
+        <strong>Sin tickets aún</strong>
+        <p>Cuando envíes uno, aparecerá aquí.</p>
+      </div>`;
       return;
     }
     list.innerHTML = items
-      .map(
-        (t) => `<button type="button" class="support-help-item${supportHelpSelectedId === t.id ? " is-selected" : ""}" data-support-ticket="${t.id}">
-          <strong>${escapeHtml(t.subject)}</strong>
-          <span>${SUPPORT_STATUS_LABELS[t.status] || t.status}</span>
-        </button>`
-      )
+      .map((t) => {
+        const when = supportHelpFormatWhen(t.updated_at || t.created_at);
+        return `<button type="button" class="support-help-item${supportHelpSelectedId === t.id ? " is-selected" : ""}" data-support-ticket="${t.id}">
+          <span class="support-help-item-main">
+            <strong>${escapeHtml(t.subject)}</strong>
+            <span class="support-help-item-meta">${when ? escapeHtml(when) : "Reciente"}</span>
+          </span>
+          ${supportStatusBadge(t.status)}
+        </button>`;
+      })
       .join("");
     list.querySelectorAll("[data-support-ticket]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2682,6 +3309,7 @@ async function refreshSupportHelpList() {
 async function openSupportHelpTicket(ticketId) {
   const thread = document.getElementById("supportHelpThread");
   if (!thread) return;
+  setSupportHelpThreadFocus(true);
   thread.innerHTML = "<p class='support-help-empty'>Cargando conversación…</p>";
   try {
     const res = await PlanoAuth.apiFetch(`/api/support/tickets/${ticketId}`);
@@ -2691,31 +3319,54 @@ async function openSupportHelpTicket(ticketId) {
     const closed = data.status === "closed";
     thread.innerHTML = `
       <header class="support-help-thread-head">
-        <strong>${escapeHtml(data.subject)}</strong>
-        <span>${SUPPORT_STATUS_LABELS[data.status] || data.status}</span>
+        <button type="button" class="support-help-back" id="supportHelpBack" aria-label="Volver a tickets">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div class="support-help-thread-title">
+          <strong>${escapeHtml(data.subject)}</strong>
+          <span class="support-help-thread-sub">Ticket #${data.id}</span>
+        </div>
+        ${supportStatusBadge(data.status)}
       </header>
       <div class="support-help-msgs">
         ${
           msgs
-            .map(
-              (m) => `<article class="support-help-msg${m.is_staff ? " is-staff" : ""}">
+            .map((m) => {
+              const who = m.author_name || (m.is_staff ? "Soporte ARCHITECT" : "Tú");
+              const when = supportHelpFormatWhen(m.created_at);
+              return `<article class="support-help-msg${m.is_staff ? " is-staff" : " is-user"}">
                 <header>
-                  <strong>${escapeHtml(m.author_name || (m.is_staff ? "Soporte" : "Tú"))}</strong>
+                  <strong>${escapeHtml(who)}</strong>
+                  ${when ? `<time>${escapeHtml(when)}</time>` : ""}
                 </header>
                 <p>${escapeHtml(m.body)}</p>
-              </article>`
-            )
+              </article>`;
+            })
             .join("") || "<p class='support-help-empty'>Sin mensajes</p>"
         }
       </div>
       ${
         closed
-          ? "<p class='support-help-empty'>Este ticket está cerrado.</p>"
+          ? `<div class="support-help-closed-note">
+              <span class="material-symbols-outlined">lock</span>
+              <p>Este ticket está cerrado. Abre uno nuevo si necesitas más ayuda.</p>
+            </div>`
           : `<form class="support-help-reply" id="supportHelpReplyForm">
               <textarea id="supportHelpReplyBody" rows="3" required placeholder="Escribe un seguimiento…"></textarea>
-              <button type="submit" class="btn-primary">Responder</button>
+              <button type="submit" class="btn-primary">
+                <span class="material-symbols-outlined">reply</span>
+                Responder
+              </button>
             </form>`
       }`;
+    document.getElementById("supportHelpBack")?.addEventListener("click", () => {
+      setSupportHelpThreadFocus(false);
+      thread.innerHTML = supportHelpEmptyThread();
+      supportHelpSelectedId = null;
+      refreshSupportHelpList();
+    });
+    const msgsEl = thread.querySelector(".support-help-msgs");
+    if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
     document.getElementById("supportHelpReplyForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const body = document.getElementById("supportHelpReplyBody")?.value || "";
@@ -2740,7 +3391,13 @@ async function openSupportHelpTicket(ticketId) {
 
 $("#btnSupportHelp")?.addEventListener("click", (e) => {
   e.preventDefault();
+  const user = PlanoAuth.getUser?.();
+  if (!PlanoAuth.getToken() || !user || user.role === "admin" || user.role === "support") {
+    showToast("La ayuda por tickets es solo para usuarios. El equipo usa la bandeja de soporte.");
+    return;
+  }
   const modal = document.getElementById("supportHelpModal");
+  setSupportHelpThreadFocus(false);
   if (modal?.showModal) modal.showModal();
   else modal?.setAttribute("open", "");
   refreshSupportHelpList();
@@ -2748,6 +3405,7 @@ $("#btnSupportHelp")?.addEventListener("click", (e) => {
 });
 $("#btnCloseSupportHelp")?.addEventListener("click", () => {
   const modal = document.getElementById("supportHelpModal");
+  setSupportHelpThreadFocus(false);
   if (modal?.close) modal.close();
   else modal?.removeAttribute("open");
 });
@@ -2791,6 +3449,7 @@ function isSidebarCollapsed() {
 
 function updateSidebarToggleUI() {
   const collapsed = isSidebarCollapsed();
+  const mobile = isMobileLayout();
   const icon = document.getElementById("sidebarToggleIcon");
   const btn = $("#btnMenu");
   const floatBtn = $("#btnMenuFloat");
@@ -2800,10 +3459,66 @@ function updateSidebarToggleUI() {
     btn.title = collapsed ? "Mostrar panel lateral" : "Minimizar panel lateral";
   }
   if (floatBtn) {
-    const showFloat = collapsed;
+    // En desktop el rail ya abre el panel; el botón flotante solo en móvil
+    const showFloat = collapsed && mobile;
     floatBtn.classList.toggle("hidden", !showFloat);
     floatBtn.classList.toggle("is-visible", showFloat);
   }
+  syncSidebarRail();
+}
+
+function syncSidebarRail() {
+  const adminBtn = $("#btnAdmin");
+  const railAdmin = $("#railAdmin");
+  if (railAdmin && adminBtn) {
+    railAdmin.hidden = adminBtn.classList.contains("hidden") || adminBtn.hidden;
+  }
+  const helpBtn = $("#btnSupportHelp");
+  const railSupport = $("#railSupport");
+  if (railSupport && helpBtn) {
+    railSupport.hidden = helpBtn.classList.contains("hidden") || helpBtn.hidden;
+  }
+  const av = $("#userAvatar");
+  const railAv = $("#railAccount");
+  const letter = $("#railAvatarLetter");
+  if (!railAv) return;
+  if (av?.classList.contains("has-photo")) {
+    railAv.classList.add("has-photo");
+    railAv.style.backgroundImage = av.style.backgroundImage;
+    if (letter) letter.textContent = "";
+  } else {
+    railAv.classList.remove("has-photo");
+    railAv.style.removeProperty("background-image");
+    if (letter) letter.textContent = (av?.textContent || "IA").trim().slice(0, 2) || "IA";
+  }
+}
+
+function bindSidebarRail() {
+  $("#railExpand")?.addEventListener("click", () => setSidebarCollapsed(false));
+  $("#railNewChat")?.addEventListener("click", () => {
+    if (isMobileLayout()) setSidebarCollapsed(true);
+    newChat(true);
+  });
+  $("#railSearchChats")?.addEventListener("click", () => {
+    setSidebarCollapsed(false);
+    window.setTimeout(() => {
+      const input = $("#searchChats");
+      input?.focus();
+      input?.select?.();
+    }, 280);
+  });
+  $("#railAccount")?.addEventListener("click", () => {
+    $("#btnAccount")?.click();
+  });
+  document.querySelectorAll("[data-rail-target]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-rail-target");
+      const target = id ? document.getElementById(id) : null;
+      if (!target) return;
+      if (isMobileLayout()) setSidebarCollapsed(true);
+      target.click();
+    });
+  });
 }
 
 function updateSidebarBackdrop() {
@@ -2830,6 +3545,7 @@ function initSidebar() {
   const saved = localStorage.getItem(SIDEBAR_KEY);
   const collapsed = saved === "1";
   setSidebarCollapsed(collapsed, false);
+  bindSidebarRail();
 }
 
 $("#btnMenu")?.addEventListener("click", () => toggleSidebar());
@@ -2839,6 +3555,7 @@ $("#sidebarBackdrop")?.addEventListener("click", () => setSidebarCollapsed(true)
 
 window.addEventListener("resize", () => {
   updateSidebarBackdrop();
+  updateSidebarToggleUI();
 });
 
 const btnCancel = document.getElementById("btnCancelSettings");
@@ -2877,6 +3594,9 @@ function planFeatureLines(plan, { compact = false } = {}) {
   }
 
   const lines = [formatPlanLimitText(plan.analyses_limit_monthly)];
+  const asks = Number(f.asks_limit_monthly ?? plan?.capabilities?.asks_limit_monthly ?? 0);
+  if (asks >= 9999) lines.push("Preguntas al chat ilimitadas");
+  else if (asks > 0) lines.push(`${asks} preguntas al chat/mes`);
   const storage = formatPlanStorageText(plan);
   if (storage) lines.push(storage);
   lines.push(plan.allow_real_model ? "Modelo real" : "Modelo demo");
@@ -2903,37 +3623,52 @@ function updateUsageUI(sub) {
   const used = usage.analyses_used || 0;
   const remaining = usage.analyses_remaining;
   const unlimited = isPlanUnlimited(sub);
+  const asksUsed = usage.asks_used ?? 0;
+  const asksLimit = usage.asks_limit;
+  const asksUnlimited = asksLimit == null || asksLimit >= 9999 || unlimited;
+  const asksReached = !asksUnlimited && !!usage.asks_limit_reached;
   const planLabel = document.getElementById("planLabel");
   const usageLabel = document.getElementById("usageLabel");
   if (planLabel) planLabel.textContent = plan.name || plan.slug || "Plan";
   if (usageLabel) {
-    usageLabel.textContent = unlimited ? `${used} análisis` : `${used} / ${limit}`;
+    usageLabel.textContent = unlimited ? `${used} análisis` : `${used} / ${limit} análisis`;
+  }
+  const asksLabel = document.getElementById("usageAsksLabel");
+  if (asksLabel) {
+    asksLabel.textContent = asksUnlimited
+      ? `${asksUsed} preguntas este mes`
+      : `${asksUsed} / ${asksLimit} preguntas`;
+    asksLabel.classList.toggle("usage-asks-label--limit", asksReached);
   }
   const pct = unlimited ? 8 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   const fill = document.getElementById("usageFill");
   if (fill) fill.style.width = `${pct}%`;
   const limitReached = !unlimited && !!usage.limit_reached;
   if (box) {
-    box.classList.toggle("usage-box--limit", limitReached);
-    box.classList.toggle("usage-box--unlimited", unlimited);
+    box.classList.toggle("usage-box--limit", limitReached || asksReached);
+    box.classList.toggle("usage-box--unlimited", unlimited && asksUnlimited);
   }
   const plansText = document.getElementById("plansUsageText");
   if (plansText) {
+    const asksLine = asksUnlimited
+      ? `${asksUsed} preguntas`
+      : `${asksUsed} / ${asksLimit} preguntas`;
     plansText.innerHTML = unlimited
-      ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso ilimitado · ${used} análisis este mes</span>`
+      ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso alto · ${used} análisis · ${asksLine}</span>`
       : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis` +
         (remaining != null ? ` · ${remaining} restantes` : "") +
-        `</span>`;
+        ` · ${asksLine}</span>`;
   }
   const badge = document.getElementById("planUsageBadge");
   const badgeText = document.getElementById("planUsageBadgeText");
   if (badge && badgeText) {
     const showBadge = !!PlanoAuth.getToken() && !!PlanoAuth.getUser() && !isGuestMode;
     badge.classList.toggle("hidden", !showBadge);
+    const asksShort = asksUnlimited ? `${asksUsed} preg.` : `${asksUsed}/${asksLimit} preg.`;
     badgeText.textContent = unlimited
-      ? `${plan.name || "Plan"} · ${used} análisis`
-      : `${plan.name || "Plan"} · ${used}/${limit}`;
-    badge.classList.toggle("plan-usage-badge--limit", limitReached);
+      ? `${plan.name || "Plan"} · ${used} análisis · ${asksShort}`
+      : `${plan.name || "Plan"} · ${used}/${limit} · ${asksShort}`;
+    badge.classList.toggle("plan-usage-badge--limit", limitReached || asksReached);
   }
 }
 
@@ -2952,6 +3687,27 @@ function applyAvatarElement(el, user, initials) {
     el.removeAttribute("aria-label");
   }
 }
+
+function updateImpersonationBanner() {
+  const banner = document.getElementById("impersonationBanner");
+  if (!banner) return;
+  const active = !!PlanoAuth.isImpersonating?.();
+  banner.classList.toggle("hidden", !active);
+  document.body.classList.toggle("is-impersonating", active);
+  if (!active) return;
+  const user = PlanoAuth.getUser?.() || {};
+  const backup = PlanoAuth.getStaffBackup?.() || {};
+  const staffName =
+    backup.impersonator?.full_name || backup.impersonator?.email || backup.user?.email || "soporte";
+  const text = document.getElementById("impersonationBannerText");
+  if (text) {
+    text.textContent = `Viendo como ${user.full_name || user.email || "usuario"} · sesión de ${staffName}`;
+  }
+}
+
+document.getElementById("btnExitImpersonation")?.addEventListener("click", () => {
+  PlanoAuth.stopImpersonation?.();
+});
 
 function updateUserUI() {
   const user = PlanoAuth.getUser();
@@ -2977,19 +3733,27 @@ function updateUserUI() {
   }
   const adminBtn = document.getElementById("btnAdmin");
   if (adminBtn) {
-    const showAdmin = user.role === "admin" || user.role === "support";
+    const showAdmin =
+      !PlanoAuth.isImpersonating?.() && (user.role === "admin" || user.role === "support");
     adminBtn.classList.toggle("hidden", !showAdmin);
     adminBtn.hidden = !showAdmin;
     const label = document.getElementById("btnAdminLabel");
-    if (label) label.textContent = user.role === "support" ? "Bandeja soporte" : "Administración";
+    if (label) label.textContent = user.role === "support" ? "Panel de soporte" : "Administración";
   }
   const helpBtn = document.getElementById("btnSupportHelp");
   if (helpBtn) {
-    const showHelp = user.role !== "support";
+    // Solo usuarios finales abren tickets. Admin/soporte usan la bandeja del panel.
+    // En impersonación sí se muestra Ayuda (experiencia real del usuario).
+    const showHelp =
+      !!user &&
+      (PlanoAuth.isImpersonating?.() || (user.role !== "admin" && user.role !== "support"));
     helpBtn.classList.toggle("hidden", !showHelp);
     helpBtn.hidden = !showHelp;
   }
   if (sub) updateUsageUI(sub);
+  syncSettingsAdminVisibility();
+  updateImpersonationBanner();
+  syncSidebarRail();
 }
 
 async function uploadProfileAvatar(file) {
@@ -3037,14 +3801,20 @@ async function loadPlansModal() {
   const res = await fetch("/api/billing/plans");
   const plans = await res.json();
   const current = PlanoAuth.getSubscription()?.plan?.slug;
+  const currentPrice = Number(PlanoAuth.getSubscription()?.plan?.price_monthly_cents || 0);
   plans.forEach((p) => {
     const card = document.createElement("article");
     const isCurrent = p.slug === current;
+    const targetPrice = Number(p.price_monthly_cents || 0);
+    const isDowngrade = !isCurrent && targetPrice < currentPrice;
+    const isUpgrade = !isCurrent && targetPrice > currentPrice && currentPrice > 0;
+    const dueCents = Math.max(0, targetPrice - currentPrice);
     const isRecommended = !!(p.features?.recommended || p.slug === "pro");
     card.className =
       "plan-card" +
       (isCurrent ? " is-current" : "") +
-      (isRecommended && !isCurrent ? " is-recommended" : "");
+      (isDowngrade ? " is-locked" : "") +
+      (isRecommended && !isCurrent && !isDowngrade ? " is-recommended" : "");
     const price = p.price_monthly_cents
       ? `$${(p.price_monthly_cents / 100).toFixed(0)}`
       : "Gratis";
@@ -3057,19 +3827,24 @@ async function loadPlansModal() {
       : "";
     const badges = [
       isCurrent ? '<span class="plan-card-badge">Actual</span>' : "",
-      isRecommended && !isCurrent
+      isRecommended && !isCurrent && !isDowngrade
         ? '<span class="plan-card-badge plan-card-badge--recommended">Recomendado</span>'
         : "",
     ]
       .filter(Boolean)
       .join("");
-    const cta = isCurrent
-      ? "Plan actual"
-      : p.price_monthly_cents
-        ? "Elegir plan"
-        : p.slug === "free"
-          ? "Bajar a gratis"
-          : "Seleccionar";
+    let cta = "Seleccionar";
+    if (isCurrent) cta = "Plan actual";
+    else if (isDowngrade) cta = "No disponible";
+    else if (isUpgrade) cta = `Mejorar · +$${(dueCents / 100).toFixed(0)}`;
+    else if (p.price_monthly_cents) cta = "Elegir plan";
+    else if (p.slug === "free") cta = "Bajar a gratis";
+    const dueHint =
+      isUpgrade
+        ? `<p class="plan-card-due">Hoy pagas $${(dueCents / 100).toFixed(0)} (diferencia)</p>`
+        : isDowngrade
+          ? `<p class="plan-card-due plan-card-due--locked">No puedes bajar de plan aquí. Usa cancelar suscripción si aplica.</p>`
+          : "";
     card.innerHTML = `
       <div class="plan-card-top">
         <div class="plan-card-title-wrap">
@@ -3080,8 +3855,9 @@ async function loadPlansModal() {
       </div>
       <p class="plan-card-desc">${escapeHtml(p.description || "")}</p>
       ${ideal}
+      ${dueHint}
       <ul class="plan-card-features">${features}</ul>
-      <button type="button" class="plan-select-btn${isCurrent ? " is-current" : ""}" data-slug="${p.slug}" ${isCurrent ? "disabled" : ""}>
+      <button type="button" class="plan-select-btn${isCurrent ? " is-current" : ""}${isDowngrade ? " is-locked" : ""}" data-slug="${p.slug}" ${isCurrent || isDowngrade ? "disabled" : ""}>
         ${cta}
       </button>`;
     grid.appendChild(card);
@@ -3589,6 +4365,66 @@ async function openAccountModal() {
       </div>
       <p class="account-period">Periodo: ${escapeHtml(formatReceiptDate(sub?.period_start))} — ${escapeHtml(formatReceiptDate(sub?.period_end))}</p>
     </section>
+
+    <section class="account-section account-settings">
+      <div class="account-section-head">
+        <h3>Datos de la cuenta</h3>
+        <p>Actualiza tu nombre visible en el workspace.</p>
+      </div>
+      <form id="accountNameForm" class="account-form">
+        <label>Nombre
+          <input type="text" id="accountFullName" maxlength="120" required value="${escapeHtml(user.full_name || "")}" />
+        </label>
+        <button type="submit" class="account-btn account-btn--solid account-btn--sm">Guardar nombre</button>
+      </form>
+    </section>
+
+    <section class="account-section account-settings">
+      <div class="account-section-head">
+        <h3>${user.has_password === false ? "Definir contraseña" : "Cambiar contraseña"}</h3>
+        <p>${user.has_password === false
+          ? "Tu cuenta usa Google. Puedes crear una contraseña para entrar también con correo."
+          : "Usa una contraseña de al menos 8 caracteres."}</p>
+      </div>
+      <form id="accountPasswordForm" class="account-form">
+        ${user.has_password === false
+          ? ""
+          : `<label>Contraseña actual
+              <input type="password" id="accountCurrentPassword" autocomplete="current-password" required />
+            </label>`}
+        <label>Nueva contraseña
+          <input type="password" id="accountNewPassword" autocomplete="new-password" minlength="8" required />
+        </label>
+        <label>Confirmar nueva
+          <input type="password" id="accountNewPassword2" autocomplete="new-password" minlength="8" required />
+        </label>
+        <button type="submit" class="account-btn account-btn--solid account-btn--sm">
+          ${user.has_password === false ? "Crear contraseña" : "Actualizar contraseña"}
+        </button>
+      </form>
+    </section>
+
+    <section class="account-section account-billing-actions" id="accountBillingActions">
+      <p class="account-loading">Cargando opciones de plan…</p>
+    </section>
+
+    <section class="account-section account-danger">
+      <div class="account-section-head">
+        <h3>Eliminar cuenta</h3>
+        <p>Borra tu usuario, chats, análisis y proyectos. No se puede deshacer.</p>
+      </div>
+      <form id="accountDeleteForm" class="account-form">
+        ${user.has_password === false
+          ? `<label>Escribe tu correo para confirmar
+              <input type="email" id="accountDeleteEmail" autocomplete="off" placeholder="${escapeHtml(user.email)}" required />
+            </label>`
+          : `<label>Contraseña
+              <input type="password" id="accountDeletePassword" autocomplete="current-password" required />
+            </label>`}
+        <button type="submit" class="account-btn account-btn--danger account-btn--sm">Eliminar mi cuenta</button>
+      </form>
+    </section>
+
     <div class="account-usage-chart-slot">
       <p class="account-loading">Cargando uso mensual…</p>
     </div>
@@ -3597,6 +4433,9 @@ async function openAccountModal() {
     </div>
   `;
   $("#accountModal").showModal();
+
+  bindAccountSettingsForms(body, user);
+  loadAccountBillingActions(body, sub);
 
   const avatarInput = body.querySelector("#accountAvatarInput");
   const pickBtn = body.querySelector("#btnPickAvatar");
@@ -3651,6 +4490,206 @@ async function openAccountModal() {
         '<p class="account-loading">No se pudo cargar el historial de compras.</p>';
     }
   }
+}
+
+function bindAccountSettingsForms(body, user) {
+  const nameForm = body.querySelector("#accountNameForm");
+  nameForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fullName = body.querySelector("#accountFullName")?.value?.trim() || "";
+    const btn = nameForm.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    try {
+      const res = await PlanoAuth.apiFetch("/api/auth/me", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: fullName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo guardar"));
+      localStorage.setItem("plano_ia_user", JSON.stringify(data.user));
+      updateUserUI();
+      showToast("Nombre actualizado");
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "Error al guardar");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  const passForm = body.querySelector("#accountPasswordForm");
+  passForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const current = body.querySelector("#accountCurrentPassword")?.value || null;
+    const next = body.querySelector("#accountNewPassword")?.value || "";
+    const next2 = body.querySelector("#accountNewPassword2")?.value || "";
+    if (next !== next2) {
+      showToast("Las contraseñas nuevas no coinciden");
+      return;
+    }
+    const btn = passForm.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    try {
+      const res = await PlanoAuth.apiFetch("/api/auth/me/password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: user.has_password === false ? null : current,
+          new_password: next,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo cambiar"));
+      localStorage.setItem("plano_ia_user", JSON.stringify(data.user));
+      showToast(user.has_password === false ? "Contraseña creada" : "Contraseña actualizada");
+      passForm.reset();
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "Error al cambiar contraseña");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  const delForm = body.querySelector("#accountDeleteForm");
+  delForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!confirm("¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer.")) {
+      return;
+    }
+    const btn = delForm.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    try {
+      const payload =
+        user.has_password === false
+          ? { confirm_email: body.querySelector("#accountDeleteEmail")?.value || "" }
+          : { password: body.querySelector("#accountDeletePassword")?.value || "" };
+      const res = await PlanoAuth.apiFetch("/api/auth/me", {
+        method: "DELETE",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo eliminar"));
+      showToast("Cuenta eliminada");
+      PlanoAuth.logout();
+    } catch (err) {
+      showToast(err.message || "Error al eliminar");
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+async function loadAccountBillingActions(body, sub) {
+  const slot = body.querySelector("#accountBillingActions");
+  if (!slot) return;
+  const plan = sub?.plan || {};
+  const price = plan.price_monthly_cents || 0;
+  const isPaid = price > 0;
+
+  let eligibility = null;
+  let refunds = [];
+  try {
+    const [elRes, rfRes] = await Promise.all([
+      PlanoAuth.apiFetch("/api/billing/refund-eligibility"),
+      PlanoAuth.apiFetch("/api/billing/refunds"),
+    ]);
+    if (elRes.ok) eligibility = await elRes.json();
+    if (rfRes.ok) {
+      const d = await rfRes.json();
+      refunds = d.refunds || [];
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const pending = refunds.find((r) => r.status === "pending");
+  const reasons = (eligibility?.reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+  const canRequestRefund = !!eligibility?.eligible && !isPaid && !pending;
+  const eligibleBadge = eligibility?.eligible
+    ? isPaid
+      ? '<span class="account-badge account-badge--ok">Cancela para pedir reembolso</span>'
+      : '<span class="account-badge account-badge--ok">Candidato a reembolso</span>'
+    : '<span class="account-badge">Sin elegibilidad actual</span>';
+
+  slot.innerHTML = `
+    <div class="account-section-head">
+      <h3>Suscripción y reembolso</h3>
+      <p>Si cancelas en los primeros ${eligibility?.window_days || 7} días y usaste poco el plan (≤30% de análisis y chat), puedes pedir reembolso.</p>
+    </div>
+    <div class="account-billing-panel">
+      <div class="account-billing-row">
+        <div>
+          <strong>${escapeHtml(plan.name || "—")}</strong>
+          <p class="account-hint">${isPaid ? "Plan de pago activo" : "Plan gratis / sin cobro activo"}</p>
+        </div>
+        ${isPaid ? '<button type="button" class="account-btn account-btn--ghost account-btn--sm" id="btnCancelSub">Cancelar suscripción</button>' : ""}
+      </div>
+      <div class="account-refund-box">
+        <div class="account-refund-head">${eligibleBadge}</div>
+        <ul class="account-refund-reasons">${reasons || "<li>Sin información de elegibilidad.</li>"}</ul>
+        ${
+          pending
+            ? `<p class="account-hint">Solicitud #${pending.id} pendiente de revisión.</p>`
+            : canRequestRefund
+              ? `<form id="accountRefundForm" class="account-form account-form--inline">
+                  <label>Motivo (opcional)
+                    <input type="text" id="accountRefundReason" maxlength="500" placeholder="Ej. no lo usé como esperaba" />
+                  </label>
+                  <button type="submit" class="account-btn account-btn--solid account-btn--sm">Pedir reembolso</button>
+                </form>`
+              : isPaid && eligibility?.eligible
+                ? `<p class="account-hint">Cancela la suscripción primero; después podrás enviar la solicitud.</p>`
+                : ""
+        }
+      </div>
+    </div>
+  `;
+
+  const cancelBtn = slot.querySelector("#btnCancelSub");
+  cancelBtn?.addEventListener("click", async () => {
+    if (!confirm("¿Cancelar tu suscripción de pago y volver al plan Gratis?")) return;
+    cancelBtn.disabled = true;
+    try {
+      const res = await PlanoAuth.apiFetch("/api/billing/cancel", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo cancelar"));
+      if (data.subscription) {
+        localStorage.setItem("plano_ia_subscription", JSON.stringify(data.subscription));
+        updateUsageUI(data.subscription);
+      }
+      const elig = data.refund_eligibility;
+      if (elig?.eligible) {
+        showToast("Suscripción cancelada. Eres candidato a reembolso.");
+      } else {
+        showToast(data.message || "Suscripción cancelada");
+      }
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "Error al cancelar");
+      cancelBtn.disabled = false;
+    }
+  });
+
+  const refundForm = slot.querySelector("#accountRefundForm");
+  refundForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = refundForm.querySelector("button[type=submit]");
+    if (btn) btn.disabled = true;
+    try {
+      const res = await PlanoAuth.apiFetch("/api/billing/refunds", {
+        method: "POST",
+        body: JSON.stringify({
+          reason: slot.querySelector("#accountRefundReason")?.value || "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(PlanoAuth.formatApiError(data, "No se pudo solicitar"));
+      showToast(data.message || "Solicitud enviada");
+      await openAccountModal();
+    } catch (err) {
+      showToast(err.message || "Error al solicitar reembolso");
+      if (btn) btn.disabled = false;
+    }
+  });
 }
 
 function openInfoModal(title, html) {
@@ -3834,6 +4873,11 @@ async function boot() {
       window.HomeProjectsUI?.open();
     }
 
+    if (!$("#welcome")?.hidden) {
+      refreshWelcomeHero({ chatId: currentChatId, animate: true });
+    }
+    updateLayoutMode();
+
     if (new URLSearchParams(window.location.search).get("plan_activated") === "1") {
       const sub = PlanoAuth.getSubscription();
       const receiptId = new URLSearchParams(window.location.search).get("receipt_id");
@@ -3879,10 +4923,5 @@ boot();
 
 window.addEventListener("plano:pageshow-restore", () => {
   if (document.querySelector(".app-shell")) refreshAfterPageRestore();
-});
-
-document.querySelectorAll(".glass-card.suggestion-card").forEach((card, i) => {
-  card.classList.add("animate-in");
-  setTimeout(() => card.classList.add("visible"), 400 + i * 150);
 });
 

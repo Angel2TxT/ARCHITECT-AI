@@ -24,14 +24,27 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(user_id: int, email: str, role: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+def create_access_token(
+    user_id: int,
+    email: str,
+    role: str,
+    *,
+    impersonator_id: int | None = None,
+    expire_hours: int | None = None,
+) -> str:
+    hours = expire_hours if expire_hours is not None else ACCESS_TOKEN_EXPIRE_HOURS
+    if impersonator_id is not None and expire_hours is None:
+        hours = min(hours, 4)
+    expire = datetime.now(timezone.utc) + timedelta(hours=hours)
     payload = {
         "sub": str(user_id),
         "email": email,
         "role": role,
         "exp": expire,
     }
+    if impersonator_id is not None:
+        payload["imp"] = str(impersonator_id)
+        payload["impersonation"] = True
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 

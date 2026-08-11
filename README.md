@@ -1,6 +1,6 @@
 # ARCHITECT
 
-Plataforma para revisar planos de arquitectura y responder consultas de construcción. Combina **FastAPI**, **React**, detección **YOLO**, **reglas normativas** (Chiapas), **biblioteca de manuales PDF**, billing demo, proyectos casa hogar y flujo de invitado.
+Plataforma para revisar planos de arquitectura, responder consultas de construcción y gestionar proyectos de vivienda (**casa hogar**). Combina **FastAPI**, **React**, detección **YOLO**, **reglas normativas** (Chiapas), biblioteca de manuales PDF, billing demo, soporte por tickets, roles (admin / support / user) y flujo de invitado.
 
 ---
 
@@ -48,15 +48,18 @@ copy .env.example .env
 docker compose up --build -d
 ```
 
-Espera ~1–2 min la primera vez (MySQL + dependencias). El backend ejecuta `scripts/init_db.py` automáticamente.
+Espera ~1–2 min la primera vez (MySQL + dependencias). El backend ejecuta `scripts/init_db.py` y migraciones automáticamente.
 
 ### URLs
 
 | Servicio | URL |
 |----------|-----|
+| **Landing** | http://localhost:8000/ |
 | **App principal (React)** | http://localhost:3000 |
-| **App legacy (chat/planos)** | http://localhost:3000/legacy-app o http://localhost:8000/legacy-app |
-| **Login** | http://localhost:3000/login |
+| **Workspace / chat (legacy)** | http://localhost:8000/legacy-app |
+| **Casa hogar** | http://localhost:8000/legacy-app?home-projects=1 |
+| **Panel admin / soporte** | http://localhost:8000/app/admin |
+| **Login** | http://localhost:8000/login o http://localhost:3000/login |
 | **API + Swagger** | http://localhost:8000/docs |
 | **MySQL (desde tu PC)** | `localhost:3307` — user `architect`, pass `architect_pass`, DB `architect` |
 
@@ -73,8 +76,6 @@ Password: admin123
 
 ## Configuración `.env`
 
-Copia la plantilla y edita lo mínimo:
-
 ```powershell
 copy .env.example .env
 ```
@@ -85,6 +86,9 @@ copy .env.example .env
 | `JWT_SECRET_KEY` | Secreto para sesiones (cámbialo en producción). |
 | `BILLING_MODE=demo` | Pasarela simulada (proyecto escolar). Sin Stripe real. |
 | `WEB_SEARCH_ENABLED=true` | Búsqueda web en consultas sin plano (DuckDuckGo). |
+| `LLM_PROVIDER` | `off` (default), `gemini`, `openai` u `ollama`. Con key/Ollama el chat razona; sin eso, plantillas mejoradas. |
+| `LLM_API_KEY` / `LLM_MODEL` | Credenciales y modelo (recomendado: `gemini-flash-latest`). |
+| `OLLAMA_BASE_URL` | Solo si `LLM_PROVIDER=ollama` (default `http://127.0.0.1:11434`). |
 | `GUEST_TRIAL_*` | Límites de prueba sin cuenta (análisis, preguntas, MB). |
 | `MAIL_*` | SMTP Brevo para comprobantes PDF y recuperación de contraseña. Ver [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md). |
 | `GOOGLE_CLIENT_*` | Login con Google (opcional). Ver [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md). |
@@ -99,14 +103,30 @@ docker compose up -d --force-recreate backend
 
 ## Funcionalidades incluidas
 
-- **Revisión de planos** — PNG, JPG, PDF → YOLO + reglas normativas (DXF/DWG solo en docs de Casa hogar).
-- **IA ARCHITECT (chat sin plano)** — Responde con manuales indexados, umbrales Chiapas y web. Sin APIs de pago.
+- **Revisión de planos** — Solo **imagen** (PNG, JPG, WEBP, TIFF…) y **PDF** → YOLO + reglas normativas. DXF/DWG **no** se analizan; sí se pueden subir como documentación en Casa hogar.
+- **IA ARCHITECT (chat sin plano)** — Manuales indexados + umbrales + web. Opcionalmente un LLM (`LLM_PROVIDER`) para razonar; sin key, plantillas cortas.
+- **Ayuda / tickets** — El usuario abre dudas desde el workspace; el rol **support** (o admin) responde en la bandeja de `/app/admin`.
+- **Roles** — `user`, `support` (solo bandeja de soporte) y `admin` (panel completo + asignación de roles).
 - **Prueba sin cuenta** — Cookie de invitado con límites configurables.
-- **Planes y billing demo** — Checkout simulado, comprobantes PDF, historial en perfil.
-- **Proyectos casa hogar** — Flujo por etapas, secciones, invitaciones (docs: PDF, Office, DXF/DWG, imágenes).
-- **Admin** — Panel de usuarios, ventas demo, comprobantes.
+- **Planes** — Gratis, Starter ($300), Pro ($500), Enterprise ($900). Billing demo (pasarela simulada).
+- **Proyectos casa hogar** — 9 etapas, apartados, revisión documental, equipo, invitaciones. Docs: PDF, Office, DXF/DWG, imágenes.
+- **Admin** — Usuarios, planes, exportaciones, casa hogar, actividad, salud del sistema.
+- **Tema claro / oscuro** — En Ajustes del workspace.
 - **Correo** — Tickets PDF y reset de contraseña vía Brevo (opcional).
 - **Google OAuth** — Opcional.
+
+---
+
+## Planes (resumen)
+
+| Plan | Precio | Destacado |
+|------|--------|-----------|
+| **Gratis** | $0 | 5 análisis/mes, modelo demo, 1 proyecto · 1 GB |
+| **Starter** | $300/mes | 30 análisis, modelo real, 3 proyectos · 5 GB, export PDF |
+| **Pro** | $500/mes | 150 análisis, 20 proyectos · 25 GB, app móvil, soporte prioritario |
+| **Enterprise** | $900/mes | Análisis/chat ilimitados, 100 GB, equipos e invitaciones, SLA |
+
+Detalle en el landing (`/`) y en el seed `db/seed.py`.
 
 ---
 
@@ -151,17 +171,32 @@ Ver [docs/ENTRENAMIENTO_PLANOS.md](docs/ENTRENAMIENTO_PLANOS.md).
 
 ## Demo pública (túnel Cloudflare)
 
-Para compartir la app sin desplegar:
-
 ```powershell
 .\scripts\tunnel.ps1
 ```
 
-Copia la URL `https://....trycloudflare.com`, ponla en `.env` como `APP_BASE_URL` y reinicia el backend:
+1. Copia la URL `https://....trycloudflare.com`  
+2. Ponla en `.env` como `APP_BASE_URL`  
+3. Reinicia el backend:
 
 ```powershell
 docker compose up -d --force-recreate backend
 ```
+
+Mantén abierta la ventana del túnel. Al cerrarla, la URL deja de funcionar y la próxima vez será **otra distinta** (túnel rápido). Para una URL fija tipo `architect.tudominio.com` hace falta dominio + túnel con nombre en Cloudflare.
+
+---
+
+## Snapshot / restore de MySQL
+
+Dump ligero (esquema + `plans` / `users` / `subscriptions`) en `scripts/db/architect.sql`:
+
+```powershell
+.\scripts\db\dump_db.ps1      # exportar (aplica trim por defecto)
+.\scripts\db\restore_db.ps1   # restaurar (sobrescribe la BD)
+```
+
+Ver [scripts/db/README.md](scripts/db/README.md).
 
 ---
 
@@ -200,11 +235,11 @@ Proxy API: `frontend/vite.config.js` → `http://localhost:8000`.
 
 ## Migraciones de base de datos
 
-Si actualizas desde una versión anterior:
-
 ```powershell
 docker compose exec backend python scripts/migrate.py
 ```
+
+Incluye, entre otras, el rol `support` y tablas de tickets (`support_tickets`, `support_messages`).
 
 ---
 
@@ -214,6 +249,8 @@ docker compose exec backend python scripts/migrate.py
 |--------|-------------|
 | `scripts/init_db.py` | Crea tablas, seed de planes y admin |
 | `scripts/migrate.py` | Migraciones incrementales |
+| `scripts/db/dump_db.ps1` | Dump SQL (con trim de INSERT grandes) |
+| `scripts/db/restore_db.ps1` | Restaura `scripts/db/architect.sql` |
 | `scripts/ingest_knowledge_docs.py` | Indexa PDF de `data/knowledge/raw` |
 | `scripts/train_demo.py` | Modelo YOLO demo |
 | `scripts/tunnel.ps1` | Túnel Cloudflare → puerto 8000 |
@@ -226,15 +263,16 @@ docker compose exec backend python scripts/migrate.py
 ## Estructura del proyecto
 
 ```text
-frontend/          React + Vite (app nueva, :3000)
-web/               App legacy chat/planos (/legacy-app)
-api/               Rutas FastAPI
+frontend/          React + Vite (shell :3000)
+web/               Workspace legacy, admin, landing (/legacy-app, /app/admin)
+api/               Rutas FastAPI (auth, analyze, support, home-projects, …)
 core/              Pipeline YOLO + análisis
-services/          Auth, billing, email, IA ARCHITECT, CAD, storage
+services/          Auth, billing, email, IA, CAD/PDF, storage, support
 rules/             Normas Chiapas y motor de reglas
 db/                Modelos SQLAlchemy, seed, migraciones
 config/            Clases YOLO, etapas casa hogar
-scripts/           DB, entrenamiento, ingest, utilidades
+scripts/           DB, entrenamiento, ingest, túnel, utilidades
+scripts/db/        Snapshot SQL + dump/restore
 docs/              Documentación detallada
 data/knowledge/    PDF raw + processed (indexados)
 ```
@@ -243,9 +281,9 @@ data/knowledge/    PDF raw + processed (indexados)
 
 ## Stack
 
-- **Frontend:** React, Vite, Three.js, Tailwind  
+- **Frontend:** React, Vite, Three.js, Tailwind (landing/workspace legacy en HTML/JS)  
 - **Backend:** FastAPI, SQLAlchemy, PyMySQL  
-- **IA:** Ultralytics YOLOv8, OpenCV, reglas en `rules/`  
+- **IA:** Ultralytics YOLOv8, OpenCV, reglas en `rules/`; PDF → PNG con pymupdf  
 - **DB:** MySQL 8  
 - **Contenedores:** Docker Compose  
 
@@ -281,9 +319,10 @@ docker compose config
 | Correo Brevo | [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md) |
 | Google OAuth | [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) |
 | Proyectos casa hogar | [docs/PROYECTOS_CASA_HOGAR.md](docs/PROYECTOS_CASA_HOGAR.md) |
-| CAD / DWG | [docs/CAD_DWG.md](docs/CAD_DWG.md) |
+| Formatos de análisis (imagen/PDF) | [docs/CAD_DWG.md](docs/CAD_DWG.md) |
 | Entrenamiento YOLO | [docs/ENTRENAMIENTO_PLANOS.md](docs/ENTRENAMIENTO_PLANOS.md) |
 | Diseño UI | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
+| Dump SQL | [scripts/db/README.md](scripts/db/README.md) |
 | **App móvil Flutter** | [github.com/Arcogo12/movil-Architect](https://github.com/Arcogo12/movil-Architect) |
 
 ---
@@ -299,9 +338,11 @@ docker compose config
 | Problema | Qué hacer |
 |----------|-----------|
 | Backend no arranca | `docker compose logs backend` — espera a que MySQL esté healthy |
-| Login 401 | Verifica que corriste `init_db.py` y credenciales admin |
+| Login 401 | Verifica `init_db.py` y credenciales admin |
 | Chat sin respuestas de manuales | `ingest_knowledge_docs.py` + reinicia backend |
 | No detecta planos | Entrena demo o modelo real (`train_demo.py` / `train.py`) |
+| DXF/DWG rechazado en análisis | Esperado: exporta a PNG/JPG/PDF, o súbelo en Casa hogar |
+| URL pública caída | El túnel rápido cambia al reiniciar; vuelve a correr `tunnel.ps1` y actualiza `APP_BASE_URL` |
 | Correos no llegan | Revisa `MAIL_*` y [docs/MAIL_BREVO_SETUP.md](docs/MAIL_BREVO_SETUP.md) |
 | OAuth falla | `APP_BASE_URL` debe coincidir con URI autorizada en Google Console |
 

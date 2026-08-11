@@ -6,6 +6,7 @@ import {
   formatPlanLimit,
   formatPlanPrice,
   formatUsage,
+  isPlanDowngrade,
   openBillingPortal,
   planActionLabel,
   planFeatureLines,
@@ -77,6 +78,7 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
 
   const usage = formatUsage(subscription);
   const currentSlug = subscription?.plan?.slug;
+  const currentPrice = Number(subscription?.plan?.price_monthly_cents || 0);
   const showPortal = billingMode === "stripe" && subscription?.has_active_payment;
 
   return (
@@ -115,20 +117,24 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
           <div className="plans-modal-grid">
             {plans.map((plan) => {
               const isCurrent = plan.slug === currentSlug;
+              const isDowngrade = !isCurrent && isPlanDowngrade(plan, currentPrice);
+              const isUpgrade =
+                !isCurrent && currentPrice > 0 && Number(plan.price_monthly_cents || 0) > currentPrice;
+              const dueCents = Math.max(0, Number(plan.price_monthly_cents || 0) - currentPrice);
               const isRecommended = !!(plan.features?.recommended || plan.slug === "pro");
               return (
                 <article
                   key={plan.slug}
                   className={`plans-card${isCurrent ? " is-current" : ""}${
-                    isRecommended && !isCurrent ? " is-recommended" : ""
-                  }`}
+                    isDowngrade ? " is-locked" : ""
+                  }${isRecommended && !isCurrent && !isDowngrade ? " is-recommended" : ""}`}
                 >
                   <div className="plans-card-head">
                     <div>
                       <div className="plans-card-title-row">
                         <h3>{plan.name}</h3>
                         {isCurrent ? <span className="plans-card-badge">Actual</span> : null}
-                        {isRecommended && !isCurrent ? (
+                        {isRecommended && !isCurrent && !isDowngrade ? (
                           <span className="plans-card-badge plans-card-badge--recommended">
                             Recomendado
                           </span>
@@ -137,6 +143,14 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
                       <p>{plan.description}</p>
                       {plan.features?.ideal_for ? (
                         <p className="plans-card-ideal">Ideal para: {plan.features.ideal_for}</p>
+                      ) : null}
+                      {isUpgrade ? (
+                        <p className="plans-card-due">Hoy pagas ${(dueCents / 100).toFixed(0)} (diferencia)</p>
+                      ) : null}
+                      {isDowngrade ? (
+                        <p className="plans-card-due plans-card-due--locked">
+                          No puedes bajar de plan aquí. Usa cancelar suscripción si aplica.
+                        </p>
                       ) : null}
                     </div>
                     <strong>{formatPlanPrice(plan.price_monthly_cents)}</strong>
@@ -149,12 +163,12 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
                   <button
                     type="button"
                     className="hp-btn primary plans-card-btn"
-                    disabled={isCurrent || busySlug === plan.slug}
+                    disabled={isCurrent || isDowngrade || busySlug === plan.slug}
                     onClick={() => selectPlan(plan.slug)}
                   >
                     {busySlug === plan.slug
                       ? "Procesando…"
-                      : planActionLabel(plan, isCurrent)}
+                      : planActionLabel(plan, isCurrent, currentPrice)}
                   </button>
                 </article>
               );
@@ -163,7 +177,8 @@ export default function PlansModal({ open, onClose, subscription, onSubscription
         )}
 
         <p className="plans-modal-foot">
-          Proyecto escolar: pasarela de pago simulada (sin cobro real). Bajar a Gratis es inmediato.
+          Al mejorar un plan solo pagas la diferencia. Las bajadas no están posibles desde aquí;
+          cancela la suscripción si necesitas volver a Gratis.
         </p>
         {showPortal && (
           <button

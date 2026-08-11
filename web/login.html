@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=49" />
+  <link rel="stylesheet" href="/static/style.css?v=160" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -142,7 +142,6 @@
                   Entrar
                   <span class="material-symbols-outlined">arrow_forward</span>
                 </button>
-                <p class="auth-demo-hint">Demo admin: <code>admin@architect.local</code> / <code>admin123</code></p>
                 <div id="googleLoginWrap" class="auth-google-wrap hidden">
                   <p class="auth-divider">o</p>
                   <button type="button" class="auth-google-btn" id="btnGoogleLogin">
@@ -190,7 +189,13 @@
                     Registrarse con Google
                   </button>
                 </div>
-                <p class="auth-footnote">Plan Gratis: 5 análisis al mes con modelo demo.</p>
+                <p class="auth-footnote">
+                  Plan Gratis: 5 análisis al mes con modelo demo.
+                  Al registrarte aceptas los
+                  <a href="/terminos" target="_blank" rel="noopener">términos y condiciones</a>
+                  y la
+                  <a href="/privacidad" target="_blank" rel="noopener">política de privacidad</a>.
+                </p>
               </form>
             </div>
           </div>
@@ -289,11 +294,16 @@
           <a href="/login#register">Crear cuenta</a>
           <a href="/">Landing</a>
         </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="/terminos">Términos y condiciones</a>
+          <a href="/privacidad">Política de privacidad</a>
+        </div>
       </div>
     </div>
   </footer>
 
   <script src="/static/billing.js?v=1"></script>
-  <script src="/static/auth.js?v=29"></script>
+  <script src="/static/auth.js?v=30"></script>
 </body>
 </html>

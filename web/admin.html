@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=122" />
+  <link rel="stylesheet" href="/static/style.css?v=151" />
   <script>
     (function () {
       var KEY = "plano_ia_theme";
@@ -28,17 +28,23 @@
 </head>
 <body class="admin-shell-page">
   <aside class="admin-sidebar" id="adminSidebar" aria-label="Módulos de administración"></aside>
+  <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" aria-hidden="true"></div>
 
   <main class="admin-main-pane">
     <header class="admin-topbar">
-      <div class="admin-topbar-crumb">
-        <span class="material-symbols-outlined">deployed_code</span>
-        <span class="admin-topbar-sep">/</span>
-        <strong id="adminBreadcrumb">Administración</strong>
+      <div class="admin-topbar-left">
+        <button type="button" class="admin-menu-btn" id="adminMenuBtn" aria-label="Abrir menú" aria-controls="adminSidebar" aria-expanded="false">
+          <span class="material-symbols-outlined" id="adminMenuIcon">menu</span>
+        </button>
+        <div class="admin-topbar-crumb">
+          <span class="material-symbols-outlined">deployed_code</span>
+          <span class="admin-topbar-sep">/</span>
+          <strong id="adminBreadcrumb">Administración</strong>
+        </div>
       </div>
       <button type="button" class="admin-refresh-btn" id="btnAdminRefresh">
         <span class="material-symbols-outlined">refresh</span>
-        Actualizar
+        <span class="admin-refresh-label">Actualizar</span>
       </button>
     </header>
 
@@ -64,8 +70,25 @@
     </form>
   </dialog>
 
-  <script src="/static/auth.js?v=28"></script>
+  <dialog class="modal" id="accountModal">
+    <div class="modal-box glass-panel account-modal-box">
+      <div class="modal-header account-modal-header">
+        <h2>Mi cuenta</h2>
+        <button type="button" class="modal-close" id="btnCloseAccount" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="account-body" id="accountBody"></div>
+      <div class="modal-actions account-modal-actions">
+        <button type="button" class="account-btn account-btn--ghost" id="btnAccountPlans">Ver planes</button>
+        <button type="button" class="account-btn account-btn--solid" id="btnAccountLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/auth.js?v=31"></script>
   <script src="/static/dialogs.js?v=4"></script>
-  <script src="/static/admin.js?v=17"></script>
+  <script src="/static/account-modal.js?v=1"></script>
+  <script src="/static/admin.js?v=28"></script>
 </body>
 </html>

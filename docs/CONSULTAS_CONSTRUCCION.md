@@ -7,17 +7,36 @@ Puedes escribir en el chat **sin adjuntar archivo**:
 - «¿Qué materiales convienen para losa en clima húmedo?»
 - «¿Qué trámites pide el ayuntamiento para ampliación?»
 
-## IA ARCHITECT (sin costo, sin APIs externas)
+## IA ARCHITECT
 
-ARCHITECT responde con **su propia biblioteca**:
+ARCHITECT responde con **su biblioteca local** y, si lo activas, un **LLM** que razona sobre ese contexto:
 
 1. **Tus PDF** en `data/knowledge/raw` (tras `ingest_knowledge_docs.py`)
 2. **Umbrales normativos** en `rules/norms.py` (referencia Tuxtla / Chiapas)
 3. **Internet** (opcional) — DuckDuckGo para reglamentos municipales
+4. **LLM opcional** — Gemini / OpenAI / Ollama (`LLM_PROVIDER`); si está en `off` o falla, usa plantillas cortas sin relleno
 
-No se usa OpenAI ni servicios de pago. La respuesta se redacta a partir de lo indexado.
+Comprueba estado: `GET /api/ask/status` → `architect_ai_enabled`, `llm_enabled`, `document_catalog`.
 
-Comprueba estado: `GET /api/ask/status` → `architect_ai_enabled: true` y `document_catalog`.
+### Activar razonamiento con LLM
+
+En `.env` (ejemplo Gemini, cuota gratuita con API key):
+
+```
+LLM_PROVIDER=gemini
+LLM_API_KEY=tu-clave
+LLM_MODEL=gemini-flash-latest
+```
+
+Ollama local (sin costo de API):
+
+```
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.2
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+```
+
+Luego: `docker compose up -d --force-recreate backend`.
 
 ### Biblioteca actual (447 páginas)
 

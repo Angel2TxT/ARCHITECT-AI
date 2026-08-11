@@ -16,6 +16,7 @@ from services.billing_checkout_service import (
     complete_demo_checkout,
     create_checkout_token,
     decode_checkout_token,
+    plan_change_quote,
     start_checkout,
 )
 from services.subscription_service import change_plan, is_paid_plan
@@ -27,18 +28,49 @@ class PaidPlanHelpersTests(unittest.TestCase):
         self.assertTrue(is_paid_plan(SimpleNamespace(price_monthly_cents=9900)))
 
 
+class PlanChangeQuoteTests(unittest.TestCase):
+    def test_upgrade_charges_difference_only(self):
+        starter = SimpleNamespace(slug="starter", price_monthly_cents=30000)
+        pro = SimpleNamespace(slug="pro", price_monthly_cents=50000)
+        quote = plan_change_quote(starter, pro)
+        self.assertTrue(quote["allowed"])
+        self.assertTrue(quote["is_upgrade"])
+        self.assertEqual(quote["credit_cents"], 30000)
+        self.assertEqual(quote["amount_due_cents"], 20000)
+
+    def test_downgrade_blocked(self):
+        pro = SimpleNamespace(slug="pro", price_monthly_cents=50000)
+        starter = SimpleNamespace(slug="starter", price_monthly_cents=30000)
+        quote = plan_change_quote(pro, starter)
+        self.assertFalse(quote["allowed"])
+        self.assertEqual(quote["code"], "downgrade_blocked")
+
+    def test_free_to_paid_full_price(self):
+        free = SimpleNamespace(slug="free", price_monthly_cents=0)
+        pro = SimpleNamespace(slug="pro", price_monthly_cents=50000)
+        quote = plan_change_quote(free, pro)
+        self.assertTrue(quote["allowed"])
+        self.assertEqual(quote["amount_due_cents"], 50000)
+        self.assertEqual(quote["credit_cents"], 0)
+
+
 class CheckoutTokenTests(unittest.TestCase):
     def test_create_and_decode_checkout_token(self):
         token = create_checkout_token(
             user_id=42,
             plan_slug="pro",
             return_url="/legacy-app",
+            amount_due_cents=20000,
+            credit_cents=30000,
+            list_price_cents=50000,
         )
         payload = decode_checkout_token(token)
         self.assertEqual(payload["typ"], CHECKOUT_TOKEN_TYPE)
         self.assertEqual(payload["uid"], 42)
         self.assertEqual(payload["plan"], "pro")
         self.assertEqual(payload["return_url"], "/legacy-app")
+        self.assertEqual(payload["amount_due_cents"], 20000)
+        self.assertEqual(payload["credit_cents"], 30000)
 
     def test_invalid_token_raises(self):
         with self.assertRaises(HTTPException):
@@ -76,9 +108,7 @@ class ChangePlanGuardTests(unittest.TestCase):
         detail = ctx.exception.detail
         self.assertEqual(detail["code"], "checkout_required")
 
-
-class StartCheckoutTests(unittest.TestCase):
-    def test_free_plan_completes_without_checkout_url(self):
+    def test_downgrade_to_free_blocked_without_bypass(self):
         db = MagicMock()
         free = SimpleNamespace(
             id=1,
@@ -87,18 +117,60 @@ class StartCheckoutTests(unittest.TestCase):
             price_monthly_cents=0,
             is_public=True,
         )
-        pro = SimpleNamespace(id=2, slug="pro")
-        sub = SimpleNamespace(plan=pro, plan_id=2)
+        pro = SimpleNamespace(id=2, slug="pro", price_monthly_cents=50000)
+        sub = SimpleNamespace(plan_id=2, plan=pro)
+        user = SimpleNamespace(id=7, role="user", email="u@test.com")
+        db.query.return_value.filter.return_value.first.return_value = free
+
+        with patch("services.subscription_service.ensure_subscription", return_value=sub):
+            with self.assertRaises(HTTPException) as ctx:
+                change_plan(db, user, "free", bypass_checkout=False)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertEqual(ctx.exception.detail["code"], "downgrade_blocked")
+
+
+class StartCheckoutTests(unittest.TestCase):
+    def test_already_on_free_returns_already_active(self):
+        db = MagicMock()
+        free = SimpleNamespace(
+            id=1,
+            slug="free",
+            name="Gratis",
+            price_monthly_cents=0,
+            is_public=True,
+        )
+        sub = SimpleNamespace(plan=free, plan_id=1)
         user = SimpleNamespace(id=3, role="user", email="free@test.com")
 
         db.query.return_value.filter.return_value.first.return_value = free
 
         with patch("services.billing_checkout_service.ensure_subscription", return_value=sub):
-            with patch("services.billing_checkout_service.change_plan") as mock_change:
-                mock_change.return_value = {"plan": {"slug": "free"}}
+            with patch(
+                "services.billing_checkout_service.subscription_payload",
+                return_value={"plan": {"slug": "free"}},
+            ):
                 result = start_checkout(db, user, "free")
-        self.assertEqual(result["status"], "completed")
-        mock_change.assert_called_once()
+        self.assertEqual(result["status"], "already_active")
+
+    def test_downgrade_checkout_blocked(self):
+        db = MagicMock()
+        starter = SimpleNamespace(
+            id=2,
+            slug="starter",
+            name="Starter",
+            price_monthly_cents=30000,
+            is_public=True,
+        )
+        pro = SimpleNamespace(id=3, slug="pro", price_monthly_cents=50000)
+        sub = SimpleNamespace(plan=pro, plan_id=3)
+        user = SimpleNamespace(id=3, role="user", email="paid@test.com")
+        db.query.return_value.filter.return_value.first.return_value = starter
+
+        with patch("services.billing_checkout_service.ensure_subscription", return_value=sub):
+            with self.assertRaises(HTTPException) as ctx:
+                start_checkout(db, user, "starter")
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertEqual(ctx.exception.detail["code"], "downgrade_blocked")
 
     def test_paid_plan_returns_demo_checkout_url(self):
         db = MagicMock()
@@ -110,7 +182,7 @@ class StartCheckoutTests(unittest.TestCase):
             price_monthly_cents=29900,
             is_public=True,
         )
-        free = SimpleNamespace(id=1, slug="free")
+        free = SimpleNamespace(id=1, slug="free", price_monthly_cents=0)
         sub = SimpleNamespace(plan=free, plan_id=1)
         user = SimpleNamespace(id=5, role="user", email="paid@test.com")
 
@@ -122,9 +194,37 @@ class StartCheckoutTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "checkout_required")
         self.assertEqual(result["mode"], "demo")
+        self.assertEqual(result["amount_due_cents"], 29900)
         self.assertIn("checkout_url", result)
         self.assertTrue(result["checkout_url"].startswith("/checkout?token="))
         self.assertIn("session_token", result)
+        payload = decode_checkout_token(result["session_token"])
+        self.assertEqual(payload["amount_due_cents"], 29900)
+
+    def test_upgrade_checkout_uses_difference(self):
+        db = MagicMock()
+        pro = SimpleNamespace(
+            id=3,
+            slug="pro",
+            name="Pro",
+            description="",
+            price_monthly_cents=50000,
+            is_public=True,
+        )
+        starter = SimpleNamespace(id=2, slug="starter", price_monthly_cents=30000)
+        sub = SimpleNamespace(plan=starter, plan_id=2)
+        user = SimpleNamespace(id=5, role="user", email="up@test.com")
+        db.query.return_value.filter.return_value.first.return_value = pro
+
+        with patch("services.billing_checkout_service.ensure_subscription", return_value=sub):
+            with patch("services.billing_checkout_service.billing_mode", return_value="demo"):
+                result = start_checkout(db, user, "pro", return_url="/legacy-app")
+
+        self.assertEqual(result["status"], "checkout_required")
+        self.assertEqual(result["amount_due_cents"], 20000)
+        self.assertEqual(result["credit_cents"], 30000)
+        payload = decode_checkout_token(result["session_token"])
+        self.assertEqual(payload["amount_due_cents"], 20000)
 
 
 class CompleteDemoCheckoutTests(unittest.TestCase):

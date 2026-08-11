@@ -14,8 +14,9 @@ from db.database import get_db
 from db.models import Chat, Message, User
 from services.qa_service import answer_construction_question
 from services.architect_ai_service import architect_ai_status
+from services.llm_service import llm_status
 from services.web_search_service import web_search_enabled
-from services.subscription_service import assert_can_ask
+from services.subscription_service import assert_can_ask, is_admin_user, record_ask_usage, subscription_payload
 
 router = APIRouter(tags=["ask"])
 
@@ -32,6 +33,7 @@ def ask_status():
         "knowledge_pages": pages,
         "web_search_enabled": web_search_enabled(),
         "document_catalog": catalog,
+        **llm_status(),
         **architect_ai_status(knowledge_pages=pages, catalog=catalog),
     }
 
@@ -86,6 +88,7 @@ async def ask_construction(
         "thresholds": result.get("thresholds"),
         "web_search_used": result.get("web_search_used"),
         "assistant_mode": result.get("assistant_mode"),
+        "llm_used": result.get("llm_used"),
     }
     db.add(
         Message(
@@ -97,5 +100,9 @@ async def ask_construction(
     chat.updated_at = datetime.utcnow()
     db.commit()
 
+    if not is_admin_user(user):
+        record_ask_usage(db, user.id)
+
     result["chat_id"] = chat.id
+    result["subscription"] = subscription_payload(db, user)
     return result

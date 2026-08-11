@@ -2,6 +2,7 @@ const TOKEN_KEY = "plano_ia_token";
 const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
 const SELECTED_PLAN_KEY = "plano_ia_selected_plan";
+const STAFF_BACKUP_KEY = "plano_ia_staff_backup";
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -11,6 +12,58 @@ function setSession(data) {
   localStorage.setItem(TOKEN_KEY, data.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(data.user));
   localStorage.setItem(SUB_KEY, JSON.stringify(data.subscription));
+}
+
+function getStaffBackup() {
+  try {
+    return JSON.parse(localStorage.getItem(STAFF_BACKUP_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function isImpersonating() {
+  return !!getStaffBackup();
+}
+
+function startImpersonation(data) {
+  const backup = {
+    access_token: getToken(),
+    user: getUser(),
+    subscription: getSubscription(),
+    impersonator: data.impersonator || null,
+  };
+  if (!backup.access_token || !backup.user) {
+    throw new Error("No hay sesión de soporte/admin para respaldar");
+  }
+  localStorage.setItem(STAFF_BACKUP_KEY, JSON.stringify(backup));
+  setSession(data);
+  const role = backup.user?.role;
+  const backHash = role === "support" ? "#support/support-inbox" : "#accounts/users";
+  sessionStorage.setItem("impersonation_return", `/app/admin${backHash}`);
+  window.location.href = "/legacy-app?impersonating=1";
+}
+
+function stopImpersonation() {
+  const backup = getStaffBackup();
+  if (!backup?.access_token) {
+    localStorage.removeItem(STAFF_BACKUP_KEY);
+    window.location.href = "/app/admin";
+    return;
+  }
+  localStorage.setItem(TOKEN_KEY, backup.access_token);
+  localStorage.setItem(USER_KEY, JSON.stringify(backup.user || null));
+  localStorage.setItem(SUB_KEY, JSON.stringify(backup.subscription || null));
+  localStorage.removeItem(STAFF_BACKUP_KEY);
+  const ret = sessionStorage.getItem("impersonation_return") || "/app/admin";
+  sessionStorage.removeItem("impersonation_return");
+  window.location.href = ret;
+}
+
+function defaultPostLoginPath(user) {
+  if (user?.role === "support") return "/app/admin#support/support-inbox";
+  if (user?.role === "admin") return "/app/admin";
+  return "/legacy-app";
 }
 
 async function applySelectedPlan(accessToken) {
@@ -34,6 +87,8 @@ function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(SUB_KEY);
+  localStorage.removeItem(STAFF_BACKUP_KEY);
+  sessionStorage.removeItem("impersonation_return");
 }
 
 function getUser() {
@@ -153,6 +208,10 @@ function requireAuth() {
 }
 
 function logout() {
+  if (isImpersonating()) {
+    stopImpersonation();
+    return;
+  }
   clearSession();
   window.location.href = "/login";
 }
@@ -167,7 +226,7 @@ if (document.getElementById("loginForm")) {
     } else if (sessionStorage.getItem("open_home_projects") === "1") {
       window.location.href = "/legacy-app?home-projects=1";
     } else {
-      window.location.href = "/legacy-app";
+      window.location.href = defaultPostLoginPath(getUser());
     }
   }
 
@@ -196,7 +255,7 @@ if (document.getElementById("loginForm")) {
       const checkoutRedirect = await applySelectedPlan(accessToken);
       if (checkoutRedirect) return true;
       window.history.replaceState({}, "", "/login");
-      window.location.href = "/app";
+      window.location.href = defaultPostLoginPath(me?.user || getUser());
     } catch {
       clearSession();
       const err = document.getElementById("loginError");
@@ -219,6 +278,11 @@ if (document.getElementById("loginForm")) {
   function postAuthRedirect() {
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next");
+    const user = getUser();
+    if (user?.role === "support" || user?.role === "admin") {
+      window.location.href = defaultPostLoginPath(user);
+      return;
+    }
     if (next && next.startsWith("/")) {
       window.location.href = next;
       return;
@@ -618,4 +682,9 @@ window.PlanoAuth = {
   logout,
   formatApiError,
   isLoggedIn,
+  isImpersonating,
+  getStaffBackup,
+  startImpersonation,
+  stopImpersonation,
+  defaultPostLoginPath,
 };

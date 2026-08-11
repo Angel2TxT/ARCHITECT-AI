@@ -103,6 +103,10 @@ def _run_correction_pipeline(
     result["correction_ack"] = ack
     result["corrections_count"] = len(analysis.corrections_json or [])
 
+    assistant_content = _build_assistant_content(result, analysis_id=analysis.id)
+    assistant_content["text"] = ack + "\n\n" + (assistant_content.get("text") or "")
+    assistant_content["corrections_count"] = result["corrections_count"]
+
     if chat:
         if user_message:
             db.add(
@@ -117,9 +121,6 @@ def _run_correction_pipeline(
                     analysis_id=analysis.id,
                 )
             )
-        assistant_content = _build_assistant_content(result, analysis_id=analysis.id)
-        assistant_content["text"] = ack + "\n\n" + (assistant_content.get("text") or "")
-        assistant_content["corrections_count"] = result["corrections_count"]
         db.add(
             Message(
                 chat_id=chat.id,
@@ -134,6 +135,7 @@ def _run_correction_pipeline(
     result["analysis_id"] = analysis.id
     if chat:
         result["chat_id"] = chat.id
+    result.update(assistant_content)
     return result
 
 

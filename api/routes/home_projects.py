@@ -16,6 +16,7 @@ from db.models import Analysis, User
 from services.home_project_service import (
     accept_project_invite,
     add_section_comment,
+    add_section_slot,
     add_stage_document,
     advance_to_next_stage,
     assist_stage,
@@ -25,6 +26,7 @@ from services.home_project_service import (
     delete_home_project,
     delete_section,
     delete_section_comment,
+    delete_section_slot,
     delete_stage_document,
     get_home_project,
     get_stage_document,
@@ -37,6 +39,8 @@ from services.home_project_service import (
     update_home_project,
     update_section,
     update_stage,
+    _log_event,
+    _require_project_access,
 )
 
 router = APIRouter(prefix="/api/home-projects", tags=["home-projects"])
@@ -86,6 +90,13 @@ class SectionCommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
 
 
+class SectionSlotCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=120)
+    accept: list[str] | None = None
+    required: bool = False
+    ai_plan_review: bool = False
+
+
 class InviteMember(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     role: str = Field(default="editor", pattern="^(editor|viewer)$")
@@ -97,6 +108,22 @@ class AcceptInvite(BaseModel):
 
 class StageAssistRequest(BaseModel):
     question: str = Field(default="", max_length=2000)
+
+
+class AdvanceRequest(BaseModel):
+    acknowledge_open_findings: bool = False
+
+
+class AiReviewCreate(BaseModel):
+    document_id: int
+    section_id: int | None = None
+    message: str = Field(default="", max_length=2000)
+    weights: str = Field(default="", max_length=512)
+
+
+class AiFindingUpdate(BaseModel):
+    action: str = Field(pattern="^(accept|dismiss|reopen)$")
+    note: str = Field(default="", max_length=500)
 
 
 def _payload(db: Session, project, user_id: int) -> dict:
@@ -351,6 +378,41 @@ def remove_section(
     return _payload(db, project, user.id)
 
 
+@router.post("/{project_id}/sections/{section_id}/slots")
+def create_section_slot(
+    project_id: str,
+    section_id: int,
+    body: SectionSlotCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    add_section_slot(
+        db,
+        user,
+        project_id,
+        section_id,
+        title=body.title,
+        accept=body.accept,
+        required=body.required,
+        ai_plan_review=body.ai_plan_review,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
+@router.delete("/{project_id}/sections/{section_id}/slots/{slot_key}")
+def remove_section_slot(
+    project_id: str,
+    section_id: int,
+    slot_key: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    delete_section_slot(db, user, project_id, section_id, slot_key)
+    project = get_home_project(db, user.id, project_id)
+    return _payload(db, project, user.id)
+
+
 @router.patch("/{project_id}/stages/{stage_number}")
 def patch_stage(
     project_id: str,
@@ -391,6 +453,70 @@ def stage_assist(
     )
 
 
+@router.post("/{project_id}/stages/{stage_number}/ai-reviews")
+async def create_stage_ai_review(
+    project_id: str,
+    stage_number: int,
+    body: AiReviewCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    from services.home_ai_review_service import create_ai_review_from_document
+    from services.home_project_service import _stage_catalog_by_number
+
+    project = get_home_project(db, user.id, project_id)
+    _require_project_access(db, project, user.id, min_role="editor")
+    cat = _stage_catalog_by_number().get(stage_number, {})
+    if not (cat.get("ai_plan_review") or cat.get("plan_review")):
+        raise HTTPException(
+            400,
+            "Esta etapa no admite revisión de plano con IA. Usa el asistente de dudas o la revisión del equipo.",
+        )
+    result = await create_ai_review_from_document(
+        db,
+        user,
+        project,
+        document_id=body.document_id,
+        stage_number=stage_number,
+        section_id=body.section_id,
+        message=body.message,
+        weights=body.weights,
+        log_event=_log_event,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return {
+        **result,
+        "project": _payload(db, project, user.id),
+    }
+
+
+@router.patch("/{project_id}/ai-reviews/{review_id}/findings/{finding_id}")
+def patch_ai_finding(
+    project_id: str,
+    review_id: int,
+    finding_id: str,
+    body: AiFindingUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    from services.home_ai_review_service import update_ai_finding
+
+    project = get_home_project(db, user.id, project_id)
+    _require_project_access(db, project, user.id, min_role="editor")
+    review = update_ai_finding(
+        db,
+        user,
+        project,
+        review_id,
+        finding_id=finding_id,
+        action=body.action,
+        note=body.note,
+        log_event=_log_event,
+    )
+    project = get_home_project(db, user.id, project_id)
+    return {"review": review, "project": _payload(db, project, user.id)}
+
+
 @router.post("/{project_id}/stages/{stage_number}/documents")
 async def upload_stage_document(
     project_id: str,
@@ -399,6 +525,7 @@ async def upload_stage_document(
     db: Annotated[Session, Depends(get_db)],
     file: UploadFile = File(...),
     section_id: int | None = Form(default=None),
+    slot_key: str | None = Form(default=None),
 ):
     content = await file.read()
     if not content:
@@ -412,6 +539,7 @@ async def upload_stage_document(
         content=content,
         mime_type=file.content_type or "",
         section_id=section_id,
+        slot_key=slot_key,
     )
     project = get_home_project(db, user.id, project_id)
     return {
@@ -421,6 +549,7 @@ async def upload_stage_document(
             "file_size": doc.file_size,
             "mime_type": doc.mime_type,
             "section_id": doc.section_id,
+            "slot_key": doc.slot_key,
             "download_url": f"/api/home-projects/{project_id}/documents/{doc.id}/file",
         },
         "project": _payload(db, project, user.id),
@@ -462,7 +591,15 @@ def advance_project(
     project_id: str,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    body: AdvanceRequest = AdvanceRequest(),
 ):
-    project = advance_to_next_stage(db, user, project_id)
+    project, advisory = advance_to_next_stage(
+        db,
+        user,
+        project_id,
+        acknowledge_open_findings=bool(body.acknowledge_open_findings),
+    )
     project = get_home_project(db, user.id, project.id)
-    return _payload(db, project, user.id)
+    payload = _payload(db, project, user.id)
+    payload["advance_advisory"] = advisory
+    return payload

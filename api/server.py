@@ -82,6 +82,10 @@ class NoCacheHTML(BaseHTTPMiddleware):
                 "/app",
                 "/login",
                 "/welcome",
+                "/privacidad",
+                "/privacy",
+                "/terminos",
+                "/terms",
                 "/checkout",
                 "/checkout/success",
                 "/index.html",
@@ -234,6 +238,18 @@ def app_spa_routes(spa_path: str):
 @app.get("/login")
 def login_page():
     return _legacy_page(WEB_DIR / "login.html")
+
+
+@app.get("/privacidad")
+@app.get("/privacy")
+def privacy_page():
+    return _legacy_page(WEB_DIR / "privacy.html")
+
+
+@app.get("/terminos")
+@app.get("/terms")
+def terms_page():
+    return _legacy_page(WEB_DIR / "terms.html")
 
 
 @app.get("/welcome")

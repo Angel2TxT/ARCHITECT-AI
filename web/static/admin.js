@@ -38,6 +38,7 @@
       sections: [
         { id: "plans", label: "Planes", icon: "sell", desc: "Catálogo y límites" },
         { id: "receipts", label: "Comprobantes", icon: "receipt_long", desc: "Tickets demo" },
+        { id: "refunds", label: "Reembolsos", icon: "currency_exchange", desc: "Solicitudes de usuarios" },
       ],
     },
     {
@@ -58,15 +59,6 @@
       sections: [
         { id: "home-projects", label: "Proyectos", icon: "apartment", desc: "9 etapas" },
         { id: "activity", label: "Actividad", icon: "history", desc: "Auditoría" },
-      ],
-    },
-    {
-      id: "system",
-      label: "Sistema",
-      icon: "settings",
-      sections: [
-        { id: "system", label: "Salud", icon: "health_and_safety", desc: "Estado general" },
-        { id: "tools", label: "Herramientas", icon: "build", desc: "Atajos admin" },
       ],
     },
   ];
@@ -123,6 +115,7 @@
     guestTrials: null,
     receipts: null,
     billingSummary: null,
+    refunds: null,
     knowledge: null,
     norms: null,
     supportInbox: null,
@@ -131,14 +124,28 @@
 
   function visibleModules() {
     if (staffRole === "support") {
-      return MODULES.filter((m) => m.id === "support");
+      return MODULES.filter((m) => m.id === "support" || m.id === "accounts").map((m) => {
+        if (m.id !== "accounts") return m;
+        return {
+          ...m,
+          sections: m.sections.filter((s) => s.id === "users"),
+        };
+      });
     }
     return MODULES;
   }
 
   function canAccessSection(sectionId) {
     if (staffRole === "admin") return !!SECTION_META[sectionId];
-    return sectionId === "welcome" || sectionId === "support-inbox";
+    return sectionId === "welcome" || sectionId === "support-inbox" || sectionId === "users";
+  }
+
+  function panelBrandLabel() {
+    return staffRole === "support" ? "Panel de soporte" : "Panel admin";
+  }
+
+  function panelTitleLabel() {
+    return staffRole === "support" ? "Soporte" : "Administración";
   }
 
   function getPage(key) {
@@ -368,21 +375,39 @@
   function renderSidebar() {
     if (!sidebarEl) return;
     const mods = visibleModules();
-    const totalSections = PINNED.length + mods.reduce((n, m) => n + m.sections.length, 0);
     const crumb = document.getElementById("adminBreadcrumb");
-    if (crumb) crumb.textContent = SECTION_META[currentSection]?.label || "Administración";
+    if (crumb) crumb.textContent = SECTION_META[currentSection]?.label || panelTitleLabel();
+
+    const user = window.PlanoAuth?.getUser?.() || {};
+    const initials = String(user.full_name || user.email || "A")
+      .split(/\s+/)
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+    const roleLabel =
+      staffRole === "support" || user.role === "support"
+        ? "Soporte"
+        : user.role === "admin"
+          ? "Administrador"
+          : "Usuario";
 
     sidebarEl.innerHTML = `
       <div class="admin-sidebar-brand">
         <span class="admin-sidebar-brand-mark">
           <img src="/static/brand/architect-icon.png?v=3" alt="" width="20" height="20" />
         </span>
-        <strong>Administración</strong>
+        <strong>${panelTitleLabel()}</strong>
+        <button type="button" class="admin-sidebar-brand-close" id="adminSidebarClose" aria-label="Cerrar menú">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
       <div class="admin-sidebar-scroll">
         <div class="admin-sidebar-top">
-          <p class="admin-sidebar-kicker">Módulos</p>
-          <p class="admin-sidebar-count">${mods.length} grupos · ${totalSections} vistas · ${staffRole === "support" ? "Soporte" : "Admin"}</p>
+          <a class="admin-back-workspace" href="/legacy-app" title="Volver al workspace">
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span>Volver al workspace</span>
+          </a>
         </div>
         <div class="admin-nav-pinned">
           ${PINNED.map(
@@ -427,12 +452,25 @@
         </nav>
       </div>
       <footer class="admin-sidebar-foot">
+        <div class="admin-user-pill">
+          <button type="button" class="admin-user-pill-main" id="adminBtnProfile" title="Mi cuenta / perfil">
+            <div class="admin-user-avatar${user.avatar_url ? " has-photo" : ""}" id="adminUserAvatar" ${user.avatar_url ? `style="background-image:url('${escapeHtml(user.avatar_url)}')"` : ""}>${user.avatar_url ? "" : escapeHtml(initials)}</div>
+            <div class="admin-user-info">
+              <span class="admin-user-name">${escapeHtml(user.full_name || user.email || "Usuario")}</span>
+              <span class="admin-user-role">${escapeHtml(roleLabel)}</span>
+            </div>
+          </button>
+          <button type="button" class="admin-user-logout" id="adminBtnLogout" title="Cerrar sesión">
+            <span class="material-symbols-outlined">logout</span>
+          </button>
+        </div>
         <button type="button" class="admin-sidebar-expand-all" id="adminExpandAll" title="Expandir todos los módulos">
           <span class="material-symbols-outlined">unfold_more</span>
           Expandir todo
         </button>
-        <p>Panel operativo ARCHITECT</p>
+        <p>Panel operativo ARCHITECT · ${panelBrandLabel()}</p>
       </footer>`;
+    document.title = `${panelTitleLabel()} · ARCHITECT`;
   }
 
   async function downloadResource(resource, format) {
@@ -543,12 +581,42 @@
       day: "numeric",
       month: "long",
     });
+
+    if (staffRole === "support") {
+      return `
+        <div class="admin-welcome">
+          <section class="admin-welcome-banner">
+            <div class="admin-welcome-banner-grid" aria-hidden="true"></div>
+            <div class="admin-welcome-banner-copy">
+              <p class="admin-welcome-kicker">Architect · Soporte</p>
+              <h2>${escapeHtml(salute)}, <strong>${escapeHtml(name)}</strong></h2>
+              <p class="admin-welcome-lead">
+                Esta bandeja es solo para el equipo de soporte y administración.
+                Los usuarios abren tickets desde <strong>Ayuda</strong> en su workspace.
+              </p>
+              <div class="admin-welcome-actions">
+                <button type="button" class="admin-welcome-cta" data-section="support-inbox">
+                  <span class="material-symbols-outlined">inbox</span>
+                  Abrir bandeja
+                </button>
+              </div>
+            </div>
+            <div class="admin-welcome-glass">
+              <img src="/static/brand/architect-icon.png?v=3" alt="" class="admin-welcome-mark" />
+              <p class="admin-welcome-date">${escapeHtml(dateLabel)}</p>
+              <p class="admin-welcome-aside-label">${panelBrandLabel()}</p>
+            </div>
+          </section>
+        </div>`;
+    }
+
     const shortcuts = [
       { id: "overview", icon: "monitoring", title: "Resumen", text: "KPIs y estado de la plataforma" },
       { id: "users", icon: "person", title: "Usuarios", text: "Cuentas, roles y acceso" },
       { id: "plans", icon: "sell", title: "Planes", text: "Catálogo y límites" },
       { id: "analyses", icon: "analytics", title: "Análisis", text: "Revisiones de planos" },
       { id: "home-projects", icon: "apartment", title: "Casa hogar", text: "Proyectos por etapas" },
+      { id: "support-inbox", icon: "support_agent", title: "Bandeja soporte", text: "Responder tickets de usuarios" },
       { id: "exports", icon: "download", title: "Exportar", text: "Excel y PDF" },
     ];
     const stats = s
@@ -567,23 +635,23 @@
             <p class="admin-welcome-kicker">Architect · Control operativo</p>
             <h2>${escapeHtml(salute)}, <strong>${escapeHtml(name)}</strong></h2>
             <p class="admin-welcome-lead">
-              Gestiona cuentas, facturación, IA y casa hogar desde un solo panel.
+              Gestiona cuentas, facturación, IA y casa hogar. Los tickets de usuarios se atienden en la bandeja de soporte.
             </p>
             <div class="admin-welcome-actions">
               <button type="button" class="admin-welcome-cta" data-section="overview">
                 <span class="material-symbols-outlined">monitoring</span>
                 Abrir resumen
               </button>
-              <button type="button" class="admin-welcome-cta admin-welcome-cta--ghost" data-section="users">
-                <span class="material-symbols-outlined">person</span>
-                Ver usuarios
+              <button type="button" class="admin-welcome-cta admin-welcome-cta--ghost" data-section="support-inbox">
+                <span class="material-symbols-outlined">support_agent</span>
+                Bandeja soporte
               </button>
             </div>
           </div>
           <div class="admin-welcome-glass">
             <img src="/static/brand/architect-icon.png?v=3" alt="" class="admin-welcome-mark" />
             <p class="admin-welcome-date">${escapeHtml(dateLabel)}</p>
-            <p class="admin-welcome-aside-label">Panel admin</p>
+            <p class="admin-welcome-aside-label">${panelBrandLabel()}</p>
           </div>
         </section>
 
@@ -705,10 +773,30 @@
     if (!data) return "<p>Cargando usuarios…</p>";
     const users = data.items || [];
     const total = data.total ?? users.length;
+    const supportMode = staffRole === "support";
     const body =
       users
-        .map(
-          (u) => `<tr data-user-id="${u.id}">
+        .map((u) => {
+          const canImpersonate = u.role === "user" && u.is_active;
+          if (supportMode) {
+            return `<tr data-user-id="${u.id}">
+              <td class="admin-col-avatar">${avatarMarkup(u.full_name, u.email)}</td>
+              <td class="admin-col-name"><strong>${escapeHtml(u.full_name || "Sin nombre")}</strong></td>
+              <td class="admin-col-email">${escapeHtml(u.email || "")}</td>
+              <td class="admin-col-plan">${escapeHtml(u.plan_name || u.plan_slug || "—")}</td>
+              <td class="admin-col-usage">${u.analyses_used ?? 0}${u.analyses_limit != null ? `/${u.analyses_limit}` : ""}</td>
+              <td class="admin-col-role">${escapeHtml(u.role || "user")}</td>
+              <td class="admin-col-access">${u.is_active ? "Activo" : "Inactivo"}</td>
+              <td class="admin-col-actions">
+                <div class="admin-row-actions">
+                  <button type="button" class="admin-icon-btn admin-impersonate-btn" data-action="impersonate" data-user-id="${u.id}" title="Entrar como este usuario" ${canImpersonate && busyId !== u.id ? "" : "disabled"}>
+                    <span class="material-symbols-outlined">login</span>
+                  </button>
+                </div>
+              </td>
+            </tr>`;
+          }
+          return `<tr data-user-id="${u.id}">
               <td class="admin-col-avatar">${avatarMarkup(u.full_name, u.email)}</td>
               <td class="admin-col-name">
                 <input class="admin-cell-input" data-action="name" aria-label="Nombre" type="text" spellcheck="false" autocomplete="off" value="${escapeHtml(u.full_name || "")}" placeholder="Sin nombre" ${busyId === u.id ? "disabled" : ""} />
@@ -732,20 +820,28 @@
               </td>
               <td class="admin-col-actions">
                 <div class="admin-row-actions">
+                  <button type="button" class="admin-icon-btn admin-impersonate-btn" data-action="impersonate" data-user-id="${u.id}" title="Entrar como este usuario" ${canImpersonate && busyId !== u.id ? "" : "disabled"}>
+                    <span class="material-symbols-outlined">login</span>
+                  </button>
                   <button type="button" class="admin-icon-btn" data-action="reset-usage" title="Reiniciar uso" ${busyId === u.id ? "disabled" : ""}><span class="material-symbols-outlined">restart_alt</span></button>
                   <button type="button" class="admin-delete-btn" data-action="delete" title="Eliminar" ${busyId === u.id ? "disabled" : ""}><span class="material-symbols-outlined">delete</span></button>
                 </div>
               </td>
-            </tr>`
-        )
+            </tr>`;
+        })
         .join("") || `<tr><td colspan="8" class="admin-empty-row">Sin resultados en esta página</td></tr>`;
     return `
-      ${sectionHead("Usuarios", "Cuentas, roles, planes y acceso.")}
+      ${sectionHead(
+        "Usuarios",
+        supportMode
+          ? "Consulta cuentas y entra como el usuario para reproducir errores. No puedes editar roles desde soporte."
+          : "Cuentas, roles, planes y acceso. También puedes entrar como un usuario para diagnosticar."
+      )}
       <div class="admin-toolbar">
         <input type="search" class="admin-search" id="adminUserSearch" placeholder="Buscar correo o nombre…" value="${escapeHtml(userSearch)}" />
         <div class="admin-toolbar-actions">
-          <button type="button" class="btn-primary" id="btnCreateUser">Nuevo usuario</button>
-          ${exportButtons("users")}
+          ${supportMode ? "" : `<button type="button" class="btn-primary" id="btnCreateUser">Nuevo usuario</button>`}
+          ${supportMode ? "" : exportButtons("users")}
           <span class="admin-toolbar-meta">${total} cuenta(s)</span>
         </div>
       </div>
@@ -873,6 +969,44 @@
         </tbody>
       </table></div>
       ${renderPager("receipts", total)}`;
+  }
+
+  function renderRefunds() {
+    const data = cache.refunds;
+    if (!data) return "<p>Cargando reembolsos…</p>";
+    const items = data.refunds || [];
+    return `
+      ${sectionHead("Reembolsos", "Solicitudes tras cancelar con uso bajo en la ventana de días.")}
+      <div class="admin-toolbar"><span class="admin-toolbar-meta">${items.length} solicitud${items.length === 1 ? "" : "es"}</span></div>
+      <div class="admin-members"><table class="admin-table" role="grid">
+        <thead><tr><th>ID</th><th>Usuario</th><th>Importe</th><th>Folio</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>
+        <tbody>
+          ${items
+            .map((r) => {
+              const pending = r.status === "pending";
+              return `<tr data-refund-id="${r.id}">
+              <td>${r.id}</td>
+              <td>
+                <strong>${escapeHtml(r.user_name || "—")}</strong><br>
+                <span class="admin-hint">${escapeHtml(r.user_email || "")}</span>
+              </td>
+              <td>${formatMoney(r.amount_cents)}</td>
+              <td>${escapeHtml(r.receipt_number || "—")}</td>
+              <td><span class="admin-pill">${escapeHtml(r.status)}</span></td>
+              <td>${formatDate(r.created_at)}</td>
+              <td class="admin-row-actions">
+                ${
+                  pending
+                    ? `<button type="button" class="btn-secondary text-xs" data-refund-approve="${r.id}">Aprobar</button>
+                       <button type="button" class="admin-delete-btn text-xs" data-refund-reject="${r.id}">Rechazar</button>`
+                    : `<span class="admin-hint">${escapeHtml(r.admin_note || "—")}</span>`
+                }
+              </td>
+            </tr>`;
+            })
+            .join("") || '<tr><td colspan="7" class="admin-empty-row">Sin solicitudes</td></tr>'}
+        </tbody>
+      </table></div>`;
   }
 
   function renderAnalyses() {
@@ -1180,29 +1314,51 @@
     const items = data.items || [];
     const total = data.total ?? items.length;
     const detail = cache.supportTicket;
-    const listBody =
+    const openCount = items.filter((t) => t.status === "open" || t.status === "pending").length;
+
+    const listCards =
       items
-        .map(
-          (t) => `<tr class="admin-support-row${supportSelectedId === t.id ? " is-selected" : ""}" data-ticket-id="${t.id}">
-            <td class="admin-col-avatar">${avatarMarkup(t.user_name, t.user_email)}</td>
-            <td>
-              <strong>${escapeHtml(t.subject)}</strong>
-              <small class="admin-support-sub">${escapeHtml(t.user_email || "—")}</small>
-            </td>
-            <td><span class="admin-badge admin-badge--${escapeHtml(t.status)}">${escapeHtml(supportStatusLabel(t.status))}</span></td>
-            <td>${t.priority === "high" ? "Alta" : "Normal"}</td>
-            <td>${formatDate(t.updated_at || t.created_at)}</td>
-          </tr>`
-        )
-        .join("") || `<tr><td colspan="5" class="admin-empty-row">Sin tickets en esta vista</td></tr>`;
+        .map((t) => {
+          const when = formatDate(t.updated_at || t.created_at);
+          const pri = t.priority === "high" ? '<span class="admin-support-priority">Alta</span>' : "";
+          return `<button type="button" class="admin-support-card${supportSelectedId === t.id ? " is-selected" : ""}" data-ticket-id="${t.id}">
+            <span class="admin-support-card-avatar">${avatarMarkup(t.user_name, t.user_email)}</span>
+            <span class="admin-support-card-body">
+              <span class="admin-support-card-top">
+                <strong>${escapeHtml(t.subject)}</strong>
+                <span class="admin-badge admin-badge--${escapeHtml(t.status)}">${escapeHtml(supportStatusLabel(t.status))}</span>
+              </span>
+              <span class="admin-support-card-meta">
+                <span>${escapeHtml(t.user_name || t.user_email || "Usuario")}</span>
+                <span>·</span>
+                <span>${escapeHtml(when)}</span>
+                ${pri}
+              </span>
+            </span>
+          </button>`;
+        })
+        .join("") ||
+      `<div class="admin-support-empty-list">
+        <span class="material-symbols-outlined">inbox</span>
+        <strong>Sin tickets en esta vista</strong>
+        <p>Cambia el filtro o espera nuevas consultas.</p>
+      </div>`;
 
     const thread = detail
       ? `
       <aside class="admin-support-detail">
         <header class="admin-support-detail-head">
-          <div>
-            <h3>${escapeHtml(detail.subject)}</h3>
-            <p>${escapeHtml(detail.user_name || "")} · ${escapeHtml(detail.user_email || "")}</p>
+          <div class="admin-support-detail-top">
+            <button type="button" class="admin-support-back" id="btnSupportBack" aria-label="Volver a la lista">
+              <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div class="admin-support-detail-identity">
+              <div class="admin-support-detail-avatar">${avatarMarkup(detail.user_name, detail.user_email)}</div>
+              <div class="admin-support-detail-copy">
+                <h3>${escapeHtml(detail.subject)}</h3>
+                <p>${escapeHtml(detail.user_name || "")}${detail.user_email ? ` · ${escapeHtml(detail.user_email)}` : ""}</p>
+              </div>
+            </div>
           </div>
           <div class="admin-support-detail-actions">
             <select id="supportStatusSelect" class="admin-select">
@@ -1213,14 +1369,21 @@
                 )
                 .join("")}
             </select>
-            <button type="button" class="btn-secondary" id="btnSupportAssign">Asignarme</button>
+            <button type="button" class="btn-secondary" id="btnSupportAssign">
+              <span class="material-symbols-outlined">person_add</span>
+              <span class="admin-support-action-label">Asignarme</span>
+            </button>
+            <button type="button" class="btn-primary" id="btnSupportImpersonate" data-user-id="${detail.user_id}">
+              <span class="material-symbols-outlined">login</span>
+              <span class="admin-support-action-label">Entrar como usuario</span>
+            </button>
           </div>
         </header>
         <div class="admin-support-thread">
           ${(detail.messages || [])
             .map(
               (m) => `
-            <article class="admin-support-msg${m.is_staff ? " is-staff" : ""}">
+            <article class="admin-support-msg${m.is_staff ? " is-staff" : " is-user"}">
               <header>
                 <strong>${escapeHtml(m.author_name || m.author_email || (m.is_staff ? "Soporte" : "Usuario"))}</strong>
                 <time>${formatDate(m.created_at)}</time>
@@ -1232,18 +1395,38 @@
         </div>
         <form class="admin-support-reply" id="supportReplyForm">
           <textarea id="supportReplyBody" rows="3" placeholder="Escribe la respuesta para el usuario…" required></textarea>
-          <button type="submit" class="btn-primary">Enviar respuesta</button>
+          <button type="submit" class="btn-primary">
+            <span class="material-symbols-outlined">send</span>
+            Enviar respuesta
+          </button>
         </form>
       </aside>`
       : `<aside class="admin-support-detail admin-support-detail--empty">
-          <p>Selecciona un ticket para ver la conversación y responder.</p>
+          <span class="material-symbols-outlined">forum</span>
+          <strong>Selecciona un ticket</strong>
+          <p>Verás la conversación completa y podrás responder al usuario.</p>
         </aside>`;
 
     return `
-      ${sectionHead("Bandeja de soporte", "Resuelve dudas de usuarios. Cada ticket es una conversación con el dueño de la cuenta.")}
-      <div class="admin-toolbar">
+      <div class="admin-support-hero">
+        <div>
+          <h2>Bandeja de soporte</h2>
+          <p>Solo personal de soporte y administración. Los usuarios abren tickets desde Ayuda en su workspace; aquí los respondes.</p>
+        </div>
+        <div class="admin-support-hero-stats">
+          <div class="admin-support-stat">
+            <strong>${total}</strong>
+            <span>Total</span>
+          </div>
+          <div class="admin-support-stat admin-support-stat--accent">
+            <strong>${openCount}</strong>
+            <span>Activos (página)</span>
+          </div>
+        </div>
+      </div>
+      <div class="admin-toolbar admin-support-toolbar">
         <select id="supportStatusFilter" class="admin-select">
-          <option value="">Todos</option>
+          <option value="">Todos los estados</option>
           <option value="open"${supportFilter === "open" ? " selected" : ""}>Abiertos</option>
           <option value="pending"${supportFilter === "pending" ? " selected" : ""}>En espera</option>
           <option value="resolved"${supportFilter === "resolved" ? " selected" : ""}>Resueltos</option>
@@ -1251,13 +1434,9 @@
         </select>
         <span class="admin-toolbar-meta">${total} ticket(s)</span>
       </div>
-      <div class="admin-support-layout">
+      <div class="admin-support-layout${supportSelectedId ? " has-selection" : ""}">
         <div class="admin-support-list">
-          ${membersTable(
-            `<th></th><th>Asunto</th><th>Estado</th><th>Prioridad</th><th>Actualizado</th>`,
-            listBody,
-            "admin-members--support"
-          )}
+          <div class="admin-support-cards">${listCards}</div>
           ${renderPager("support-inbox", total)}
         </div>
         ${thread}
@@ -1304,6 +1483,7 @@
       plans: renderPlans,
       subscriptions: renderSubscriptions,
       receipts: renderReceipts,
+      refunds: renderRefunds,
       analyses: renderAnalyses,
       chats: renderChats,
       knowledge: renderKnowledge,
@@ -1311,8 +1491,6 @@
       "home-projects": renderHomeProjects,
       activity: renderActivity,
       guests: renderGuests,
-      system: renderSystem,
-      tools: renderTools,
       "support-inbox": renderSupportInbox,
     };
     const fn = map[currentSection] || (() => "<p>Sección no disponible</p>");
@@ -1395,6 +1573,20 @@
     return document.querySelector(sel);
   }
 
+  async function startUserImpersonation(userId) {
+    if (!userId) return;
+    showError("");
+    setStatus("Entrando como usuario…");
+    try {
+      const data = await apiAdmin(`/api/support/impersonate/${userId}`, { method: "POST" });
+      if (!data?.access_token) throw new Error("No se recibió sesión de impersonación");
+      window.PlanoAuth.startImpersonation(data);
+    } catch (err) {
+      setStatus("");
+      showError(err.message || "No se pudo entrar como ese usuario");
+    }
+  }
+
   function bindSectionEvents() {
     sectionRoot?.querySelectorAll("[data-page-go]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -1426,7 +1618,15 @@
       row.addEventListener("click", async () => {
         supportSelectedId = Number(row.getAttribute("data-ticket-id"));
         await loadSection(true);
+        const thread = sectionRoot?.querySelector(".admin-support-thread");
+        if (thread) thread.scrollTop = thread.scrollHeight;
       });
+    });
+
+    document.getElementById("btnSupportBack")?.addEventListener("click", async () => {
+      supportSelectedId = null;
+      cache.supportTicket = null;
+      renderSection();
     });
 
     document.getElementById("btnSupportAssign")?.addEventListener("click", async () => {
@@ -1441,6 +1641,15 @@
       } catch (err) {
         showError(err.message);
       }
+    });
+
+    document.getElementById("btnSupportImpersonate")?.addEventListener("click", async (e) => {
+      const uid = Number(e.currentTarget.getAttribute("data-user-id"));
+      const ok = await confirmAction(
+        "Vas a entrar al workspace como este usuario para diagnosticar el error. ¿Continuar?"
+      );
+      if (!ok) return;
+      await startUserImpersonation(uid);
     });
 
     document.getElementById("supportStatusSelect")?.addEventListener("change", async (e) => {
@@ -1516,6 +1725,14 @@
         const next = String(value ?? "").trim();
         const prev = input?.dataset.prev ?? "";
         if (next === prev) return;
+        const label = field === "name" ? "nombre" : "correo";
+        const ok = await confirmAction(
+          `¿Guardar el cambio de ${label}?\n\nDe: ${prev || "(vacío)"}\nA: ${next || "(vacío)"}`
+        );
+        if (!ok) {
+          if (input) input.value = prev;
+          return;
+        }
         try {
           const payload =
             field === "name" ? { full_name: next } : { email: next };
@@ -1543,6 +1760,11 @@
             e.preventDefault();
             nameInput.blur();
           }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            nameInput.value = nameInput.dataset.prev || "";
+            nameInput.blur();
+          }
         });
       }
       if (emailInput) {
@@ -1551,6 +1773,11 @@
         emailInput.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
+            emailInput.blur();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            emailInput.value = emailInput.dataset.prev || "";
             emailInput.blur();
           }
         });
@@ -1613,6 +1840,16 @@
         } catch (err) {
           showError(err.message);
         }
+      });
+      row.querySelector('[data-action="impersonate"]')?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const uid = Number(e.currentTarget.getAttribute("data-user-id") || id);
+        const ok = await confirmAction(
+          "Vas a entrar al workspace como este usuario para diagnosticar. ¿Continuar?"
+        );
+        if (!ok) return;
+        await startUserImpersonation(uid);
       });
     });
 
@@ -1757,6 +1994,39 @@
       });
     });
 
+    sectionRoot?.querySelectorAll("[data-refund-approve]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-refund-approve");
+        if (!(await confirmAction("¿Aprobar este reembolso (simulado)?"))) return;
+        try {
+          await apiAdmin(`/api/admin/refunds/${id}/review`, {
+            method: "POST",
+            body: JSON.stringify({ approve: true, admin_note: "Aprobado" }),
+          });
+          toast("Reembolso aprobado");
+          await loadSection(true);
+        } catch (err) {
+          showError(err.message);
+        }
+      });
+    });
+    sectionRoot?.querySelectorAll("[data-refund-reject]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-refund-reject");
+        const note = prompt("Motivo del rechazo (opcional):") || "Rechazado";
+        try {
+          await apiAdmin(`/api/admin/refunds/${id}/review`, {
+            method: "POST",
+            body: JSON.stringify({ approve: false, admin_note: note }),
+          });
+          toast("Solicitud rechazada");
+          await loadSection(true);
+        } catch (err) {
+          showError(err.message);
+        }
+      });
+    });
+
     const search = document.getElementById("adminUserSearch");
     search?.addEventListener("input", () => {
       userSearch = search.value || "";
@@ -1768,8 +2038,42 @@
     });
   }
 
+  function isAdminMobile() {
+    return window.matchMedia("(max-width: 767px)").matches;
+  }
+
+  function setAdminNavOpen(open) {
+    const next = !!open && isAdminMobile();
+    document.body.classList.toggle("admin-nav-open", next);
+    const btn = document.getElementById("adminMenuBtn");
+    const icon = document.getElementById("adminMenuIcon");
+    const backdrop = document.getElementById("adminSidebarBackdrop");
+    if (btn) {
+      btn.setAttribute("aria-expanded", next ? "true" : "false");
+      btn.setAttribute("aria-label", next ? "Cerrar menú" : "Abrir menú");
+    }
+    if (icon) icon.textContent = next ? "close" : "menu";
+    if (backdrop) backdrop.setAttribute("aria-hidden", next ? "false" : "true");
+  }
+
+  function toggleAdminNav() {
+    setAdminNavOpen(!document.body.classList.contains("admin-nav-open"));
+  }
+
   function bindGlobalEvents() {
     sidebarEl?.addEventListener("click", (e) => {
+      if (e.target.closest("#adminSidebarClose")) {
+        setAdminNavOpen(false);
+        return;
+      }
+      if (e.target.closest("#adminBtnLogout")) {
+        window.PlanoAuth?.logout?.();
+        return;
+      }
+      if (e.target.closest("#adminBtnProfile")) {
+        window.ArchitectAccount?.open?.();
+        return;
+      }
       const expandAll = e.target.closest("#adminExpandAll");
       if (expandAll) {
         openModules = defaultOpenModules();
@@ -1788,6 +2092,17 @@
       const item = e.target.closest("[data-section]");
       if (item) {
         goToSection(item.getAttribute("data-section"));
+      }
+    });
+
+    document.getElementById("adminMenuBtn")?.addEventListener("click", () => toggleAdminNav());
+    document.getElementById("adminSidebarBackdrop")?.addEventListener("click", () => setAdminNavOpen(false));
+    window.addEventListener("resize", () => {
+      if (!isAdminMobile()) setAdminNavOpen(false);
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("admin-nav-open")) {
+        setAdminNavOpen(false);
       }
     });
 
@@ -1885,6 +2200,7 @@
     }
     if (push) setHash(sectionId);
     renderSidebar();
+    if (isAdminMobile()) setAdminNavOpen(false);
     loadSection(false);
   }
 
@@ -1920,6 +2236,9 @@
           cache.receipts = await apiAdmin(`/api/admin/billing/receipts?${pageQuery("receipts")}`);
           cache.billingSummary = await apiAdmin("/api/admin/billing/summary");
           break;
+        case "refunds":
+          cache.refunds = await apiAdmin("/api/admin/refunds");
+          break;
         case "analyses":
           cache.analyses = await apiAdmin(`/api/admin/analyses?${pageQuery("analyses")}`);
           break;
@@ -1935,13 +2254,7 @@
         case "guests":
           cache.guestTrials = await apiAdmin(`/api/admin/guest-trials?${pageQuery("guests")}`);
           break;
-        case "system":
-          if (force || !cache.stats) cache.stats = await apiAdmin("/api/admin/stats");
-          if (force || !cache.guestTrials) cache.guestTrials = await apiAdmin("/api/admin/guest-trials?limit=20");
-          break;
         case "exports":
-          break;
-        case "tools":
           break;
         case "support-inbox": {
           const st = supportFilter ? `&status=${encodeURIComponent(supportFilter)}` : "";
@@ -1978,9 +2291,17 @@
       window.location.href = "/login?next=" + encodeURIComponent("/app/admin");
       return;
     }
+    window.ArchitectAccount?.configure?.({
+      toast: (msg) => toast(msg),
+      onUserUpdated: () => renderSidebar(),
+      onOpenPlans: () => {
+        if (canAccessSection("plans")) goToSection("plans");
+        else window.location.href = "/legacy-app";
+      },
+    });
     try {
       const me = await window.PlanoAuth.refreshMe?.();
-      const role = me?.role || window.PlanoAuth.getUser()?.role;
+      const role = me?.user?.role || me?.role || window.PlanoAuth.getUser()?.role;
       if (role !== "admin" && role !== "support") {
         showError("Se requiere cuenta administrador o de soporte.");
         setTimeout(() => (window.location.href = "/legacy-app"), 1200);

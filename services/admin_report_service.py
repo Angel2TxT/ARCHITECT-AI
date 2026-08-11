@@ -25,6 +25,7 @@ from db.models import (
     UsageRecord,
     User,
 )
+from services.pdf_brand import company_profile, create_branded_pdf, pdf_text as _pdf_text
 
 EVENT_LABELS = {
     "section_assigned": "Apartado asignado",
@@ -225,7 +226,7 @@ def build_period_report(db: Session, start: datetime, end: datetime) -> dict[str
 
     return {
         "meta": {
-            "title": "ARCHITECT — Resumen administrativo",
+            "title": "ARCHITECT - Resumen administrativo",
             "from": start.date().isoformat(),
             "to": end.date().isoformat(),
             "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
@@ -347,102 +348,64 @@ def report_to_csv(report: dict[str, Any]) -> bytes:
     return buf.getvalue().encode("utf-8-sig")
 
 
-def _esc_html(text: Any) -> str:
-    s = str(text if text is not None else "")
-    return (
-        s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
-
-
 def report_to_pdf(report: dict[str, Any]) -> bytes:
-    try:
-        from fpdf import FPDF
-    except ImportError as exc:
-        raise RuntimeError("Instala fpdf2 para exportar PDF: pip install fpdf2") from exc
-
     meta = report["meta"]
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=14)
+    company = company_profile()
+    generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    pdf = create_branded_pdf(
+        orientation="P",
+        document_title="Resumen administrativo",
+    )
     pdf.add_page()
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "ARCHITECT - Resumen administrativo", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    pdf.cell(0, 6, f"Periodo: {meta['from']} a {meta['to']}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"Generado (UTC): {meta['generated_at']}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(4)
-
-    kpi_rows = "".join(
-        f"<tr><td>{_esc_html(r['label'])}</td><td align='right'>{_esc_html(r['value'])}</td></tr>"
-        for r in report["kpis"]
-    )
-    plan_rows = "".join(
-        f"<tr><td>{_esc_html(p['name'])}</td><td>{_esc_html(p['slug'])}</td>"
-        f"<td align='right'>{_esc_html(p['subscribers'])}</td></tr>"
-        for p in report["plans"]
+    pdf.draw_document_banner(
+        "Resumen administrativo",
+        [
+            f"Periodo: {meta['from']} a {meta['to']}",
+            f"Generado: {generated}  ·  {company['email']}",
+            company["note"],
+        ],
     )
 
-    def _table_html(title: str, headers: list[str], rows_html: str, empty_msg: str) -> str:
-        head = "".join(f"<th>{_esc_html(h)}</th>" for h in headers)
-        body = rows_html or f"<tr><td colspan='{len(headers)}'>{_esc_html(empty_msg)}</td></tr>"
-        return f"""
-        <h2 style="font-size:12px;">{_esc_html(title)}</h2>
-        <table border="1" cellpadding="4" cellspacing="0" width="100%">
-          <thead><tr>{head}</tr></thead>
-          <tbody>{body}</tbody>
-        </table>
-        <br/>
-        """
+    kpi_items = [(r["label"], r["value"]) for r in report.get("kpis", [])]
+    if kpi_items:
+        pdf.section_title("Métricas del periodo")
+        pdf.draw_kpi_grid(kpi_items, cols=3)
 
-    user_rows = "".join(
-        f"<tr><td>{u['id']}</td><td>{_esc_html(u['email'])}</td>"
-        f"<td>{_esc_html(u['full_name'])}</td><td>{_esc_html(u['created_at'][:10])}</td></tr>"
-        for u in report["users"][:40]
-    )
-    analysis_rows = "".join(
-        f"<tr><td>{a['id']}</td><td>{_esc_html(a['user_email'])}</td>"
-        f"<td>{_esc_html(a['filename'])}</td><td>{_esc_html(a['is_demo'])}</td></tr>"
-        for a in report["analyses"][:40]
-    )
-    project_rows = "".join(
-        f"<tr><td>{_esc_html(p['name'])}</td><td>{_esc_html(p['owner'])}</td>"
-        f"<td>{_esc_html(p['status'])}</td><td>{p['stage']}</td></tr>"
-        for p in report["home_projects"][:30]
-    )
-    activity_rows = "".join(
-        f"<tr><td>{_esc_html(e['date'][:16].replace('T', ' '))}</td>"
-        f"<td>{_esc_html(e['project'])}</td><td>{_esc_html(e['event'])}</td></tr>"
-        for e in report["activity"][:35]
-    )
+    plan_rows = [
+        [p["name"], p["slug"], p["subscribers"]] for p in report.get("plans", [])
+    ]
+    pdf.section_title("Distribución por plan")
+    pdf.draw_table(["Plan", "Slug", "Suscriptores"], plan_rows, max_rows=50)
 
-    html = f"""
-    <h2 style="font-size:12px;">Metricas del periodo</h2>
-    <table border="1" cellpadding="4" cellspacing="0" width="60%">
-      <thead><tr><th>Metrica</th><th>Valor</th></tr></thead>
-      <tbody>{kpi_rows}</tbody>
-    </table>
-    <br/>
-    <h2 style="font-size:12px;">Distribucion por plan (suscriptores actuales)</h2>
-    <table border="1" cellpadding="4" cellspacing="0" width="80%">
-      <thead><tr><th>Plan</th><th>Slug</th><th>Suscriptores</th></tr></thead>
-      <tbody>{plan_rows}</tbody>
-    </table>
-    <br/>
-    {_table_html("Usuarios nuevos (max 40)", ["ID", "Correo", "Nombre", "Alta"], user_rows, "Sin registros")}
-    {_table_html("Analisis (max 40)", ["ID", "Usuario", "Archivo", "Demo"], analysis_rows, "Sin analisis")}
-    {_table_html("Proyectos nuevos (max 30)", ["Proyecto", "Propietario", "Estado", "Etapa"], project_rows, "Sin proyectos")}
-    {_table_html("Actividad casa hogar (max 35)", ["Fecha", "Proyecto", "Evento"], activity_rows, "Sin actividad")}
-    """
+    user_rows = [
+        [u["id"], u["email"], u["full_name"], u["created_at"][:10]]
+        for u in report.get("users", [])[:40]
+    ]
+    pdf.section_title("Usuarios nuevos (máx. 40)")
+    pdf.draw_table(["ID", "Correo", "Nombre", "Alta"], user_rows, max_rows=40)
 
-    pdf.write_html(html)
-    out = pdf.output()
-    if isinstance(out, bytearray):
-        return bytes(out)
-    if isinstance(out, bytes):
-        return out
-    return str(out).encode("latin-1")
+    analysis_rows = [
+        [a["id"], a["user_email"], a["filename"], a["is_demo"]]
+        for a in report.get("analyses", [])[:40]
+    ]
+    pdf.section_title("Análisis (máx. 40)")
+    pdf.draw_table(["ID", "Usuario", "Archivo", "Demo"], analysis_rows, max_rows=40)
+
+    project_rows = [
+        [p["name"], p["owner"], p["status"], p["stage"]]
+        for p in report.get("home_projects", [])[:30]
+    ]
+    pdf.section_title("Proyectos nuevos (máx. 30)")
+    pdf.draw_table(["Proyecto", "Propietario", "Estado", "Etapa"], project_rows, max_rows=30)
+
+    activity_rows = [
+        [e["date"][:16].replace("T", " "), e["project"], e["event"]]
+        for e in report.get("activity", [])[:35]
+    ]
+    pdf.section_title("Actividad casa hogar (máx. 35)")
+    pdf.draw_table(["Fecha", "Proyecto", "Evento"], activity_rows, max_rows=35)
+
+    return pdf.output_bytes()
 
 
 def export_report(report: dict[str, Any], fmt: str) -> tuple[bytes, str, str]:
@@ -489,43 +452,27 @@ def _rows_to_csv(title: str, headers: list[str], rows: list[list[Any]]) -> bytes
 
 
 def _rows_to_pdf(title: str, headers: list[str], rows: list[list[Any]]) -> bytes:
-    try:
-        from fpdf import FPDF
-    except ImportError as exc:
-        raise RuntimeError("fpdf2 no está instalado") from exc
+    company = company_profile()
+    generated = datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+    # Quitar prefijo de marca del titulo interno si viene incluido
+    clean_title = title
+    for prefix in ("ARCHITECT - ", "ARCHITECT — "):
+        if clean_title.startswith(prefix):
+            clean_title = clean_title[len(prefix) :]
+            break
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf = create_branded_pdf(orientation="L", document_title=clean_title)
     pdf.add_page()
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 8, title[:80], ln=1)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.ln(2)
-
-    col_w = max(25, int(270 / max(len(headers), 1)))
-    pdf.set_font("Helvetica", "B", 8)
-    for h in headers:
-        pdf.cell(col_w, 6, _esc_html(str(h))[:28], border=1)
-    pdf.ln()
-    pdf.set_font("Helvetica", "", 7)
-    for row in rows[:200]:
-        for cell in row:
-            pdf.cell(col_w, 5, _esc_html(str(cell if cell is not None else ""))[:28], border=1)
-        pdf.ln()
-        if pdf.get_y() > 190:
-            pdf.add_page()
-            pdf.set_font("Helvetica", "B", 8)
-            for h in headers:
-                pdf.cell(col_w, 6, _esc_html(str(h))[:28], border=1)
-            pdf.ln()
-            pdf.set_font("Helvetica", "", 7)
-
-    out = pdf.output()
-    if isinstance(out, bytearray):
-        return bytes(out)
-    if isinstance(out, bytes):
-        return out
-    return str(out).encode("latin-1")
+    pdf.draw_document_banner(
+        clean_title,
+        [
+            f"Listado administrativo  ·  {len(rows)} registro(s)",
+            f"Generado: {generated}  ·  {company['email']}",
+            f"{company['location']}  ·  {company['note']}",
+        ],
+    )
+    pdf.draw_table(headers, rows, max_rows=200, font_size=7)
+    return pdf.output_bytes()
 
 
 def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], list[list[Any]]]:
@@ -551,7 +498,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for u in rows_db
         ]
-        return "ARCHITECT — Usuarios", headers, rows
+        return "ARCHITECT - Usuarios", headers, rows
 
     if resource == "plans":
         rows_db = db.query(Plan).order_by(Plan.sort_order.asc()).all()
@@ -578,7 +525,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for p in rows_db
         ]
-        return "ARCHITECT — Planes", headers, rows
+        return "ARCHITECT - Planes", headers, rows
 
     if resource == "subscriptions":
         rows_db = (
@@ -600,7 +547,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for s in rows_db
         ]
-        return "ARCHITECT — Suscripciones", headers, rows
+        return "ARCHITECT - Suscripciones", headers, rows
 
     if resource == "analyses":
         rows_db = (
@@ -622,7 +569,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for a in rows_db
         ]
-        return "ARCHITECT — Análisis", headers, rows
+        return "ARCHITECT - Análisis", headers, rows
 
     if resource == "home-projects":
         rows_db = (
@@ -645,7 +592,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for p in rows_db
         ]
-        return "ARCHITECT — Casa hogar", headers, rows
+        return "ARCHITECT - Casa hogar", headers, rows
 
     if resource == "chats":
         rows_db = (
@@ -665,7 +612,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for c in rows_db
         ]
-        return "ARCHITECT — Chats", headers, rows
+        return "ARCHITECT - Chats", headers, rows
 
     if resource == "activity":
         rows_db = (
@@ -689,7 +636,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for e in rows_db
         ]
-        return "ARCHITECT — Actividad", headers, rows
+        return "ARCHITECT - Actividad", headers, rows
 
     if resource == "receipts":
         rows_db = (
@@ -712,7 +659,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
             ]
             for r in rows_db
         ]
-        return "ARCHITECT — Comprobantes", headers, rows
+        return "ARCHITECT - Comprobantes", headers, rows
 
     # guest-trials
     rows_db = (
@@ -729,7 +676,7 @@ def build_resource_export(db: Session, resource: str) -> tuple[str, list[str], l
         ]
         for g in rows_db
     ]
-    return "ARCHITECT — Invitados", headers, rows
+    return "ARCHITECT - Invitados", headers, rows
 
 
 def export_resource(

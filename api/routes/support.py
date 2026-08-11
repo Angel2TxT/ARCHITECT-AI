@@ -41,6 +41,11 @@ def create_ticket(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
+    if svc.is_staff_user(user):
+        raise HTTPException(
+            403,
+            "Las cuentas de admin/soporte no abren tickets. Usa la bandeja de soporte.",
+        )
     try:
         ticket = svc.create_ticket(
             db,
@@ -142,3 +147,49 @@ def patch_ticket(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return svc._ticket_item(ticket, include_messages=True)
+
+
+@router.post("/impersonate/{user_id}")
+def impersonate_user(
+    user_id: int,
+    staff: Annotated[User, Depends(require_support_staff)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Soporte/admin entra al workspace como un usuario final (diagnóstico)."""
+    from api.routes.auth import _user_out
+    from db.models import UserRole
+    from services.auth_service import create_access_token
+    from services.subscription_service import subscription_payload
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(404, "Usuario no encontrado")
+    if not target.is_active:
+        raise HTTPException(403, "La cuenta del usuario está desactivada")
+    role_val = target.role.value if hasattr(target.role, "value") else str(target.role)
+    if role_val in (UserRole.admin.value, UserRole.support.value):
+        raise HTTPException(403, "No se puede suplantar cuentas de admin o soporte")
+    if target.id == staff.id:
+        raise HTTPException(400, "No puedes suplantar tu propia cuenta")
+
+    token = create_access_token(
+        target.id,
+        target.email,
+        role_val,
+        impersonator_id=staff.id,
+        expire_hours=4,
+    )
+    user_out = _user_out(target)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": user_out.model_dump() if hasattr(user_out, "model_dump") else user_out.dict(),
+        "subscription": subscription_payload(db, target),
+        "impersonation": True,
+        "impersonator": {
+            "id": staff.id,
+            "email": staff.email,
+            "full_name": staff.full_name or "",
+            "role": staff.role.value if hasattr(staff.role, "value") else str(staff.role),
+        },
+    }

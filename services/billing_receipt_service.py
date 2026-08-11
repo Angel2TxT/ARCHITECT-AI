@@ -287,19 +287,25 @@ def record_plan_purchase(
     payment_ref: str | None,
     period_start: datetime,
     period_end: datetime,
+    amount_cents: int | None = None,
     send_email: bool = True,
 ) -> BillingReceipt:
     """Registra ticket y opcionalmente envía correo con PDF adjunto."""
     if (plan.price_monthly_cents or 0) <= 0:
         raise ValueError("Solo se emiten comprobantes para planes de pago")
 
+    charged = (
+        int(plan.price_monthly_cents or 0)
+        if amount_cents is None
+        else max(0, int(amount_cents))
+    )
     receipt = BillingReceipt(
         receipt_number=_next_receipt_number(db),
         user_id=user.id,
         plan_id=plan.id,
         plan_slug=plan.slug,
         plan_name=plan.name,
-        amount_cents=plan.price_monthly_cents,
+        amount_cents=charged,
         currency=os.getenv("STRIPE_CURRENCY", "mxn").upper(),
         billing_mode=billing_mode(),
         payment_ref=payment_ref,

@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from api.deps import require_admin
+from api.deps import get_current_user, require_admin, require_support_staff
+from api.schemas import RefundReviewRequest
 from db.database import get_db
 from db.models import (
     Analysis,
@@ -32,6 +33,7 @@ from db.models import (
 )
 from services.subscription_service import change_plan, period_key
 from services.billing_receipt_service import admin_billing_summary, admin_receipts_list
+from services.refund_service import list_admin_refunds, review_refund
 from services.admin_report_service import (
     build_period_report,
     export_report,
@@ -366,7 +368,7 @@ def stats(
 
 @router.get("/users")
 def list_users(
-    _: Annotated[User, Depends(require_admin)],
+    _: Annotated[User, Depends(require_support_staff)],
     db: Annotated[Session, Depends(get_db)],
     limit: int = 100,
     offset: int = 0,
@@ -737,8 +739,9 @@ def reset_user_usage(
     )
     if row:
         row.analyses_count = 0
+        row.asks_count = 0
     else:
-        db.add(UsageRecord(user_id=user.id, period_key=key, analyses_count=0))
+        db.add(UsageRecord(user_id=user.id, period_key=key, analyses_count=0, asks_count=0))
     db.commit()
     return _user_item(db, user)
 
@@ -1128,4 +1131,29 @@ def delete_guest_trial(
     db.delete(trial)
     db.commit()
     return {"ok": True, "deleted_id": trial_id}
+
+
+@router.get("/refunds")
+def admin_list_refunds(
+    _: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+    status: str | None = None,
+):
+    return {"refunds": list_admin_refunds(db, status=status)}
+
+
+@router.post("/refunds/{request_id}/review")
+def admin_review_refund(
+    request_id: int,
+    body: RefundReviewRequest,
+    admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return review_refund(
+        db,
+        admin,
+        request_id,
+        approve=body.approve,
+        admin_note=body.admin_note,
+    )
 

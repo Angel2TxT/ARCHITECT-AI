@@ -54,6 +54,76 @@ ROOT = Path(__file__).resolve().parents[1]
 _STAGES_CACHE: list[dict[str, Any]] | None = None
 
 
+def invalidate_stage_catalog_cache() -> None:
+    global _STAGES_CACHE
+    _STAGES_CACHE = None
+
+
+def load_stage_catalog() -> list[dict[str, Any]]:
+    global _STAGES_CACHE
+    if _STAGES_CACHE is not None:
+        return _STAGES_CACHE
+    path = ROOT / "config" / "home_stages.yaml"
+    if not path.exists():
+        raise RuntimeError(f"No se encontró catálogo de etapas: {path}")
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    _STAGES_CACHE = list(data.get("stages") or [])
+    if len(_STAGES_CACHE) != 9:
+        raise RuntimeError("El catálogo debe definir exactamente 9 etapas")
+    return _STAGES_CACHE
+
+
+def _normalize_slot(raw: dict[str, Any]) -> dict[str, Any]:
+    key = str(raw.get("key") or "").strip()
+    title = str(raw.get("title") or key or "Archivo").strip()
+    accept_raw = raw.get("accept") or []
+    accept: list[str] = []
+    for item in accept_raw:
+        ext = str(item or "").strip().lower()
+        if not ext:
+            continue
+        if not ext.startswith("."):
+            ext = f".{ext}"
+        accept.append(ext)
+    return {
+        "key": key,
+        "title": title,
+        "accept": accept,
+        "required": bool(raw.get("required")),
+        "ai_plan_review": bool(raw.get("ai_plan_review")),
+    }
+
+
+def _slots_from_section_def(section_def: dict[str, Any]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for raw in section_def.get("slots") or []:
+        if not isinstance(raw, dict):
+            continue
+        slot = _normalize_slot(raw)
+        if slot["key"]:
+            out.append(slot)
+    return out
+
+
+def _checklist_from_catalog(stage_def: dict[str, Any]) -> list[dict[str, Any]]:
+    """Compat: checklist derivado de apartados/slots del catálogo."""
+    items: list[dict[str, Any]] = []
+    sections = stage_def.get("sections") or []
+    if sections:
+        for sec in sections:
+            title = str((sec or {}).get("title") or "").strip()
+            if title:
+                items.append({"id": f"sec-{(sec or {}).get('key') or len(items)}", "title": title, "done": False, "notes": ""})
+        return items
+    for i, title in enumerate(stage_def.get("tasks") or []):
+        items.append({"id": f"task-{i + 1}", "title": title, "done": False, "notes": ""})
+    return items
+
+
+def _stage_catalog_by_number() -> dict[int, dict[str, Any]]:
+    return {int(s["number"]): s for s in load_stage_catalog()}
+
+
 def _log_event(
     db: Session,
     *,
@@ -80,36 +150,6 @@ def _log_event(
     except Exception:
         # Auditoría no debe romper la acción principal.
         pass
-
-
-def load_stage_catalog() -> list[dict[str, Any]]:
-    global _STAGES_CACHE
-    if _STAGES_CACHE is not None:
-        return _STAGES_CACHE
-    path = ROOT / "config" / "home_stages.yaml"
-    if not path.exists():
-        raise RuntimeError(f"No se encontró catálogo de etapas: {path}")
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    _STAGES_CACHE = list(data.get("stages") or [])
-    if len(_STAGES_CACHE) != 9:
-        raise RuntimeError("El catálogo debe definir exactamente 9 etapas")
-    return _STAGES_CACHE
-
-
-def _checklist_from_catalog(stage_def: dict[str, Any]) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": f"task-{i + 1}",
-            "title": title,
-            "done": False,
-            "notes": "",
-        }
-        for i, title in enumerate(stage_def.get("tasks") or [])
-    ]
-
-
-def _stage_catalog_by_number() -> dict[int, dict[str, Any]]:
-    return {int(s["number"]): s for s in load_stage_catalog()}
 
 
 def _project_query_options():
@@ -188,10 +228,71 @@ def _validate_reopen_reason(reason: str | None, *, fallback: str = "") -> str:
     return text
 
 
+def _default_custom_slots() -> list[dict[str, Any]]:
+    return [
+        {
+            "key": "adjunto",
+            "title": "Archivo adjunto",
+            "accept": [
+                ".pdf",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".webp",
+                ".bmp",
+                ".tif",
+                ".tiff",
+                ".doc",
+                ".docx",
+                ".xls",
+                ".xlsx",
+                ".dxf",
+                ".dwg",
+            ],
+            "required": False,
+            "ai_plan_review": False,
+        }
+    ]
+
+
+def _section_slots(sec: HomeProjectSection) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for raw in sec.slots_json or []:
+        if not isinstance(raw, dict):
+            continue
+        slot = _normalize_slot(raw)
+        if slot["key"]:
+            out.append(slot)
+    return out
+
+
 def _seed_sections_from_catalog(db: Session, project: HomeProject, user_id: int) -> None:
     catalog = _stage_catalog_by_number()
     for stage_def in catalog.values():
         num = int(stage_def["number"])
+        sections = stage_def.get("sections") or []
+        if sections:
+            for i, sec_def in enumerate(sections):
+                if not isinstance(sec_def, dict):
+                    continue
+                title = str(sec_def.get("title") or "").strip()
+                if not title:
+                    continue
+                db.add(
+                    HomeProjectSection(
+                        project_id=project.id,
+                        stage_number=num,
+                        title=title,
+                        description=str(sec_def.get("description") or "").strip(),
+                        catalog_key=str(sec_def.get("key") or "").strip() or None,
+                        slots_json=_slots_from_section_def(sec_def),
+                        sort_order=i,
+                        status=HomeProjectSectionStatus.pending,
+                        created_by=user_id,
+                        is_catalog=True,
+                    )
+                )
+            continue
         tasks = stage_def.get("tasks") or []
         for i, title in enumerate(tasks):
             db.add(
@@ -208,6 +309,39 @@ def _seed_sections_from_catalog(db: Session, project: HomeProject, user_id: int)
             )
 
 
+def _backfill_section_slots(db: Session, project: HomeProject) -> None:
+    """Rellena slots del catálogo en apartados viejos que aún no los tienen."""
+    catalog = _stage_catalog_by_number()
+    changed = False
+    for sec in project.sections or []:
+        if sec.slots_json:
+            continue
+        if not sec.is_catalog:
+            continue
+        stage_def = catalog.get(sec.stage_number) or {}
+        matched = None
+        for sec_def in stage_def.get("sections") or []:
+            if not isinstance(sec_def, dict):
+                continue
+            key = str(sec_def.get("key") or "").strip()
+            title = str(sec_def.get("title") or "").strip()
+            if (sec.catalog_key and key and sec.catalog_key == key) or (
+                title and title == sec.title
+            ):
+                matched = sec_def
+                break
+        if not matched:
+            continue
+        sec.catalog_key = str(matched.get("key") or "").strip() or sec.catalog_key
+        sec.slots_json = _slots_from_section_def(matched)
+        if not (sec.description or "").strip() and matched.get("description"):
+            sec.description = str(matched.get("description") or "").strip()
+        changed = True
+    if changed:
+        db.commit()
+        db.refresh(project)
+
+
 def _ensure_sections_migrated(db: Session, project: HomeProject) -> None:
     existing = (
         db.query(HomeProjectSection.id)
@@ -216,12 +350,35 @@ def _ensure_sections_migrated(db: Session, project: HomeProject) -> None:
         .first()
     )
     if existing:
+        _backfill_section_slots(db, project)
         return
     catalog = _stage_catalog_by_number()
     for stage in project.stages:
-        items = stage.checklist_json or _checklist_from_catalog(
-            catalog.get(stage.stage_number, {})
-        )
+        stage_def = catalog.get(stage.stage_number, {})
+        sections = stage_def.get("sections") or []
+        if sections:
+            for i, sec_def in enumerate(sections):
+                if not isinstance(sec_def, dict):
+                    continue
+                title = str(sec_def.get("title") or "").strip()
+                if not title:
+                    continue
+                db.add(
+                    HomeProjectSection(
+                        project_id=project.id,
+                        stage_number=stage.stage_number,
+                        title=title,
+                        description=str(sec_def.get("description") or "").strip(),
+                        catalog_key=str(sec_def.get("key") or "").strip() or None,
+                        slots_json=_slots_from_section_def(sec_def),
+                        sort_order=i,
+                        status=HomeProjectSectionStatus.pending,
+                        created_by=project.user_id,
+                        is_catalog=True,
+                    )
+                )
+            continue
+        items = stage.checklist_json or _checklist_from_catalog(stage_def)
         for i, item in enumerate(items):
             status = (
                 HomeProjectSectionStatus.completed
@@ -261,6 +418,7 @@ def _document_payload(project: HomeProject, doc: HomeProjectDocument) -> dict:
         "stage_number": doc.stage_number,
         "section_id": doc.section_id,
         "section_title": section_title,
+        "slot_key": doc.slot_key,
         "filename": doc.original_filename,
         "mime_type": doc.mime_type,
         "file_size": doc.file_size,
@@ -269,6 +427,58 @@ def _document_payload(project: HomeProject, doc: HomeProjectDocument) -> dict:
         "download_url": f"/api/home-projects/{project.id}/documents/{doc.id}/file",
         "is_image": (doc.mime_type or "").startswith("image/"),
     }
+
+
+def _section_slots_payload(
+    project: HomeProject, sec: HomeProjectSection, sec_docs: list[HomeProjectDocument]
+) -> list[dict]:
+    slots = _section_slots(sec)
+    if not slots:
+        return []
+    grouped: dict[str, list[HomeProjectDocument]] = {s["key"]: [] for s in slots}
+    orphan: list[HomeProjectDocument] = []
+    for doc in sec_docs:
+        key = (doc.slot_key or "").strip()
+        if key and key in grouped:
+            grouped[key].append(doc)
+        else:
+            orphan.append(doc)
+    out: list[dict] = []
+    for slot in slots:
+        docs = grouped[slot["key"]]
+        out.append(
+            {
+                **slot,
+                "documents": [_document_payload(project, d) for d in docs],
+                "filled": len(docs) > 0,
+            }
+        )
+    if orphan:
+        out.append(
+            {
+                "key": "_other",
+                "title": "Otros archivos",
+                "accept": [],
+                "required": False,
+                "ai_plan_review": False,
+                "documents": [_document_payload(project, d) for d in orphan],
+                "filled": True,
+            }
+        )
+    return out
+
+
+def _section_has_required_docs(
+    sec: HomeProjectSection, sec_docs: list[HomeProjectDocument]
+) -> bool:
+    slots = _section_slots(sec)
+    if not slots:
+        return len(sec_docs) > 0
+    required = [s for s in slots if s.get("required")]
+    if not required:
+        return len(sec_docs) > 0
+    by_key = {(d.slot_key or "").strip() for d in sec_docs if d.slot_key}
+    return all(s["key"] in by_key for s in required)
 
 
 def _members_payload(db: Session, project: HomeProject) -> list[dict]:
@@ -623,13 +833,43 @@ def update_stage(
     return stage
 
 
-def advance_to_next_stage(db: Session, user: User, project_id: str) -> HomeProject:
+def advance_to_next_stage(
+    db: Session,
+    user: User,
+    project_id: str,
+    *,
+    acknowledge_open_findings: bool = False,
+) -> tuple[HomeProject, dict]:
     project = get_home_project(db, user.id, project_id)
     actor_role = _require_project_owner_or_admin(db, project, user.id)
     current = project.current_stage
     stage = next((s for s in project.stages if s.stage_number == current), None)
     if not stage:
         raise HTTPException(400, "Etapa actual no encontrada")
+
+    from services.home_ai_review_service import count_open_findings_for_stage
+
+    open_findings = count_open_findings_for_stage(db, project.id, current)
+    advisory = {
+        "open_ai_findings": open_findings,
+        "acknowledged": bool(acknowledge_open_findings),
+        "message": (
+            f"Hay {open_findings} hallazgo(s) de revisión IA aún abiertos en esta etapa. "
+            "Puedes avanzar igual: la revisión del equipo manda."
+            if open_findings
+            else None
+        ),
+    }
+    if open_findings and not acknowledge_open_findings:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "open_ai_findings",
+                "message": advisory["message"],
+                "open_ai_findings": open_findings,
+                "acknowledge_required": True,
+            },
+        )
 
     if stage.status != HomeStageStatus.completed:
         stage.status = HomeStageStatus.completed
@@ -642,7 +882,11 @@ def advance_to_next_stage(db: Session, user: User, project_id: str) -> HomeProje
             project=project,
             actor_user_id=user.id,
             event_type=HomeProjectEventType.stage_completed,
-            metadata={"stage_number": current},
+            metadata={
+                "stage_number": current,
+                "open_ai_findings": open_findings,
+                "ai_findings_acknowledged": bool(acknowledge_open_findings),
+            },
         )
 
     next_stage_num = current + 1 if current < 9 else 9
@@ -661,14 +905,18 @@ def advance_to_next_stage(db: Session, user: User, project_id: str) -> HomeProje
             project=project,
             actor_user_id=user.id,
             event_type=HomeProjectEventType.stage_advanced,
-            metadata={"from_stage": current, "to_stage": next_stage_num},
+            metadata={
+                "from_stage": current,
+                "to_stage": next_stage_num,
+                "open_ai_findings": open_findings,
+            },
         )
 
     project.updated_at = datetime.utcnow()
     _sync_project_current_stage(project)
     db.commit()
     db.refresh(project)
-    return project
+    return project, advisory
 
 
 def _build_ai_prompt(
@@ -679,17 +927,22 @@ def _build_ai_prompt(
     catalog = _stage_catalog_by_number().get(stage.stage_number, {})
     summary = catalog.get("summary", stage.title)
     loc = project.location or "sin ubicación definida"
+    sections = _sections_for_stage(project, stage.stage_number)
     pending_tasks = [
         item.title
-        for item in _sections_for_stage(project, stage.stage_number)
+        for item in sections
         if item.status != HomeProjectSectionStatus.completed
     ]
     done_count = sum(
-        1
-        for item in _sections_for_stage(project, stage.stage_number)
-        if item.status == HomeProjectSectionStatus.completed
+        1 for item in sections if item.status == HomeProjectSectionStatus.completed
     )
-    total = len(_sections_for_stage(project, stage.stage_number))
+    total = len(sections)
+    section_titles = [s.title for s in sections[:12]]
+    doc_names = [
+        d.original_filename
+        for d in (project.documents or [])
+        if d.stage_number == stage.stage_number
+    ][:12]
 
     parts = [
         f"Contexto: proyecto de casa hogar «{project.name}».",
@@ -697,16 +950,28 @@ def _build_ai_prompt(
         f"Etapa actual ({stage.stage_number}/9): {stage.title} — {summary}.",
         f"Avance apartados: {done_count}/{total} entregables.",
     ]
+    if section_titles:
+        parts.append("Apartados de la etapa: " + "; ".join(section_titles))
     if pending_tasks:
         parts.append("Pendientes: " + "; ".join(pending_tasks[:6]))
+    if doc_names:
+        parts.append(
+            "Archivos subidos (solo nombres; no tienes su contenido): "
+            + "; ".join(doc_names)
+        )
     if stage.notes:
         parts.append(f"Notas del usuario: {stage.notes[:800]}")
     if project.description:
         parts.append(f"Descripción del proyecto: {project.description[:500]}")
-    if catalog.get("plan_review"):
+    if catalog.get("ai_plan_review") or catalog.get("plan_review"):
         parts.append(
-            "Indica si conviene subir planos a ARCHITECT para revisión técnica en esta etapa."
+            "En esta etapa el usuario puede pedir revisión de planta 2D con IA "
+            "(habitabilidad/vanos). No inventes que ya revisaste un plano."
         )
+    parts.append(
+        "Importante: no afirmes haber leído el contenido de PDF/Office/CAD. "
+        "Solo orienta con normas y buenas prácticas."
+    )
     q = (user_question or "").strip()
     if q:
         parts.append(f"Pregunta del usuario: {q}")
@@ -734,15 +999,26 @@ def assist_stage(
     if not stage:
         raise HTTPException(404, "Etapa no encontrada")
 
+    catalog = _stage_catalog_by_number().get(stage_number, {})
+    if catalog.get("ai_ask") is False:
+        raise HTTPException(400, "El asistente no está disponible en esta etapa")
+
     prompt = _build_ai_prompt(project, stage, question)
     result = answer_construction_question(prompt)
-    guidance = result.get("text", "")
+    guidance = (result.get("text") or "").strip()
 
-    catalog = _stage_catalog_by_number().get(stage_number, {})
-    if catalog.get("plan_review"):
+    from services.home_ai_review_service import ASK_DISCLAIMER, scope_payload
+
+    if ASK_DISCLAIMER not in guidance:
+        guidance = f"{guidance}\n\n—\n**{ASK_DISCLAIMER}**"
+
+    plan_review = bool(catalog.get("ai_plan_review") or catalog.get("plan_review"))
+    if plan_review:
+        scope = scope_payload(catalog.get("ai_plan_scope"))
         guidance += (
-            "\n\n—\n**Revisión con ARCHITECT:** en esta etapa puedes subir el plano "
-            "en el Workspace y vincular el análisis a esta etapa desde el panel del proyecto."
+            "\n\n**Revisión de plano (opcional):** puedes lanzar «Revisar con IA» "
+            f"desde un archivo de planta (imagen/PDF). Alcance: {scope['title']}. "
+            "No cubre: " + "; ".join((scope.get("exclusions") or [])[:3]) + "."
         )
 
     stage.ai_guidance = guidance
@@ -758,7 +1034,12 @@ def assist_stage(
         "web_sources": result.get("web_sources", []),
         "thresholds": result.get("thresholds", []),
         "web_search_used": result.get("web_search_used", False),
-        "plan_review_recommended": bool(catalog.get("plan_review")),
+        "plan_review_recommended": plan_review,
+        "ai_ask": True,
+        "scope_disclaimer": ASK_DISCLAIMER,
+        "ai_plan_scope": (
+            scope_payload(catalog.get("ai_plan_scope")) if plan_review else None
+        ),
     }
 
 
@@ -1149,17 +1430,21 @@ def _section_payload(
             .all()
         )
     preview = comments[-comments_preview_limit:] if comments_preview_limit > 0 else []
+    slots_payload = _section_slots_payload(project, sec, sec_docs)
     return {
         "id": sec.id,
         "stage_number": sec.stage_number,
         "title": sec.title,
         "description": sec.description,
+        "catalog_key": sec.catalog_key,
         "status": sec.status.value,
         "sort_order": sec.sort_order,
         "is_catalog": sec.is_catalog,
         "assigned_to": _user_brief(db, sec.assigned_to_user_id),
         "assigned_to_user_id": sec.assigned_to_user_id,
-        "has_documents": len(sec_docs) > 0,
+        "has_documents": _section_has_required_docs(sec, sec_docs),
+        "documents_count": len(sec_docs),
+        "slots": slots_payload,
         "documents": [_document_payload(project, d) for d in sec_docs],
         "comments": [_comment_payload(c, db) for c in preview],
         "comments_count": len(comments),
@@ -1194,6 +1479,7 @@ def create_section(
         stage_number=stage_number,
         title=title,
         description=(description or "").strip(),
+        slots_json=_default_custom_slots(),
         sort_order=len(existing),
         status=HomeProjectSectionStatus.pending,
         created_by=user.id,
@@ -1402,7 +1688,7 @@ def delete_section(
     db: Session, user: User, project_id: str, section_id: int
 ) -> None:
     project = get_home_project(db, user.id, project_id)
-    _require_project_owner_or_admin(db, project, user.id)
+    actor_role = _require_project_access(db, project, user.id, min_role="editor")
     section = (
         db.query(HomeProjectSection)
         .filter(
@@ -1413,6 +1699,12 @@ def delete_section(
     )
     if not section:
         raise HTTPException(404, "Apartado no encontrado")
+    if section.is_catalog and actor_role not in ("owner", "admin"):
+        raise HTTPException(
+            403,
+            "Solo el propietario o un administrador pueden eliminar apartados del catálogo",
+        )
+    _require_unassigned_section_owner(section, actor_role)
     for doc in list(project.documents or []):
         if doc.section_id == section_id:
             path = Path(doc.stored_path)
@@ -1425,6 +1717,112 @@ def delete_section(
     db.delete(section)
     project.updated_at = datetime.utcnow()
     db.commit()
+
+
+def _slug_slot_key(title: str, existing: set[str]) -> str:
+    base = re.sub(r"[^a-z0-9]+", "_", (title or "").lower()).strip("_")[:60] or "archivo"
+    key = base
+    n = 2
+    while key in existing or key == "_other":
+        key = f"{base}_{n}"
+        n += 1
+    return key
+
+
+def add_section_slot(
+    db: Session,
+    user: User,
+    project_id: str,
+    section_id: int,
+    *,
+    title: str,
+    accept: list[str] | None = None,
+    required: bool = False,
+    ai_plan_review: bool = False,
+) -> HomeProjectSection:
+    title = (title or "").strip()
+    if len(title) < 2:
+        raise HTTPException(400, "El nombre del espacio es obligatorio")
+    if len(title) > 120:
+        raise HTTPException(400, "Nombre demasiado largo (máx. 120)")
+    project = get_home_project(db, user.id, project_id)
+    actor_role = _require_project_access(db, project, user.id, min_role="editor")
+    section = (
+        db.query(HomeProjectSection)
+        .filter(
+            HomeProjectSection.id == section_id,
+            HomeProjectSection.project_id == project.id,
+        )
+        .first()
+    )
+    if not section:
+        raise HTTPException(404, "Apartado no encontrado")
+    _require_unassigned_section_owner(section, actor_role)
+
+    slots = list(_section_slots(section))
+    key = _slug_slot_key(title, {s["key"] for s in slots})
+    slot = _normalize_slot(
+        {
+            "key": key,
+            "title": title,
+            "accept": accept if accept is not None else _default_custom_slots()[0]["accept"],
+            "required": required,
+            "ai_plan_review": ai_plan_review,
+        }
+    )
+    slots.append(slot)
+    section.slots_json = slots
+    section.updated_at = datetime.utcnow()
+    project.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(section)
+    return section
+
+
+def delete_section_slot(
+    db: Session,
+    user: User,
+    project_id: str,
+    section_id: int,
+    slot_key: str,
+) -> HomeProjectSection:
+    key = (slot_key or "").strip()
+    if not key or key == "_other":
+        raise HTTPException(400, "Espacio de archivo no válido")
+    project = get_home_project(db, user.id, project_id)
+    actor_role = _require_project_access(db, project, user.id, min_role="editor")
+    section = (
+        db.query(HomeProjectSection)
+        .filter(
+            HomeProjectSection.id == section_id,
+            HomeProjectSection.project_id == project.id,
+        )
+        .first()
+    )
+    if not section:
+        raise HTTPException(404, "Apartado no encontrado")
+    _require_unassigned_section_owner(section, actor_role)
+
+    slots = list(_section_slots(section))
+    if not any(s["key"] == key for s in slots):
+        raise HTTPException(404, "Espacio de archivo no encontrado")
+
+    for doc in list(project.documents or []):
+        if doc.section_id == section_id and (doc.slot_key or "") == key:
+            path = Path(doc.stored_path)
+            if path.is_file():
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            db.delete(doc)
+
+    section.slots_json = [s for s in slots if s["key"] != key]
+    section.updated_at = datetime.utcnow()
+    project.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(section)
+    return section
 
 
 def add_section_comment(
@@ -1692,6 +2090,7 @@ def add_stage_document(
     content: bytes,
     mime_type: str = "",
     section_id: int | None = None,
+    slot_key: str | None = None,
 ) -> HomeProjectDocument:
     if stage_number < 1 or stage_number > 9:
         raise HTTPException(400, "Etapa inválida (1-9)")
@@ -1702,6 +2101,7 @@ def add_stage_document(
         raise HTTPException(404, "Etapa no encontrada")
 
     section = None
+    resolved_slot_key = (slot_key or "").strip() or None
     if section_id is not None:
         section = (
             db.query(HomeProjectSection)
@@ -1715,6 +2115,23 @@ def add_stage_document(
         if not section:
             raise HTTPException(404, "Apartado no encontrado")
         _require_unassigned_section_owner(section, actor_role)
+        slots = _section_slots(section)
+        if slots:
+            if not resolved_slot_key:
+                raise HTTPException(
+                    400, "Indica qué entregable estás subiendo (tipo de archivo)"
+                )
+            slot = next((s for s in slots if s["key"] == resolved_slot_key), None)
+            if not slot:
+                raise HTTPException(400, "Ese entregable no pertenece a este apartado")
+            accept = slot.get("accept") or []
+            if accept:
+                ext = Path(filename or "").suffix.lower()
+                if ext not in accept:
+                    raise HTTPException(
+                        400,
+                        f"Formato no permitido para «{slot['title']}». Usa: {', '.join(accept)}",
+                    )
 
     max_bytes = MAX_PROJECT_DOC_MB * 1024 * 1024
     if len(content) > max_bytes:
@@ -1729,6 +2146,7 @@ def add_stage_document(
         user_id=user.id,
         stage_number=stage_number,
         section_id=section_id,
+        slot_key=resolved_slot_key,
         original_filename=Path(filename or "documento").name,
         stored_path="",
         mime_type=(mime_type or "application/octet-stream")[:120],
@@ -1760,6 +2178,7 @@ def add_stage_document(
             "filename": doc.original_filename,
             "bytes": doc.file_size,
             "mime_type": doc.mime_type,
+            "slot_key": doc.slot_key,
         },
     )
     db.commit()
@@ -1851,6 +2270,14 @@ def project_payload(
     all_docs = list(project.documents or [])
     section_ids = [s.id for s in (project.sections or [])]
     comments_map = _comments_for_sections(db, section_ids) if db else {}
+
+    from services.home_ai_review_service import (
+        ai_review_payload,
+        count_open_findings_for_stage,
+        list_ai_reviews_for_stage,
+        scope_payload,
+    )
+
     stages_out = []
     for stage in sorted(project.stages, key=lambda s: s.stage_number):
         cat = catalog.get(stage.stage_number, {})
@@ -1887,6 +2314,15 @@ def project_payload(
             )
             for sec in sections
         ]
+        ai_plan = bool(cat.get("ai_plan_review") or cat.get("plan_review"))
+        ai_reviews = []
+        open_ai_findings = 0
+        if db:
+            reviews = list_ai_reviews_for_stage(db, project.id, stage.stage_number)
+            ai_reviews = [ai_review_payload(r) for r in reviews[:8]]
+            open_ai_findings = count_open_findings_for_stage(
+                db, project.id, stage.stage_number
+            )
         stages_out.append(
             {
                 "stage_number": stage.stage_number,
@@ -1907,7 +2343,14 @@ def project_payload(
                 "documents": _documents_for_stage(
                     project, stage.stage_number, section_id=None
                 ),
-                "plan_review": bool(cat.get("plan_review")),
+                "plan_review": ai_plan,
+                "ai_ask": cat.get("ai_ask", True) is not False,
+                "ai_plan_review": ai_plan,
+                "ai_plan_scope": (
+                    scope_payload(cat.get("ai_plan_scope")) if ai_plan else None
+                ),
+                "ai_reviews": ai_reviews,
+                "open_ai_findings": open_ai_findings,
                 "started_at": stage.started_at.isoformat() if stage.started_at else None,
                 "completed_at": stage.completed_at.isoformat() if stage.completed_at else None,
                 "updated_at": stage.updated_at.isoformat() if stage.updated_at else None,
@@ -1944,14 +2387,40 @@ def project_payload(
 
 
 def catalog_payload() -> list[dict]:
-    return [
-        {
-            "number": int(s["number"]),
-            "slug": s["slug"],
-            "title": s["title"],
-            "summary": s.get("summary", ""),
-            "tasks": s.get("tasks", []),
-            "plan_review": bool(s.get("plan_review")),
-        }
-        for s in load_stage_catalog()
-    ]
+    from services.home_ai_review_service import scope_payload
+
+    out = []
+    for s in load_stage_catalog():
+        ai_plan = bool(s.get("ai_plan_review") or s.get("plan_review"))
+        sections = []
+        for sec in s.get("sections") or []:
+            if not isinstance(sec, dict):
+                continue
+            sections.append(
+                {
+                    "key": str(sec.get("key") or "").strip(),
+                    "title": str(sec.get("title") or "").strip(),
+                    "description": str(sec.get("description") or "").strip(),
+                    "slots": _slots_from_section_def(sec),
+                }
+            )
+        tasks = list(s.get("tasks") or [])
+        if not tasks and sections:
+            tasks = [sec["title"] for sec in sections if sec.get("title")]
+        out.append(
+            {
+                "number": int(s["number"]),
+                "slug": s["slug"],
+                "title": s["title"],
+                "summary": s.get("summary", ""),
+                "tasks": tasks,
+                "sections": sections,
+                "plan_review": ai_plan,
+                "ai_ask": s.get("ai_ask", True) is not False,
+                "ai_plan_review": ai_plan,
+                "ai_plan_scope": (
+                    scope_payload(s.get("ai_plan_scope")) if ai_plan else None
+                ),
+            }
+        )
+    return out

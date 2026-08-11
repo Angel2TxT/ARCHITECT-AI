@@ -10,10 +10,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from db.models import (
-    Chat,
     HomeProject,
     HomeProjectDocument,
-    Message,
     Plan,
     Subscription,
     SubscriptionStatus,
@@ -78,19 +76,23 @@ def count_owned_home_projects(db: Session, user_id: int) -> int:
 
 
 def get_asks_used(db: Session, user_id: int) -> int:
-    """Preguntas al chat (mensajes user) en el periodo mensual actual."""
-    start, _end = _period_bounds()
-    total = (
-        db.query(func.count(Message.id))
-        .join(Chat, Chat.id == Message.chat_id)
-        .filter(
-            Chat.user_id == user_id,
-            Message.role == "user",
-            Message.created_at >= start,
-        )
-        .scalar()
-    )
-    return int(total or 0)
+    """Preguntas al chat contabilizadas en el periodo mensual actual."""
+    usage = get_usage(db, user_id)
+    return int(usage.asks_count or 0)
+
+
+def record_ask_usage(db: Session, user_id: int) -> None:
+    usage = get_usage(db, user_id)
+    usage.asks_count = int(usage.asks_count or 0) + 1
+    db.commit()
+
+
+def is_analyses_unlimited(user: User, plan: Plan | None = None) -> bool:
+    if is_admin_user(user):
+        return True
+    if plan is None:
+        return False
+    return int(plan.analyses_limit_monthly or 0) >= 9999
 
 
 def assert_can_ask(db: Session, user: User) -> None:
@@ -105,7 +107,7 @@ def assert_can_ask(db: Session, user: User) -> None:
     if used >= limit:
         raise HTTPException(
             402,
-            f"Límite de preguntas del chat alcanzado ({limit}/mes en plan {sub.plan.name}). "
+            f"Límite de preguntas del chat alcanzado ({used}/{limit} este mes en plan {sub.plan.name}). "
             f"Mejora tu plan para continuar.",
         )
 
@@ -259,7 +261,12 @@ def get_usage(db: Session, user_id: int, key: str | None = None) -> UsageRecord:
         .first()
     )
     if not row:
-        row = UsageRecord(user_id=user_id, period_key=key, analyses_count=0)
+        row = UsageRecord(
+            user_id=user_id,
+            period_key=key,
+            analyses_count=0,
+            asks_count=0,
+        )
         db.add(row)
         db.commit()
         db.refresh(row)
@@ -280,7 +287,7 @@ def subscription_payload(db: Session, user: User) -> dict:
     usage = get_usage(db, user.id)
     limit = plan.analyses_limit_monthly
     used = usage.analyses_count
-    is_unlimited = is_admin_user(user)
+    is_unlimited = is_analyses_unlimited(user, plan)
     remaining = None if is_unlimited else max(0, limit - used)
     storage_gb = plan_storage_gb(plan)
     storage_used = get_documentation_bytes_used(db, user.id)
@@ -288,7 +295,8 @@ def subscription_payload(db: Session, user: User) -> dict:
     caps = plan_capabilities(plan)
     asks_used = get_asks_used(db, user.id)
     asks_limit = caps["asks_limit_monthly"]
-    asks_remaining = None if caps["asks_unlimited"] or is_unlimited else max(0, asks_limit - asks_used)
+    asks_unlimited = caps["asks_unlimited"] or is_admin_user(user)
+    asks_remaining = None if asks_unlimited else max(0, asks_limit - asks_used)
 
     return {
         "plan": {
@@ -318,7 +326,8 @@ def subscription_payload(db: Session, user: User) -> dict:
             "limit_reached": False if is_unlimited else used >= limit,
             "asks_used": asks_used,
             "asks_remaining": asks_remaining,
-            "asks_limit": None if caps["asks_unlimited"] or is_unlimited else asks_limit,
+            "asks_limit": None if asks_unlimited else asks_limit,
+            "asks_limit_reached": False if asks_unlimited else asks_used >= asks_limit,
             "projects_owned": count_owned_home_projects(db, user.id),
             "projects_limit": None if is_unlimited else caps["max_projects"],
             "storage_used_bytes": storage_used,
@@ -338,7 +347,7 @@ def assert_can_analyze(
 ) -> Subscription:
     sub = ensure_subscription(db, user)
     plan = sub.plan
-    is_unlimited = is_admin_user(user)
+    is_unlimited = is_analyses_unlimited(user, plan)
 
     if sub.status not in (
         SubscriptionStatus.active,
@@ -353,7 +362,7 @@ def assert_can_analyze(
     if not is_unlimited and usage.analyses_count >= plan.analyses_limit_monthly:
         raise HTTPException(
             402,
-            f"Límite mensual alcanzado ({plan.analyses_limit_monthly} análisis). "
+            f"Límite mensual alcanzado ({usage.analyses_count}/{plan.analyses_limit_monthly} análisis). "
             f"Mejora tu plan para continuar.",
         )
 
@@ -396,6 +405,22 @@ def change_plan(
         raise HTTPException(404, "Plan no encontrado")
     sub = ensure_subscription(db, user)
 
+    # Sin bypass (p. ej. change-plan desde la UI): no permitir bajadas de precio.
+    if not bypass_checkout and not is_admin_user(user):
+        from services.billing_checkout_service import plan_change_quote
+
+        quote = plan_change_quote(sub.plan, plan)
+        if not quote["allowed"]:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": quote["message"],
+                    "code": quote["code"],
+                    "current_price_cents": quote["current_price_cents"],
+                    "list_price_cents": quote["list_price_cents"],
+                },
+            )
+
     if (
         not bypass_checkout
         and not is_admin_user(user)
@@ -437,7 +462,7 @@ def user_usage_history(db: Session, user: User, *, months: int = 6) -> list[dict
     sub = ensure_subscription(db, user)
     plan = sub.plan
     limit = plan.analyses_limit_monthly if plan else 0
-    unlimited = is_admin_user(user)
+    unlimited = is_analyses_unlimited(user, plan)
 
     now = datetime.utcnow()
     keys: list[str] = []

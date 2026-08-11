@@ -76,7 +76,6 @@ export default function WorkspaceSidebar({
         <div className="workspace-sidebar-brand">
           <div className="workspace-sidebar-brand-text">
             <strong>ARCHITECT</strong>
-            <small>AI Plan Review Studio</small>
           </div>
           <button
             type="button"
@@ -97,11 +96,12 @@ export default function WorkspaceSidebar({
           >
             <div className="workspace-sidebar-usage-row">
               <span>{usage.planName}</span>
-              <span>{usage.isUnlimited ? usage.usageLabel : usage.usageLabel}</span>
+              <span>{usage.usageLabel}</span>
             </div>
             <div className="workspace-sidebar-usage-bar">
               <span style={{ width: `${usage.pct}%` }} />
             </div>
+            <div className="workspace-sidebar-usage-asks">{usage.asksLabel}</div>
           </button>
         )}
 

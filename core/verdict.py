@@ -67,10 +67,10 @@ def build_plan_verdict(
     cf_warn = [c for c in cf if c.get("severity") in ("warning", "error")]
     cf_ok = [c for c in cf if c.get("severity") == "ok"]
 
-    if errors > 0:
+    if (errors > 0):
         tone = "fail"
         if informal:
-            headline = "No, todavía no está del todo bien."
+            headline = "Todavía no: hay puntos que corregir en el plano."
         else:
             headline = f"Hay {errors} error(es) normativos que debes corregir."
         detail = _summarize_top_issues(issues_summary, errors, warnings)
@@ -78,7 +78,7 @@ def build_plan_verdict(
     elif warnings > 0:
         tone = "caution"
         if informal:
-            headline = "Más o menos: va encaminado, pero hay detalles por revisar."
+            headline = "Va bien encaminado, pero conviene revisar unos detalles."
         else:
             headline = f"Sin errores graves; {warnings} aviso(s) a considerar."
         detail = _summarize_top_issues(issues_summary, 0, warnings)
@@ -86,15 +86,16 @@ def build_plan_verdict(
     else:
         tone = "ok"
         if informal:
-            headline = "Sí, en líneas generales se ve bien."
+            headline = "En general se ve bien según las reglas aplicadas."
         else:
             headline = "No se encontraron incidencias con las reglas configuradas."
         detail = (
             f"Detecté {detections} elementos y ninguna regla automática falló. "
-            "Esto no sustituye revisión de un perito ni el reglamento de tu municipio."
+            "Esto no sustituye la revisión de un responsable de obra ni el "
+            "reglamento de tu municipio."
         )
         suggestions.append(
-            "Confirma cortes, instalaciones y estructura en proyecto completo."
+            "Confirma cortes, instalaciones y estructura en el proyecto completo."
         )
 
     if cf_warn:
