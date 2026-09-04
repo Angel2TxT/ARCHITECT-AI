@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="ARCHITECT — Revisión profesional de planos arquitectónicos" />
   <title>ARCHITECT</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ARCHITECT" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=162" />
+  <link rel="stylesheet" href="/static/style.css?v=163" />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -322,6 +327,7 @@
       </div>
 
       <div id="homeProjectsPanel" class="home-projects-panel hidden flex min-h-0 flex-1 flex-col overflow-hidden" hidden>
+        <div id="homeOfflineBanner" class="home-offline-banner" hidden role="status" aria-live="polite"></div>
         <div class="home-projects-body flex min-h-0 flex-1 overflow-hidden">
           <section class="home-projects-detail flex min-h-0 flex-1 flex-col p-0" id="homeProjectsDetail">
             <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
@@ -767,10 +773,12 @@
   <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-  <script src="/static/auth.js?v=31"></script>
+  <script src="/static/auth.js?v=32"></script>
   <script src="/static/billing.js?v=2"></script>
   <script src="/static/dialogs.js?v=4"></script>
-  <script src="/static/home-projects.js?v=58"></script>
+  <script src="/static/offline-store.js?v=1"></script>
+  <script src="/static/home-projects.js?v=59"></script>
   <script src="/static/app.js?v=95"></script>
+  <script src="/static/pwa.js?v=2" defer></script>
 </body>
 </html>

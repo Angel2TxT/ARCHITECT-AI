@@ -55,6 +55,7 @@ Espera ~1–2 min la primera vez (MySQL + dependencias). El backend ejecuta `scr
 | Servicio | URL |
 |----------|-----|
 | **Landing** | http://localhost:8000/ |
+| **Instalar app (PWA)** | En Chrome/Edge: botón «Instalar app» en la landing, o ⋮ → Instalar ARCHITECT |
 | **App principal (React)** | http://localhost:3000 |
 | **Workspace / chat (legacy)** | http://localhost:8000/legacy-app |
 | **Casa hogar** | http://localhost:8000/legacy-app?home-projects=1 |

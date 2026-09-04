@@ -4,8 +4,14 @@
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>ARCHITECT</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ARCHITECT" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
+  <script src="/static/pwa.js?v=1" defer></script>
   <script>
     /* Si ya hay sesión, ir directo al workspace (no mostrar la landing). */
     (function () {
@@ -892,6 +898,34 @@
       background: rgba(255, 255, 255, 0.05);
       color: #fafafa;
     }
+    .nexus-cta-install {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0 1.4rem;
+      border-radius: 0.45rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #f4f4f5;
+      font-size: 0.82rem;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .nexus-cta-install:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .nexus-cta-install[hidden] {
+      display: none !important;
+    }
+    @media (min-width: 640px) {
+      .nexus-cta-install { width: auto; }
+    }
     .welcome-nav-cta-wrap {
       padding: 1px;
       border-radius: 0.55rem;
@@ -1413,6 +1447,10 @@
                 <span class="material-symbols-outlined" style="font-size:1.1rem">arrow_forward</span>
               </a>
             </div>
+            <button type="button" class="nexus-cta-install" data-pwa-install hidden aria-hidden="true">
+              <span class="material-symbols-outlined" style="font-size:1.1rem">download</span>
+              Instalar app
+            </button>
             <a class="nexus-cta-ghost" href="#model-3d">Ver cómo funciona</a>
           </div>
         </div>

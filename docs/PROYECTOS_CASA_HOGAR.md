@@ -4,6 +4,15 @@ Administraci처n de proyectos de **vivienda unifamiliar** siguiendo la metodolog�
 
 Casa hogar es un **expediente**: entregables, revisi처n del equipo, archivos y actividad. La IA es **apoyo embebido**, no el producto.
 
+## Uso sin conexi처n
+
+Tras abrir Casa hogar **al menos una vez con internet** (PWA o `/legacy-app`):
+
+- La **sesi처n JWT** permanece en el dispositivo; un fallo de red no te cierra la sesi처n.
+- Los proyectos se cachean en **IndexedDB**; puedes navegar las **9 etapas**, editar notas/estado y encolar subidas de archivos.
+- Al recuperar red, la cola se sincroniza sola.
+- **IA** (asistente y revisi처n de planos) queda bloqueada offline: requiere API.
+
 ## Etapas
 
 | # | Etapa | Asistente (dudas) | Revisi처n de plano IA |

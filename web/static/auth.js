@@ -114,8 +114,21 @@ async function apiFetch(url, options = {}) {
   if (options.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = headers["Content-Type"] || "application/json";
   }
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401) {
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch (err) {
+    const offline = typeof navigator.onLine === "boolean" && !navigator.onLine;
+    const msg = offline
+      ? "Sin conexión. Puedes seguir trabajando en Casa hogar con los datos guardados."
+      : err?.message || "Error de red";
+    const e = new Error(msg);
+    e.isNetworkError = true;
+    e.isOffline = offline;
+    throw e;
+  }
+  // Solo cerrar sesión con 401 si hay red real (evitar borrar JWT offline).
+  if (res.status === 401 && navigator.onLine !== false) {
     clearSession();
     const loginUrl = "/login";
     if (window.top !== window.self) {
@@ -126,6 +139,15 @@ async function apiFetch(url, options = {}) {
     throw new Error("Sesión expirada");
   }
   return res;
+}
+
+function hasLocalSession() {
+  return !!(getToken() && getUser());
+}
+
+function isOnline() {
+  if (window.ArchitectOffline?.isOnline) return window.ArchitectOffline.isOnline();
+  return typeof navigator.onLine === "boolean" ? navigator.onLine : true;
 }
 
 async function refreshMe() {
@@ -682,6 +704,8 @@ window.PlanoAuth = {
   logout,
   formatApiError,
   isLoggedIn,
+  hasLocalSession,
+  isOnline,
   isImpersonating,
   getStaffBackup,
   startImpersonation,

@@ -21,6 +21,131 @@
   /** @type {Record<string, Array<{role: string, text: string}>>} */
   let assistChatHistory = {};
   let assistChatBusy = false;
+  let offlineBannerEl = null;
+  let syncInFlight = false;
+
+  function isAppOnline() {
+    return PlanoAuth?.isOnline ? PlanoAuth.isOnline() : navigator.onLine !== false;
+  }
+
+  function requireOnlineForAi(actionLabel) {
+    if (isAppOnline()) return true;
+    window.showToast?.(
+      `${actionLabel || "La IA"} necesita internet. Las 9 etapas del expediente sí puedes usarlas sin conexión.`,
+      { variant: "warning" }
+    );
+    return false;
+  }
+
+  async function persistProjectsCache() {
+    try {
+      await window.ArchitectOffline?.saveProjects?.(projects);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function applySectionPatchLocally(projectId, sectionId, payload) {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return null;
+    for (const stage of project.stages || []) {
+      const sec = (stage.sections || []).find((s) => s.id === sectionId);
+      if (!sec) continue;
+      if (payload.title != null) sec.title = payload.title;
+      if (payload.description != null) sec.description = payload.description;
+      if (payload.status != null) sec.status = payload.status;
+      if (Object.prototype.hasOwnProperty.call(payload, "assigned_to_user_id")) {
+        sec.assigned_to_user_id = payload.assigned_to_user_id;
+        if (payload.assigned_to_user_id == null) sec.assigned_to = null;
+      }
+      if (payload.sort_order != null) sec.sort_order = payload.sort_order;
+      sec.updated_at = new Date().toISOString();
+      project._offline_dirty = true;
+      return project;
+    }
+    return null;
+  }
+
+  function applyStagePatchLocally(projectId, stageNumber, payload) {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return null;
+    const stage = (project.stages || []).find((s) => s.stage_number === stageNumber);
+    if (!stage) return null;
+    if (payload.notes != null) stage.notes = payload.notes;
+    if (payload.status != null) stage.status = payload.status;
+    if (payload.analysis_id !== undefined) stage.analysis_id = payload.analysis_id || null;
+    stage.updated_at = new Date().toISOString();
+    project._offline_dirty = true;
+    return project;
+  }
+
+  async function updateOfflineBanner() {
+    const el = document.getElementById("homeOfflineBanner");
+    if (!el) return;
+    offlineBannerEl = el;
+    const online = isAppOnline();
+    let pending = 0;
+    try {
+      pending = (await window.ArchitectOffline?.queueCount?.()) || 0;
+    } catch {
+      pending = 0;
+    }
+    if (online && pending === 0) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+    if (!online) {
+      el.innerHTML = `
+        <strong>Modo sin conexión</strong>
+        <span>Tu sesión sigue activa. Puedes revisar y actualizar las 9 etapas; la IA no estará disponible hasta recuperar internet.${
+          pending ? ` · ${pending} cambio(s) pendientes de sincronizar.` : ""
+        }</span>`;
+      return;
+    }
+    el.innerHTML = `
+      <strong>Sincronizando…</strong>
+      <span>${pending} cambio(s) pendientes se enviarán al servidor.</span>`;
+  }
+
+  async function syncPendingWhenOnline() {
+    if (!isAppOnline() || syncInFlight || !window.ArchitectOffline?.flushQueue) return;
+    syncInFlight = true;
+    try {
+      await updateOfflineBanner();
+      const result = await window.ArchitectOffline.flushQueue(PlanoAuth.apiFetch.bind(PlanoAuth));
+      if (result.synced > 0) {
+        window.showToast?.(
+          result.remaining
+            ? `Sincronizados ${result.synced}. Quedan ${result.remaining}.`
+            : `Sincronizados ${result.synced} cambio(s) offline.`,
+          { variant: "success" }
+        );
+        await loadProjects({ preferNetwork: true });
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      syncInFlight = false;
+      await updateOfflineBanner();
+    }
+  }
+
+  function wireOfflineListeners() {
+    if (window.__homeOfflineWired) return;
+    window.__homeOfflineWired = true;
+    window.addEventListener("online", () => {
+      updateOfflineBanner();
+      syncPendingWhenOnline();
+    });
+    window.addEventListener("offline", () => {
+      updateOfflineBanner();
+      window.showToast?.("Sin internet: Casa hogar sigue disponible con datos guardados.", {
+        variant: "warning",
+      });
+    });
+  }
 
   function assistChatKey(projectId, stageNumber) {
     return `${projectId}:${stageNumber}`;
@@ -828,7 +953,9 @@
   }
 
   function open() {
-    const hasToken = typeof PlanoAuth?.getToken === "function" && PlanoAuth.getToken();
+    const hasToken =
+      (typeof PlanoAuth?.hasLocalSession === "function" && PlanoAuth.hasLocalSession()) ||
+      (typeof PlanoAuth?.getToken === "function" && PlanoAuth.getToken());
     if ((typeof window.getIsGuestMode === "function" && window.getIsGuestMode()) || !hasToken) {
       sessionStorage.setItem("open_home_projects", "1");
       window.location.href = "/login?next=" + encodeURIComponent("/legacy-app?home-projects=1");
@@ -844,8 +971,10 @@
     setSidebarHomeMode(true);
     window.setNavActive?.("home-projects");
     ensureAssistFab();
+    wireOfflineListeners();
     loadProjects();
     syncAssistChatUi();
+    updateOfflineBanner();
   }
 
   function close() {
@@ -879,29 +1008,64 @@
     return analysesPicker;
   }
 
-  async function loadProjects() {
+  async function loadProjects(opts) {
+    const preferNetwork = !opts || opts.preferNetwork !== false;
+    wireOfflineListeners();
     try {
-      const res = await PlanoAuth.apiFetch("/api/home-projects");
-      if (!res.ok) throw new Error("No se pudieron cargar los proyectos");
-      projects = await res.json();
-      renderList();
-      const urlProject = new URLSearchParams(window.location.search).get("project");
-      if (urlProject && projects.find((p) => p.id === urlProject)) {
-        selectProject(urlProject);
-      } else if (activeId && projects.find((p) => p.id === activeId)) {
-        const p = projects.find((x) => x.id === activeId);
-        viewedStage = viewedStage || p.current_stage;
-        renderDetail(p);
-      } else if (projects.length && !activeId) {
-        selectProject(projects[0].id);
+      if (preferNetwork && isAppOnline()) {
+        const res = await PlanoAuth.apiFetch("/api/home-projects");
+        if (!res.ok) throw new Error("No se pudieron cargar los proyectos");
+        projects = await res.json();
+        await persistProjectsCache();
       } else {
-        activeId = null;
-        viewedStage = null;
-        renderDetail(null);
+        throw new Error("offline");
       }
     } catch (err) {
-      window.showToast?.(err.message || "Error al cargar proyectos");
+      try {
+        const cached = (await window.ArchitectOffline?.loadProjects?.()) || [];
+        if (cached.length) {
+          projects = cached;
+          window.showToast?.(
+            isAppOnline()
+              ? "Usando copia local de Casa hogar (el servidor no respondió)."
+              : "Sin conexión: mostrando Casa hogar guardado en este dispositivo.",
+            { variant: "warning" }
+          );
+        } else if (err?.message !== "offline") {
+          window.showToast?.(err.message || "Error al cargar proyectos");
+          await updateOfflineBanner();
+          return;
+        } else {
+          window.showToast?.(
+            "Sin datos offline aún. Conéctate una vez para guardar tus proyectos en este dispositivo.",
+            { variant: "warning" }
+          );
+          projects = [];
+        }
+      } catch {
+        window.showToast?.(err.message || "Error al cargar proyectos");
+        await updateOfflineBanner();
+        return;
+      }
     }
+
+    renderList();
+    const urlProject = new URLSearchParams(window.location.search).get("project");
+    if (urlProject && projects.find((p) => p.id === urlProject)) {
+      selectProject(urlProject);
+    } else if (activeId && projects.find((p) => p.id === activeId)) {
+      const p = projects.find((x) => x.id === activeId);
+      viewedStage = viewedStage || p.current_stage;
+      renderDetail(p);
+    } else if (projects.length && !activeId) {
+      selectProject(projects[0].id);
+    } else {
+      activeId = null;
+      viewedStage = null;
+      renderDetail(null);
+    }
+    await updateOfflineBanner();
+    if (isAppOnline()) syncPendingWhenOnline();
   }
 
   function renderList() {
@@ -2195,6 +2359,31 @@
   }
 
   async function patchStage(projectId, stageNumber, payload) {
+    if (!isAppOnline()) {
+      const local = applyStagePatchLocally(projectId, stageNumber, payload);
+      if (!local) {
+        window.showToast?.("Etapa no encontrada en la copia local");
+        return;
+      }
+      try {
+        await window.ArchitectOffline?.enqueue?.({
+          method: "PATCH",
+          url: `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}`,
+          body_kind: "json",
+          body: payload,
+        });
+        await persistProjectsCache();
+        renderList();
+        renderDetail(local);
+        await updateOfflineBanner();
+        window.showToast?.("Guardado offline · se sincronizará al volver internet", {
+          variant: "success",
+        });
+      } catch (err) {
+        window.showToast?.(err.message || "No se pudo guardar offline");
+      }
+      return;
+    }
     const res = await PlanoAuth.apiFetch(
       `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}`,
       { method: "PATCH", body: JSON.stringify(payload) }
@@ -2206,6 +2395,7 @@
     }
     const idx = projects.findIndex((p) => p.id === projectId);
     if (idx >= 0) projects[idx] = data;
+    await persistProjectsCache();
     renderList();
     renderDetail(projects[idx]);
     if (payload.reopen_reason) {
@@ -2260,6 +2450,30 @@
   }
 
   async function patchSection(projectId, sectionId, payload) {
+    if (!isAppOnline()) {
+      const local = applySectionPatchLocally(projectId, sectionId, payload);
+      if (!local) {
+        window.showToast?.("Apartado no encontrado en la copia local");
+        return;
+      }
+      try {
+        await window.ArchitectOffline?.enqueue?.({
+          method: "PATCH",
+          url: `/api/home-projects/${encodeURIComponent(projectId)}/sections/${sectionId}`,
+          body_kind: "json",
+          body: payload,
+        });
+        await persistProjectsCache();
+        renderDetail(local);
+        await updateOfflineBanner();
+        window.showToast?.("Guardado offline · se sincronizará al volver internet", {
+          variant: "success",
+        });
+      } catch (err) {
+        window.showToast?.(err.message || "No se pudo guardar offline");
+      }
+      return;
+    }
     const res = await PlanoAuth.apiFetch(
       `/api/home-projects/${encodeURIComponent(projectId)}/sections/${sectionId}`,
       { method: "PATCH", body: JSON.stringify(payload) }
@@ -2271,6 +2485,7 @@
     }
     const idx = projects.findIndex((p) => p.id === projectId);
     if (idx >= 0) projects[idx] = data;
+    await persistProjectsCache();
     renderDetail(projects[idx]);
     if (payload.reopen_reason) {
       window.showToast?.("Apartado reabierto");
@@ -2374,6 +2589,58 @@
   }
 
   async function uploadDocument(projectId, stageNumber, file, sectionId, slotKey) {
+    if (!isAppOnline()) {
+      try {
+        const fields = await window.ArchitectOffline.fileToQueueFields(file, {
+          section_id: sectionId ? String(sectionId) : "",
+          slot_key: slotKey || "",
+        });
+        await window.ArchitectOffline.enqueue({
+          method: "POST",
+          url: `/api/home-projects/${encodeURIComponent(projectId)}/stages/${stageNumber}/documents`,
+          body_kind: "formdata_base64",
+          form: { fields },
+        });
+        // Marca visual local en el slot/apartado.
+        const project = projects.find((p) => p.id === projectId);
+        if (project && sectionId) {
+          for (const stage of project.stages || []) {
+            const sec = (stage.sections || []).find((s) => s.id === sectionId);
+            if (!sec) continue;
+            const pendingDoc = {
+              id: `offline-${Date.now()}`,
+              filename: file.name,
+              file_size: file.size,
+              section_id: sectionId,
+              slot_key: slotKey || null,
+              pending_sync: true,
+              download_url: "",
+              is_image: (file.type || "").startsWith("image/"),
+            };
+            sec.documents = [...(sec.documents || []), pendingDoc];
+            sec.documents_count = (sec.documents_count || 0) + 1;
+            sec.has_documents = true;
+            if (slotKey && Array.isArray(sec.slots)) {
+              const slot = sec.slots.find((s) => s.key === slotKey);
+              if (slot) {
+                slot.documents = [...(slot.documents || []), pendingDoc];
+                slot.filled = true;
+              }
+            }
+            break;
+          }
+          await persistProjectsCache();
+          renderDetail(project);
+        }
+        await updateOfflineBanner();
+        window.showToast?.("Archivo en cola offline · se subirá al recuperar internet", {
+          variant: "success",
+        });
+      } catch (err) {
+        window.showToast?.(err.message || "No se pudo guardar el archivo offline");
+      }
+      return;
+    }
     const fd = new FormData();
     fd.append("file", file);
     if (sectionId) fd.append("section_id", String(sectionId));
@@ -2387,6 +2654,7 @@
       if (!res.ok) throw new Error(data.detail || "No se pudo subir el archivo");
       const idx = projects.findIndex((p) => p.id === projectId);
       if (idx >= 0) projects[idx] = data.project || data;
+      await persistProjectsCache();
       renderDetail(projects[idx]);
       window.showToast?.("Archivo subido");
     } catch (err) {
@@ -2418,6 +2686,7 @@
   }
 
   function openAssistForSection(project, stage, sec) {
+    if (!requireOnlineForAi("El asistente IA")) return;
     ensureAssistFab();
     assistChatOpen = true;
     syncAssistChatUi();
@@ -2437,6 +2706,7 @@
   }
 
   async function suggestReviewComment(project, stage, sec) {
+    if (!requireOnlineForAi("El borrador con IA")) return;
     const panel = document.querySelector(`.home-review-block[data-section-id="${sec.id}"]`);
     const status =
       panel?.querySelector(".home-section-review-status")?.value ||
@@ -2505,6 +2775,7 @@
   }
 
   async function askStageAssist(projectId, stageNumber) {
+    if (!requireOnlineForAi("El asistente IA")) return;
     const input = document.getElementById("homeAiQuestion");
     const btn = document.getElementById("btnHomeAssist");
     const question = (input?.value || "").trim();
@@ -2577,6 +2848,7 @@
   }
 
   async function runDocAiReview(projectId, stageNumber, documentId, sectionId) {
+    if (!requireOnlineForAi("La revisión de plano con IA")) return;
     if (
       !(await PlanoDialog.confirm(
         "Se revisará solo la planta 2D (puertas, ventanas, muros, recintos). No cubre CAD, cortes, estructura ni instalaciones. ¿Continuar?",

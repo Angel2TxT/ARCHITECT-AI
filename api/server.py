@@ -272,6 +272,28 @@ def legacy_app_page():
     return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
+@app.get("/manifest.webmanifest")
+def web_manifest():
+    return FileResponse(
+        STATIC_DIR / "manifest.webmanifest",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/sw.js")
+def service_worker():
+    """Service worker en la raíz para scope=/ (instalación PWA en escritorio)."""
+    return FileResponse(
+        STATIC_DIR / "sw.js",
+        media_type="application/javascript; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache",
+            "Service-Worker-Allowed": "/",
+        },
+    )
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/media/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
