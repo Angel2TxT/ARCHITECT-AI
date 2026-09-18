@@ -3655,9 +3655,7 @@ function updateUsageUI(sub) {
       : `${asksUsed} / ${asksLimit} preguntas`;
     plansText.innerHTML = unlimited
       ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso alto · ${used} análisis · ${asksLine}</span>`
-      : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis` +
-        (remaining != null ? ` · ${remaining} restantes` : "") +
-        ` · ${asksLine}</span>`;
+      : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis · ${asksLine}</span>`;
   }
   const badge = document.getElementById("planUsageBadge");
   const badgeText = document.getElementById("planUsageBadgeText");
@@ -3817,14 +3815,11 @@ async function loadPlansModal() {
       (isRecommended && !isCurrent && !isDowngrade ? " is-recommended" : "");
     const price = p.price_monthly_cents
       ? `$${(p.price_monthly_cents / 100).toFixed(0)}`
-      : "Gratis";
-    const priceSuffix = p.price_monthly_cents ? "<small>/mes</small>" : "";
+      : "$0";
+    const priceSuffix = "<small>/mes</small>";
     const features = planFeatureLines(p, { compact: true })
       .map((line) => `<li>${escapeHtml(line)}</li>`)
       .join("");
-    const ideal = p.features?.ideal_for
-      ? `<p class="plan-card-ideal">Ideal para: ${escapeHtml(p.features.ideal_for)}</p>`
-      : "";
     const badges = [
       isCurrent ? '<span class="plan-card-badge">Actual</span>' : "",
       isRecommended && !isCurrent && !isDowngrade
@@ -3854,7 +3849,6 @@ async function loadPlansModal() {
         <p class="plan-card-price">${price}${priceSuffix}</p>
       </div>
       <p class="plan-card-desc">${escapeHtml(p.description || "")}</p>
-      ${ideal}
       ${dueHint}
       <ul class="plan-card-features">${features}</ul>
       <button type="button" class="plan-select-btn${isCurrent ? " is-current" : ""}${isDowngrade ? " is-locked" : ""}" data-slug="${p.slug}" ${isCurrent || isDowngrade ? "disabled" : ""}>

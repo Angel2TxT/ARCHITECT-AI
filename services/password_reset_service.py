@@ -17,7 +17,10 @@ from services.email_service import is_mail_configured, send_password_reset_email
 
 RESET_TOKEN_TYPE = "password_reset"
 RESET_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_TTL_MINUTES", "60"))
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
+
+
+def _app_base_url() -> str:
+    return os.getenv("APP_BASE_URL", "http://localhost:8000").rstrip("/")
 
 
 def _reset_expiry() -> datetime:
@@ -46,7 +49,7 @@ def decode_reset_token(token: str) -> dict[str, Any]:
 
 
 def reset_url(token: str) -> str:
-    return f"{APP_BASE_URL}/login?reset={token}"
+    return f"{_app_base_url()}/login?reset={token}"
 
 
 def request_password_reset(db: Session, email: str) -> dict[str, str]:

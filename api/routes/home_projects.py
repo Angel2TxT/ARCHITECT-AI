@@ -50,6 +50,8 @@ class HomeProjectCreate(BaseModel):
     name: str = Field(min_length=2, max_length=160)
     client_name: str = Field(default="", max_length=120)
     location: str = Field(default="", max_length=200)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     description: str = Field(default="", max_length=4000)
     metadata: dict[str, Any] | None = None
 
@@ -58,9 +60,12 @@ class HomeProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=160)
     client_name: str | None = Field(default=None, max_length=120)
     location: str | None = Field(default=None, max_length=200)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     description: str | None = Field(default=None, max_length=4000)
     status: str | None = None
     metadata: dict[str, Any] | None = None
+    clear_coordinates: bool = False
 
 
 class StageUpdate(BaseModel):
@@ -169,6 +174,36 @@ def list_projects(
     return [_payload(db, p, user.id) for p in rows]
 
 
+@router.get("/geo/search")
+async def geo_search(
+    user: Annotated[User, Depends(get_current_user)],
+    q: str = "",
+    limit: int = 8,
+):
+    """Autocompletado de lugares acotado a Chiapas (Nominatim)."""
+    from services.geo_service import CHIAPAS_CENTER, search_places
+
+    _ = user
+    results = await search_places(q, limit=limit)
+    return {
+        "results": results,
+        "center": {"latitude": CHIAPAS_CENTER[0], "longitude": CHIAPAS_CENTER[1]},
+    }
+
+
+@router.get("/geo/reverse")
+async def geo_reverse(
+    user: Annotated[User, Depends(get_current_user)],
+    lat: float,
+    lon: float,
+):
+    """Dirección legible a partir de coordenadas."""
+    from services.geo_service import reverse_geocode
+
+    _ = user
+    return await reverse_geocode(lat, lon)
+
+
 @router.get("/{project_id}/events")
 def get_project_events(
     project_id: str,
@@ -206,6 +241,8 @@ def create_project(
         name=body.name,
         client_name=body.client_name,
         location=body.location,
+        latitude=body.latitude,
+        longitude=body.longitude,
         description=body.description,
         metadata=body.metadata,
     )
@@ -247,9 +284,12 @@ def patch_project(
         name=body.name,
         client_name=body.client_name,
         location=body.location,
+        latitude=body.latitude,
+        longitude=body.longitude,
         description=body.description,
         status=body.status,
         metadata=body.metadata,
+        clear_coordinates=body.clear_coordinates,
     )
     project = get_home_project(db, user.id, project.id)
     return _payload(db, project, user.id)

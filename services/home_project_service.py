@@ -510,6 +510,25 @@ def _members_payload(db: Session, project: HomeProject) -> list[dict]:
     return out
 
 
+def _normalize_coords(
+    latitude: float | None,
+    longitude: float | None,
+) -> tuple[float | None, float | None]:
+    """Acepta ambos o ninguno; rechaza pares incompletos o fuera de rango."""
+    if latitude is None and longitude is None:
+        return None, None
+    if latitude is None or longitude is None:
+        raise HTTPException(400, "Indica latitud y longitud juntas")
+    try:
+        lat = float(latitude)
+        lng = float(longitude)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(400, "Coordenadas inválidas") from exc
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        raise HTTPException(400, "Coordenadas fuera de rango")
+    return round(lat, 6), round(lng, 6)
+
+
 def create_home_project(
     db: Session,
     user: User,
@@ -517,6 +536,8 @@ def create_home_project(
     name: str,
     client_name: str = "",
     location: str = "",
+    latitude: float | None = None,
+    longitude: float | None = None,
     description: str = "",
     metadata: dict | None = None,
 ) -> HomeProject:
@@ -526,6 +547,8 @@ def create_home_project(
 
     assert_can_create_home_project(db, user)
 
+    lat, lng = _normalize_coords(latitude, longitude)
+
     catalog = load_stage_catalog()
     project = HomeProject(
         id=str(uuid.uuid4()),
@@ -533,6 +556,8 @@ def create_home_project(
         name=name,
         client_name=(client_name or "").strip(),
         location=(location or "").strip(),
+        latitude=lat,
+        longitude=lng,
         description=(description or "").strip(),
         status=HomeProjectStatus.active,
         current_stage=1,
@@ -619,9 +644,12 @@ def update_home_project(
     name: str | None = None,
     client_name: str | None = None,
     location: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
     description: str | None = None,
     status: str | None = None,
     metadata: dict | None = None,
+    clear_coordinates: bool = False,
 ) -> HomeProject:
     project = get_home_project(db, user.id, project_id)
     _require_project_access(db, project, user.id, min_role="editor")
@@ -634,6 +662,16 @@ def update_home_project(
         project.client_name = client_name.strip()
     if location is not None:
         project.location = location.strip()
+    if clear_coordinates:
+        project.latitude = None
+        project.longitude = None
+    elif latitude is not None or longitude is not None:
+        # Si solo llega un eje, completa con el valor actual.
+        lat_in = latitude if latitude is not None else project.latitude
+        lng_in = longitude if longitude is not None else project.longitude
+        lat, lng = _normalize_coords(lat_in, lng_in)
+        project.latitude = lat
+        project.longitude = lng
     if description is not None:
         project.description = description.strip()
     if status is not None:
@@ -2370,6 +2408,8 @@ def project_payload(
         "name": project.name,
         "client_name": project.client_name,
         "location": project.location,
+        "latitude": project.latitude,
+        "longitude": project.longitude,
         "description": project.description,
         "status": project.status.value,
         "current_stage": project.current_stage,

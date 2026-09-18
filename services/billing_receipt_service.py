@@ -17,8 +17,12 @@ from db.models import BillingReceipt, Plan, User
 from services.billing_checkout_service import billing_mode
 from services.email_service import is_mail_configured, send_billing_receipt_email
 
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
 logger = logging.getLogger(__name__)
+
+
+def _app_base_url() -> str:
+    return os.getenv("APP_BASE_URL", "http://localhost:8000").rstrip("/")
+
 
 _PDF_CHAR_REPLACEMENTS = {
     "—": "-",
@@ -332,7 +336,7 @@ def _try_send_receipt_email(db: Session, receipt: BillingReceipt, user: User) ->
     if not is_mail_configured():
         return False
     pdf_bytes = receipt_to_pdf(receipt, user)
-    download_url = f"{APP_BASE_URL}/legacy-app?account=1&receipt_id={receipt.id}"
+    download_url = f"{_app_base_url()}/legacy-app?account=1&receipt_id={receipt.id}"
     period_label = None
     if receipt.period_start and receipt.period_end:
         period_label = (

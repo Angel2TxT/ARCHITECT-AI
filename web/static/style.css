@@ -9301,6 +9301,121 @@ html.dark .home-analysis-select {
   padding-top: 0.15rem;
 }
 
+.hp-location-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.hp-location-controls input {
+  flex: 1;
+  min-width: 0;
+}
+
+.hp-location-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--fill-soft, rgba(128, 128, 128, 0.08));
+  color: inherit;
+  cursor: pointer;
+}
+
+.hp-location-icon-btn:hover {
+  opacity: 0.9;
+}
+
+.hp-location-icon-btn[aria-pressed="true"] {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+html.dark .hp-location-icon-btn[aria-pressed="true"] {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.hp-location-icon-btn .material-symbols-outlined {
+  font-size: 1.15rem;
+}
+
+.hp-location-suggest {
+  margin-top: 0.35rem;
+  max-height: 10rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--white, #fff);
+  z-index: 5;
+}
+
+html.dark .hp-location-suggest {
+  background: #171717;
+}
+
+.hp-location-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.hp-location-suggest button:last-child {
+  border-bottom: 0;
+}
+
+.hp-location-suggest button:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.hp-location-map-wrap {
+  margin-top: 0.55rem;
+}
+
+.hp-location-map {
+  height: 200px;
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.hp-location-map-hint,
+.hp-location-coords {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  opacity: 0.65;
+}
+
+.hp-detail-map-wrap {
+  margin-top: 0.75rem;
+  max-width: 28rem;
+}
+
+.hp-detail-map {
+  height: 160px;
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  z-index: 1;
+}
+
 .home-slot-required-row {
   display: flex;
   align-items: center;

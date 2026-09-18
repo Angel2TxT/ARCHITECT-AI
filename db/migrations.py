@@ -476,6 +476,26 @@ def _ensure_refund_requests_table() -> None:
         print("  Tabla refund_requests creada.")
 
 
+def _ensure_home_project_geo_columns() -> None:
+    """latitude / longitude en home_projects para mapa y geolocalización."""
+    with engine.begin() as conn:
+        for col, ddl in (
+            ("latitude", "ALTER TABLE home_projects ADD COLUMN latitude DOUBLE NULL"),
+            ("longitude", "ALTER TABLE home_projects ADD COLUMN longitude DOUBLE NULL"),
+        ):
+            r = conn.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA = DATABASE() "
+                    "AND TABLE_NAME = 'home_projects' AND COLUMN_NAME = :col"
+                ),
+                {"col": col},
+            )
+            if r.scalar() == 0:
+                conn.execute(text(ddl))
+                print(f"  Columna home_projects.{col} añadida.")
+
+
 def _ensure_usage_asks_count() -> None:
     """Columna asks_count + backfill de preguntas (type=question) del mes."""
     with engine.begin() as conn:
@@ -635,3 +655,4 @@ def apply_pending_migrations() -> None:
     _ensure_support_role_and_tables()
     _ensure_refund_requests_table()
     _ensure_usage_asks_count()
+    _ensure_home_project_geo_columns()

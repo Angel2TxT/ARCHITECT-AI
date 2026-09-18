@@ -1836,6 +1836,11 @@
             <div class="home-project-header-meta">
               <p class="home-project-subtitle text-sm opacity-65">${escapeHtml(project.client_name || "Cliente no indicado")}${project.location ? " · " + escapeHtml(project.location) : ""}</p>
               ${
+                Number.isFinite(Number(project.latitude)) && Number.isFinite(Number(project.longitude))
+                  ? `<div class="hp-detail-map-wrap"><div id="hpDetailMap" class="hp-detail-map" role="img" aria-label="Mapa del proyecto"></div></div>`
+                  : ""
+              }
+              ${
                 isCompleted
                   ? '<p class="home-project-status-badge is-completed">Proyecto completado</p>'
                   : ""
@@ -2327,6 +2332,7 @@
     if (shouldResetScroll) resetDetailScroll();
     lastDetailView = detailView;
     syncAssistChatUi();
+    renderDetailMap(project);
   }
 
   function rerenderDetailPreservingScroll(project) {
@@ -3243,10 +3249,286 @@
     }
   }
 
+  /* ——— Geolocalización (Leaflet + Nominatim vía API) ——— */
+  const CHIAPAS_CENTER = [16.7569, -93.1292];
+  const CHIAPAS_BOUNDS = [
+    [14.4, -94.3],
+    [18.1, -90.2],
+  ];
+  let createMap = null;
+  let createMarker = null;
+  let createMapReady = false;
+  let searchTimer = null;
+  let searchSeq = 0;
+  let detailMap = null;
+
+  function parseCoord(value) {
+    if (value == null || value === "") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function setCreateCoords(lat, lng, label) {
+    const latEl = $("#hpCreateLat");
+    const lngEl = $("#hpCreateLng");
+    const locEl = $("#hpCreateLocation");
+    const coordsEl = $("#hpLocationCoords");
+    if (latEl) latEl.value = lat != null ? String(lat) : "";
+    if (lngEl) lngEl.value = lng != null ? String(lng) : "";
+    if (label && locEl && document.activeElement !== locEl) {
+      locEl.value = label;
+    } else if (label && locEl && !locEl.value.trim()) {
+      locEl.value = label;
+    }
+    if (coordsEl) {
+      if (lat != null && lng != null) {
+        coordsEl.textContent = `📍 ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+        coordsEl.classList.remove("hidden");
+        coordsEl.hidden = false;
+      } else {
+        coordsEl.textContent = "";
+        coordsEl.classList.add("hidden");
+        coordsEl.hidden = true;
+      }
+    }
+  }
+
+  function hideSuggest() {
+    const box = $("#hpLocationSuggest");
+    if (!box) return;
+    box.innerHTML = "";
+    box.classList.add("hidden");
+    box.hidden = true;
+  }
+
+  function showSuggest(results) {
+    const box = $("#hpLocationSuggest");
+    if (!box) return;
+    if (!results.length) {
+      hideSuggest();
+      return;
+    }
+    box.innerHTML = results
+      .map(
+        (r, i) =>
+          `<button type="button" data-idx="${i}">${escapeHtml(r.label || r.display_name || "")}</button>`
+      )
+      .join("");
+    box.classList.remove("hidden");
+    box.hidden = false;
+    box.querySelectorAll("button").forEach((btn) => {
+      btn.onclick = () => {
+        const item = results[Number(btn.dataset.idx)];
+        if (!item) return;
+        applyPlace(item, { openMap: true });
+        hideSuggest();
+      };
+    });
+  }
+
+  function applyPlace(place, { openMap = false } = {}) {
+    const lat = Number(place.latitude);
+    const lng = Number(place.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    setCreateCoords(lat, lng, place.label || place.display_name || "");
+    if (openMap) ensureCreateMapVisible();
+    if (createMap && createMarker) {
+      createMarker.setLatLng([lat, lng]);
+      createMap.setView([lat, lng], Math.max(createMap.getZoom(), 13));
+    }
+    if (place.in_chiapas === false) {
+      window.showToast?.("La ubicación está fuera de Chiapas; puedes mover el pin.");
+    }
+  }
+
+  async function reverseFill(lat, lng) {
+    try {
+      const res = await PlanoAuth.apiFetch(
+        `/api/home-projects/geo/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCreateCoords(lat, lng, null);
+        return;
+      }
+      setCreateCoords(lat, lng, data.label || data.display_name || null);
+      if (data.in_chiapas === false) {
+        window.showToast?.("Fuera del área de Chiapas; ajusta el pin si hace falta.");
+      }
+    } catch {
+      setCreateCoords(lat, lng, null);
+    }
+  }
+
+  function destroyCreateMap() {
+    if (createMap) {
+      createMap.remove();
+      createMap = null;
+      createMarker = null;
+      createMapReady = false;
+    }
+  }
+
+  function ensureCreateMapVisible() {
+    const wrap = $("#hpLocationMapWrap");
+    const btn = $("#hpLocToggleMap");
+    if (wrap) {
+      wrap.classList.remove("hidden");
+      wrap.hidden = false;
+    }
+    if (btn) btn.setAttribute("aria-pressed", "true");
+    initCreateMap();
+  }
+
+  function toggleCreateMap() {
+    const wrap = $("#hpLocationMapWrap");
+    const btn = $("#hpLocToggleMap");
+    if (!wrap) return;
+    const open = wrap.classList.contains("hidden") || wrap.hidden;
+    if (open) {
+      ensureCreateMapVisible();
+    } else {
+      wrap.classList.add("hidden");
+      wrap.hidden = true;
+      if (btn) btn.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  function initCreateMap() {
+    if (typeof window.L === "undefined") {
+      window.showToast?.("Mapa no disponible (Leaflet no cargó)");
+      return;
+    }
+    const el = $("#hpLocationMap");
+    if (!el) return;
+
+    const lat = parseCoord($("#hpCreateLat")?.value) ?? CHIAPAS_CENTER[0];
+    const lng = parseCoord($("#hpCreateLng")?.value) ?? CHIAPAS_CENTER[1];
+
+    if (!createMap) {
+      createMap = window.L.map(el, {
+        maxBounds: CHIAPAS_BOUNDS,
+        maxBoundsViscosity: 0.65,
+      }).setView([lat, lng], 12);
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(createMap);
+      createMarker = window.L.marker([lat, lng], { draggable: true }).addTo(createMap);
+      createMarker.on("dragend", () => {
+        const p = createMarker.getLatLng();
+        reverseFill(p.lat, p.lng);
+      });
+      createMap.on("click", (e) => {
+        createMarker.setLatLng(e.latlng);
+        reverseFill(e.latlng.lat, e.latlng.lng);
+      });
+      createMapReady = true;
+    } else {
+      createMarker.setLatLng([lat, lng]);
+      createMap.setView([lat, lng], createMap.getZoom());
+    }
+    setTimeout(() => createMap?.invalidateSize(), 80);
+    setTimeout(() => createMap?.invalidateSize(), 250);
+  }
+
+  async function searchLocation(query) {
+    const q = String(query || "").trim();
+    if (q.length < 2) {
+      hideSuggest();
+      return;
+    }
+    const seq = ++searchSeq;
+    try {
+      const res = await PlanoAuth.apiFetch(
+        `/api/home-projects/geo/search?q=${encodeURIComponent(q)}&limit=8`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (seq !== searchSeq) return;
+      if (!res.ok) {
+        hideSuggest();
+        return;
+      }
+      showSuggest(data.results || []);
+    } catch {
+      if (seq === searchSeq) hideSuggest();
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      window.showToast?.("Geolocalización no disponible en este navegador");
+      return;
+    }
+    window.showToast?.("Obteniendo ubicación…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        ensureCreateMapVisible();
+        if (createMarker && createMap) {
+          createMarker.setLatLng([lat, lng]);
+          createMap.setView([lat, lng], 15);
+        }
+        reverseFill(lat, lng);
+      },
+      (err) => {
+        const msg =
+          err?.code === 1
+            ? "Permiso de ubicación denegado"
+            : "No se pudo obtener tu ubicación";
+        window.showToast?.(msg);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+  }
+
+  function resetLocationPicker() {
+    hideSuggest();
+    setCreateCoords(null, null, null);
+    const wrap = $("#hpLocationMapWrap");
+    const btn = $("#hpLocToggleMap");
+    if (wrap) {
+      wrap.classList.add("hidden");
+      wrap.hidden = true;
+    }
+    if (btn) btn.setAttribute("aria-pressed", "false");
+    destroyCreateMap();
+  }
+
+  function renderDetailMap(project) {
+    if (detailMap) {
+      detailMap.remove();
+      detailMap = null;
+    }
+    const lat = Number(project?.latitude);
+    const lng = Number(project?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || typeof window.L === "undefined") {
+      return;
+    }
+    const el = $("#hpDetailMap");
+    if (!el) return;
+    detailMap = window.L.map(el, {
+      zoomControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+    }).setView([lat, lng], 14);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OSM",
+    }).addTo(detailMap);
+    window.L.marker([lat, lng]).addTo(detailMap);
+    setTimeout(() => detailMap?.invalidateSize(), 100);
+  }
+
   function openCreateModal() {
     const dlg = $("#homeProjectCreateModal");
     if (!dlg) return;
     $("#homeProjectCreateForm")?.reset();
+    resetLocationPicker();
     if (typeof dlg.showModal === "function") dlg.showModal();
     else dlg.setAttribute("open", "");
   }
@@ -3256,6 +3538,7 @@
     if (!dlg) return;
     if (typeof dlg.close === "function") dlg.close();
     else dlg.removeAttribute("open");
+    hideSuggest();
   }
 
   async function createProjectFromForm(event) {
@@ -3264,13 +3547,20 @@
     const clientName = ($("#hpCreateClient")?.value || "").trim();
     const location = ($("#hpCreateLocation")?.value || "").trim();
     const description = ($("#hpCreateDescription")?.value || "").trim();
+    const latitude = parseCoord($("#hpCreateLat")?.value);
+    const longitude = parseCoord($("#hpCreateLng")?.value);
     if (name.length < 2) {
       window.showToast?.("El nombre debe tener al menos 2 caracteres");
       return;
     }
+    const body = { name, client_name: clientName, location, description };
+    if (latitude != null && longitude != null) {
+      body.latitude = latitude;
+      body.longitude = longitude;
+    }
     const res = await PlanoAuth.apiFetch("/api/home-projects", {
       method: "POST",
-      body: JSON.stringify({ name, client_name: clientName, location, description }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -3279,6 +3569,7 @@
       return;
     }
     closeCreateModal();
+    resetLocationPicker();
     projects.unshift(data);
     viewedStage = 1;
     selectProject(data.id);
@@ -3290,6 +3581,26 @@
   $("#btnCloseHomeProjectCreate")?.addEventListener("click", closeCreateModal);
   $("#btnCancelHomeProjectCreate")?.addEventListener("click", closeCreateModal);
   $("#homeProjectCreateForm")?.addEventListener("submit", createProjectFromForm);
+  $("#hpLocMyPos")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    useMyLocation();
+  });
+  $("#hpLocToggleMap")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleCreateMap();
+  });
+  $("#hpCreateLocation")?.addEventListener("input", (e) => {
+    const value = e.target.value || "";
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => searchLocation(value), 380);
+  });
+  $("#hpCreateLocation")?.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hideSuggest();
+  });
+  document.addEventListener("click", (e) => {
+    const field = e.target?.closest?.(".hp-location-field");
+    if (!field) hideSuggest();
+  });
 
   $("#btnCloseHomeSection")?.addEventListener("click", closeSectionModal);
   $("#btnCancelHomeSection")?.addEventListener("click", closeSectionModal);

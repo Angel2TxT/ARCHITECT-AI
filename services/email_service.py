@@ -224,7 +224,7 @@ def send_email(
 
 
 def _app_base_url() -> str:
-    return os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
+    return os.getenv("APP_BASE_URL", "http://localhost:8000").rstrip("/")
 
 
 def _project_url(project_id: str) -> str:
@@ -363,10 +363,10 @@ def send_project_invite_email(
     )
     html_body = f"""
     <p>Hola,</p>
-    <p><strong>{inviter_name}</strong> te ha invitado a colaborar en el proyecto
-    <strong>«{project_name}»</strong> como <strong>{role_label}</strong>.</p>
-    <p><a href="{invite_url}">Aceptar invitación</a> (válida 14 días)</p>
-    <p>Debes iniciar sesión con: <strong>{to_email}</strong></p>
+    <p><strong>{_e(inviter_name)}</strong> te ha invitado a colaborar en el proyecto
+    <strong>«{_e(project_name)}»</strong> como <strong>{_e(role_label)}</strong>.</p>
+    <p><a href="{_e(invite_url)}">Aceptar invitación</a> (válida 14 días)</p>
+    <p>Debes iniciar sesión con: <strong>{_e(to_email)}</strong></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """
     return _send_safe(
@@ -404,9 +404,9 @@ def send_section_assigned_email(
     )
     html_body = f"""
     <p>Hola,</p>
-    <p><strong>{assigner_name}</strong> te asignó el apartado
-    <strong>«{section_title}»</strong> en <strong>«{project_name}»</strong>.</p>
-    <p><a href="{url}">Abrir proyecto</a></p>
+    <p><strong>{_e(assigner_name)}</strong> te asignó el apartado
+    <strong>«{_e(section_title)}»</strong> en <strong>«{_e(project_name)}»</strong>.</p>
+    <p><a href="{_e(url)}">Abrir proyecto</a></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """
     return _send_safe(
@@ -437,12 +437,17 @@ def send_section_review_email(
         f"en «{project_name}».{comment_block}\n\n"
         f"Ver proyecto: {url}\n\n— ARCHITECT"
     )
+    comment_html = (
+        f"<blockquote style='border-left:3px solid #ddd;padding-left:12px;color:#444'>{_e(comment)}</blockquote>"
+        if comment
+        else ""
+    )
     html_body = f"""
     <p>Hola,</p>
-    <p><strong>{reviewer_name}</strong> revisó el apartado
-    <strong>«{section_title}»</strong>: <strong>{status_label}</strong>.</p>
-    {f"<blockquote style='border-left:3px solid #ddd;padding-left:12px;color:#444'>{comment}</blockquote>" if comment else ""}
-    <p><a href="{url}">Abrir proyecto</a></p>
+    <p><strong>{_e(reviewer_name)}</strong> revisó el apartado
+    <strong>«{_e(section_title)}»</strong>: <strong>{_e(status_label)}</strong>.</p>
+    {comment_html}
+    <p><a href="{_e(url)}">Abrir proyecto</a></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """
     return _send_safe(
@@ -472,10 +477,10 @@ def send_mention_email(
     )
     html_body = f"""
     <p>Hola,</p>
-    <p><strong>{author_name}</strong> te mencionó en
-    <strong>«{section_title}»</strong> (<strong>{project_name}</strong>):</p>
-    <blockquote style="border-left:3px solid #ddd;padding-left:12px;color:#444">{comment}</blockquote>
-    <p><a href="{url}">Abrir proyecto</a></p>
+    <p><strong>{_e(author_name)}</strong> te mencionó en
+    <strong>«{_e(section_title)}»</strong> (<strong>{_e(project_name)}</strong>):</p>
+    <blockquote style="border-left:3px solid #ddd;padding-left:12px;color:#444">{_e(comment)}</blockquote>
+    <p><a href="{_e(url)}">Abrir proyecto</a></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """
     return _send_safe(
@@ -507,10 +512,10 @@ def send_reopen_alert_email(
     )
     html_body = f"""
     <p>Hola,</p>
-    <p><strong>{actor_name}</strong> reabrió <strong>{target_label}</strong>
-    en <strong>«{project_name}»</strong>{override}.</p>
-    <blockquote style="border-left:3px solid #ddd;padding-left:12px;color:#444">{reason}</blockquote>
-    <p><a href="{url}">Abrir proyecto</a></p>
+    <p><strong>{_e(actor_name)}</strong> reabrió <strong>{_e(target_label)}</strong>
+    en <strong>«{_e(project_name)}»</strong>{_e(override)}.</p>
+    <blockquote style="border-left:3px solid #ddd;padding-left:12px;color:#444">{_e(reason)}</blockquote>
+    <p><a href="{_e(url)}">Abrir proyecto</a></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """
     return _send_safe(
@@ -603,9 +608,9 @@ def send_password_reset_email(
         f"— ARCHITECT"
     )
     html_body = f"""
-    <p>Hola <strong>{user_name}</strong>,</p>
+    <p>Hola <strong>{_e(user_name)}</strong>,</p>
     <p>Recibimos una solicitud para restablecer tu contraseña en ARCHITECT.</p>
-    <p><a href="{reset_url}">Restablecer contraseña</a> (válido {expires_minutes} min)</p>
+    <p><a href="{_e(reset_url)}">Restablecer contraseña</a> (válido {expires_minutes} min)</p>
     <p style="color:#666;font-size:12px">Si no lo solicitaste, ignora este correo.</p>
     """
     return _send_safe(

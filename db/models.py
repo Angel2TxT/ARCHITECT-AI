@@ -10,6 +10,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -284,6 +285,8 @@ class HomeProject(Base):
     name: Mapped[str] = mapped_column(String(160))
     client_name: Mapped[str] = mapped_column(String(120), default="")
     location: Mapped[str] = mapped_column(String(200), default="")
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[HomeProjectStatus] = mapped_column(
         Enum(HomeProjectStatus), default=HomeProjectStatus.active, index=True

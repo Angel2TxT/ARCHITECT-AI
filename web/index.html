@@ -15,7 +15,13 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=163" />
+  <link rel="stylesheet" href="/static/style.css?v=164" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
     #appLoader.app-loader--visible {
@@ -650,9 +656,25 @@
           <label for="hpCreateClient">Cliente</label>
           <input type="text" id="hpCreateClient" maxlength="120" placeholder="Nombre del cliente" />
         </div>
-        <div class="form-group">
+        <div class="form-group hp-location-field">
           <label for="hpCreateLocation">Ubicación</label>
-          <input type="text" id="hpCreateLocation" maxlength="200" placeholder="Municipio, colonia…" />
+          <div class="hp-location-controls">
+            <input type="text" id="hpCreateLocation" maxlength="200" placeholder="Buscar municipio o colonia en Chiapas…" autocomplete="off" />
+            <button type="button" class="hp-location-icon-btn" id="hpLocMyPos" title="Usar mi ubicación" aria-label="Usar mi ubicación">
+              <span class="material-symbols-outlined">my_location</span>
+            </button>
+            <button type="button" class="hp-location-icon-btn" id="hpLocToggleMap" title="Elegir en mapa" aria-label="Elegir en mapa" aria-pressed="false">
+              <span class="material-symbols-outlined">map</span>
+            </button>
+          </div>
+          <input type="hidden" id="hpCreateLat" value="" />
+          <input type="hidden" id="hpCreateLng" value="" />
+          <div id="hpLocationSuggest" class="hp-location-suggest hidden" hidden></div>
+          <div id="hpLocationMapWrap" class="hp-location-map-wrap hidden" hidden>
+            <div id="hpLocationMap" class="hp-location-map" role="application" aria-label="Mapa de ubicación en Chiapas"></div>
+            <p class="hp-location-map-hint">Toca el mapa o arrastra el pin. Búsqueda centrada en Chiapas.</p>
+          </div>
+          <p id="hpLocationCoords" class="hp-location-coords hidden" hidden></p>
         </div>
         <div class="form-group">
           <label for="hpCreateDescription">Descripción</label>
@@ -773,12 +795,17 @@
   <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="/static/auth.js?v=32"></script>
   <script src="/static/billing.js?v=2"></script>
   <script src="/static/dialogs.js?v=4"></script>
   <script src="/static/offline-store.js?v=1"></script>
-  <script src="/static/home-projects.js?v=59"></script>
-  <script src="/static/app.js?v=95"></script>
+  <script src="/static/home-projects.js?v=60"></script>
+  <script src="/static/app.js?v=96"></script>
   <script src="/static/pwa.js?v=2" defer></script>
 </body>
 </html>
