@@ -24,6 +24,7 @@ from db.models import (
     HomeProjectEvent,
     HomeProjectStatus,
     Message,
+    NotificationKind,
     Plan,
     Subscription,
     SubscriptionStatus,
@@ -34,6 +35,7 @@ from db.models import (
 from services.subscription_service import change_plan, period_key
 from services.billing_receipt_service import admin_billing_summary, admin_receipts_list
 from services.refund_service import list_admin_refunds, review_refund
+from services.notification_service import notify
 from services.admin_report_service import (
     build_period_report,
     export_report,
@@ -664,6 +666,11 @@ def update_user(
     if not user:
         raise HTTPException(404, "Usuario no encontrado")
 
+    role_changed = False
+    active_changed = False
+    prev_role = user.role
+    prev_active = user.is_active
+
     if body.role is not None:
         try:
             new_role = UserRole(body.role)
@@ -671,11 +678,15 @@ def update_user(
             raise HTTPException(400, "Rol inválido") from exc
         if user.id == admin.id and new_role != UserRole.admin:
             raise HTTPException(400, "No puedes quitarte el rol de administrador")
+        if new_role != user.role:
+            role_changed = True
         user.role = new_role
 
     if body.is_active is not None:
         if user.id == admin.id and not body.is_active:
             raise HTTPException(400, "No puedes desactivar tu propia cuenta")
+        if body.is_active != user.is_active:
+            active_changed = True
         user.is_active = body.is_active
 
     if body.full_name is not None:
@@ -701,6 +712,41 @@ def update_user(
         and body.email is None
     ):
         raise HTTPException(400, "Nada que actualizar")
+
+    if role_changed:
+        role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+        notify(
+            db,
+            user.id,
+            kind=NotificationKind.admin_account,
+            title="Tu rol fue actualizado",
+            body=f"Un administrador cambió tu rol a «{role_val}».",
+            link="/legacy-app",
+            entity_type="user_role",
+            entity_id=user.id,
+            actor_user_id=admin.id,
+            metadata={
+                "from": prev_role.value if hasattr(prev_role, "value") else str(prev_role),
+                "to": role_val,
+            },
+        )
+    if active_changed:
+        notify(
+            db,
+            user.id,
+            kind=NotificationKind.admin_account,
+            title="Acceso a la cuenta actualizado",
+            body=(
+                "Tu cuenta fue reactivada."
+                if user.is_active
+                else "Tu cuenta fue desactivada. Contacta a soporte si crees que es un error."
+            ),
+            link="/legacy-app",
+            entity_type="user_active",
+            entity_id=user.id,
+            actor_user_id=admin.id,
+            metadata={"is_active": user.is_active, "was_active": prev_active},
+        )
 
     db.commit()
     db.refresh(user)

@@ -2321,6 +2321,7 @@
       setHash(currentSection);
     }
     bindGlobalEvents();
+    window.PlanoNotifications?.init?.({ selectors: ["#adminNotifMount"] });
     await loadSection(true);
   }
 

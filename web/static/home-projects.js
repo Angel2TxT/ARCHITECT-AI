@@ -1148,7 +1148,7 @@
 
   function isPlanReviewableDoc(filename) {
     const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
-    return ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff", "pdf"].includes(ext);
+    return ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff", "pdf", "dxf", "dwg"].includes(ext);
   }
 
   function renderDocList(docs, projectId, editable, stage, opts) {

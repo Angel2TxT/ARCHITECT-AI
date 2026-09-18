@@ -641,6 +641,53 @@ def _ensure_home_project_file_slots() -> None:
                 print(f"  Columna {table}.{column} añadida.")
 
 
+def _ensure_user_notifications_table() -> None:
+    collate = "utf8mb4_0900_ai_ci"
+    with engine.begin() as conn:
+        r = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'user_notifications'"
+            )
+        )
+        if r.scalar() != 0:
+            return
+
+        conn.execute(
+            text(
+                f"""
+                CREATE TABLE user_notifications (
+                    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    kind VARCHAR(48) NOT NULL,
+                    title VARCHAR(160) NOT NULL,
+                    body VARCHAR(500) NOT NULL DEFAULT '',
+                    link VARCHAR(512) NULL,
+                    entity_type VARCHAR(48) NULL,
+                    entity_id VARCHAR(64) NULL,
+                    actor_user_id BIGINT NULL,
+                    metadata_json JSON NULL,
+                    is_read TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    read_at DATETIME NULL,
+                    INDEX ix_un_user_id (user_id),
+                    INDEX ix_un_kind (kind),
+                    INDEX ix_un_entity_type (entity_type),
+                    INDEX ix_un_entity_id (entity_id),
+                    INDEX ix_un_is_read (is_read),
+                    INDEX ix_un_created_at (created_at),
+                    CONSTRAINT fk_un_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_un_actor FOREIGN KEY (actor_user_id)
+                        REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE={collate}
+                """
+            )
+        )
+        print("  Tabla user_notifications creada.")
+
+
 def apply_pending_migrations() -> None:
     """Aplica ALTER TABLE pendientes sin borrar datos."""
     _ensure_analysis_corrections_column()
@@ -656,3 +703,4 @@ def apply_pending_migrations() -> None:
     _ensure_refund_requests_table()
     _ensure_usage_asks_count()
     _ensure_home_project_geo_columns()
+    _ensure_user_notifications_table()

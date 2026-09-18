@@ -1,0 +1,14 @@
+# Generado por resplan_to_yolo.py - CC BY 4.0 (ResPlan)
+path: C:/UNI/ARCHITECT/datasets/resplan_yolo
+train: images/train
+val: images/val
+nc: 8
+names:
+  0: door
+  1: window
+  2: wall
+  3: room
+  4: stair
+  5: bathroom
+  6: kitchen
+  7: parking

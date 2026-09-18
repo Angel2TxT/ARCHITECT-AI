@@ -41,6 +41,7 @@ from api.routes import (  # noqa: E402
     mobile,
     mobile_home_projects,
     norms,
+    notifications,
     support,
 )
 from core.pipeline import find_default_weights  # noqa: E402
@@ -108,6 +109,7 @@ app.include_router(chats.router)
 app.include_router(billing.router)
 app.include_router(admin.router)
 app.include_router(support.router)
+app.include_router(notifications.router)
 app.include_router(analyze.router)
 app.include_router(feedback.router)
 app.include_router(analyses.router)

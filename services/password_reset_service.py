@@ -11,9 +11,10 @@ from fastapi import HTTPException
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from db.models import User
+from db.models import NotificationKind, User
 from services.auth_service import ALGORITHM, SECRET_KEY, hash_password
 from services.email_service import is_mail_configured, send_password_reset_email
+from services.notification_service import notify
 
 RESET_TOKEN_TYPE = "password_reset"
 RESET_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_TTL_MINUTES", "60"))
@@ -101,6 +102,16 @@ def reset_password_with_token(db: Session, token: str, new_password: str) -> dic
         )
 
     user.password_hash = hash_password(new_password)
+    notify(
+        db,
+        user.id,
+        kind=NotificationKind.security_password,
+        title="Contraseña restablecida",
+        body="Tu contraseña se cambió con el enlace de recuperación.",
+        link="/legacy-app?account=1",
+        entity_type="security",
+        entity_id="password_reset",
+    )
     db.commit()
     return {"status": "ok", "message": "Contraseña actualizada. Ya puedes iniciar sesión."}
 

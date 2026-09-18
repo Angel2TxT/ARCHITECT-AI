@@ -16,6 +16,7 @@ from db.database import get_db
 from services.cad_service import (
     PREVIEW_DPI,
     CadConversionError,
+    is_cad_filename,
     is_pdf_filename,
     is_supported_filename,
     pdf_bytes_to_png_async,
@@ -86,7 +87,7 @@ async def guest_analyze(
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF, PDF, DXF o DWG.")
 
     assert_guest_can_analyze(db, guest_id, len(content))
     wpath = _guest_weights()
@@ -105,6 +106,7 @@ async def guest_analyze(
             conf=conf,
             auto_calibrate=use_auto,
             user_prompt=message.strip(),
+            dxf_path=prepared.dxf_path,
         )
     except Exception as exc:
         raise HTTPException(500, str(exc)) from exc
@@ -154,7 +156,7 @@ async def guest_preview(
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF, PDF, DXF o DWG.")
 
     mime_map = {
         ".png": "image/png",
@@ -171,7 +173,13 @@ async def guest_preview(
         if is_pdf_filename(filename):
             png, pdf_note = await pdf_bytes_to_png_async(content, dpi=PREVIEW_DPI)
             mime = "image/png"
-            note = pdf_note or "Vista previa desde PDF (página 1)"
+            note = pdf_note or "Vista previa desde PDF"
+        elif is_cad_filename(filename):
+            from services.cad_service import cad_bytes_to_png_async
+
+            png = await cad_bytes_to_png_async(content, filename, dpi=PREVIEW_DPI)
+            mime = "image/png"
+            note = f"Vista previa desde {ext.upper().lstrip('.')}"
         else:
             png = content
             mime = mime_map.get(ext, "image/png")

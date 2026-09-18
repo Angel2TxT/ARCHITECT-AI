@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 
 from fastapi import HTTPException
 
-from db.models import User, UserRole
+from db.models import NotificationKind, User, UserRole
 from services.auth_service import hash_password, verify_password
 from services.avatar_service import delete_user_avatar
+from services.notification_service import notify
 
 
 def update_profile(db: Session, user: User, *, full_name: str) -> User:
@@ -43,6 +44,16 @@ def change_password(
 
     user.password_hash = hash_password(new_password)
     db.add(user)
+    notify(
+        db,
+        user.id,
+        kind=NotificationKind.security_password,
+        title="Contraseña actualizada",
+        body="Si no fuiste tú, recupera el acceso o contacta a soporte de inmediato.",
+        link="/legacy-app?account=1",
+        entity_type="security",
+        entity_id="password",
+    )
     db.commit()
     db.refresh(user)
     return user

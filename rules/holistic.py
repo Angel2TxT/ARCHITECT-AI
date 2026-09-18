@@ -45,7 +45,98 @@ class HolisticConstructionValidator:
         issues.extend(self._check_urban_built_area(rooms))
         issues.extend(self._check_wall_presence(rooms, walls))
         issues.extend(self._check_room_geometry(rooms))
+        issues.extend(self._check_typed_classes(detections, windows))
         issues.extend(self._check_manual_construction_domains(detections))
+        return issues
+
+    def _check_typed_classes(
+        self,
+        detections: list[Detection],
+        windows: list[Detection],
+    ) -> list[ValidationIssue]:
+        """Reglas tipadas cuando el modelo ya trae clases ampliadas."""
+        issues: list[ValidationIssue] = []
+        stairs = [d for d in detections if d.class_name == "stair"]
+        bathrooms = [d for d in detections if d.class_name == "bathroom"]
+        kitchens = [d for d in detections if d.class_name == "kitchen"]
+        columns = [d for d in detections if d.class_name == "column"]
+        corridors = [d for d in detections if d.class_name == "corridor"]
+
+        for stair in stairs:
+            issues.append(
+                ValidationIssue(
+                    code="STAIR_DETECTED_REVIEW",
+                    message=(
+                        "Escalera detectada en planta. Verifica huella, contrahuella, "
+                        "descansos y barandales en corte/detalle (checklist)."
+                    ),
+                    severity="info",
+                    related_class="stair",
+                    bbox_xyxy=stair.bbox_xyxy,
+                    norm_ref="tuxtla_rc · escaleras",
+                )
+            )
+
+        for bath in bathrooms:
+            win_in = any(bath.to_shapely().intersects(w.to_shapely()) for w in windows)
+            if not win_in:
+                issues.append(
+                    ValidationIssue(
+                        code="TYPED_BATHROOM_NO_WINDOW",
+                        message="Baño tipado sin ventana de ventilación detectada.",
+                        severity="warning",
+                        related_class="bathroom",
+                        bbox_xyxy=bath.bbox_xyxy,
+                        norm_ref="tuxtla_rc Art. 147",
+                    )
+                )
+
+        for kit in kitchens:
+            win_in = any(kit.to_shapely().intersects(w.to_shapely()) for w in windows)
+            if not win_in:
+                issues.append(
+                    ValidationIssue(
+                        code="TYPED_KITCHEN_NO_WINDOW",
+                        message="Cocina tipada sin ventana detectada.",
+                        severity="warning",
+                        related_class="kitchen",
+                        bbox_xyxy=kit.bbox_xyxy,
+                        norm_ref="CEV 2010 · cocina",
+                    )
+                )
+
+        rooms = [d for d in detections if d.class_name == "room"]
+        if columns and rooms and len(columns) < max(2, len(rooms) // 3):
+            issues.append(
+                ValidationIssue(
+                    code="COLUMN_GRID_SPARSE",
+                    message=(
+                        f"Solo {len(columns)} columna(s) tipadas para {len(rooms)} recintos. "
+                        "Revisa la retícula estructural en el plano."
+                    ),
+                    severity="info",
+                    related_class="column",
+                    norm_ref="Estructura",
+                )
+            )
+
+        min_corr = self.rules.circulation.corridor_min_width_m
+        for corr in corridors:
+            short = self._min_side_m(corr)
+            if short < min_corr:
+                issues.append(
+                    ValidationIssue(
+                        code="TYPED_CORRIDOR_NARROW",
+                        message=(
+                            f"Pasillo tipado ~{short:.2f} m "
+                            f"(mín. ref. {min_corr:.2f} m)."
+                        ),
+                        severity="error",
+                        related_class="corridor",
+                        bbox_xyxy=corr.bbox_xyxy,
+                        norm_ref="Circulación",
+                    )
+                )
         return issues
 
     def _check_building_completeness(

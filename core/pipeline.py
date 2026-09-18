@@ -22,6 +22,7 @@ from core.analysis_intent import (
 )
 from core.auto_calibrate import AutoCalibration, calibrate_from_scout
 from core.measures_report import build_measures_report
+from core.tiled_infer import InferSettings, choose_infer_settings, predict_detections
 from core.verdict import build_plan_verdict
 from rules import DEFAULT_RULES, ISSUE_LABELS, NORM_BUNDLE_TITLE, ValidationEngine
 from rules.holistic import construction_coverage_report
@@ -171,6 +172,12 @@ def summarize_detections(detections: list[Detection]) -> list[dict]:
         "window": "Ventanas",
         "wall": "Muros",
         "room": "Habitaciones",
+        "stair": "Escaleras",
+        "bathroom": "Baños",
+        "kitchen": "Cocinas",
+        "column": "Columnas",
+        "parking": "Estacionamientos",
+        "corridor": "Pasillos",
     }
     return [
         {
@@ -219,10 +226,20 @@ def _detection_matches_focus(det: Detection, intent: AnalysisIntent) -> bool:
 
 
 def _scout_detect(
-    model: YOLO, image, names: dict, conf: float = 0.12
+    model: YOLO, image_bgr, names: dict, conf: float = 0.12
 ) -> list[Detection]:
-    results = _run_predict(model, image, conf)
-    return _extract_detections(results, names)
+    # Scout rápido: sin tiles, imgsz moderado
+    h, w = image_bgr.shape[:2]
+    base = choose_infer_settings(w, h)
+    settings = InferSettings(
+        imgsz=min(base.imgsz, 960),
+        use_tiles=False,
+        tile_size=base.tile_size,
+        overlap=base.overlap,
+        note="scout",
+    )
+    dets, _ = predict_detections(model, image_bgr, names, conf, settings=settings)
+    return dets
 
 
 def _is_demo_model(weights: str | Path) -> bool:
@@ -354,6 +371,7 @@ def revalidate_analysis(
 
 
 def _run_predict(model: YOLO, image, conf: float):
+    """Compat: predicción simple (tests/scripts). Preferir predict_detections."""
     return model.predict(source=image, conf=conf, imgsz=640, verbose=False)
 
 
@@ -364,9 +382,10 @@ def _extract_detections(results, names: dict) -> list[Detection]:
             continue
         for box in r.boxes:
             cls_id = int(box.cls[0])
+            name = names.get(cls_id, str(cls_id)) if isinstance(names, dict) else names[cls_id]
             detections.append(
                 Detection(
-                    class_name=names[cls_id],
+                    class_name=str(name),
                     bbox_xyxy=tuple(box.xyxy[0].tolist()),
                     confidence=float(box.conf[0]),
                 )
@@ -383,6 +402,7 @@ def analyze_plano(
     auto_calibrate: bool = True,
     manual_ppm: float | None = None,
     manual_conf: float | None = None,
+    dxf_path: str | Path | None = None,
 ) -> tuple[np.ndarray, list[Detection], list[ValidationIssue], str, AutoCalibration | None]:
     """
     Devuelve: imagen RGB, detecciones, incidencias, status, calibración (si auto).
@@ -391,33 +411,61 @@ def analyze_plano(
     names = model.names
     base_bgr = _load_bgr(image)
     h, w = base_bgr.shape[:2]
+    infer_settings = choose_infer_settings(w, h)
 
     calibration: AutoCalibration | None = None
     used_conf = conf
     used_ppm = pixels_per_meter
+    cad_issues: list[ValidationIssue] = []
+    cad_note = ""
+
+    # Geometría CAD (si hay DXF) puede sugerir ppm antes del scout
+    cad_suggested_ppm: float | None = None
+    if dxf_path and Path(dxf_path).is_file():
+        try:
+            from services.dxf_geometry import analyze_dxf_file
+
+            geo = analyze_dxf_file(
+                dxf_path, raster_width_px=w, raster_height_px=h
+            )
+            cad_issues = list(geo.issues)
+            cad_note = geo.note or ""
+            if geo.suggested_ppm and 25 <= geo.suggested_ppm <= 450:
+                cad_suggested_ppm = geo.suggested_ppm
+        except Exception:
+            pass
 
     if auto_calibrate:
-        scout = _scout_detect(model, image, names, conf=0.12)
+        scout = _scout_detect(model, base_bgr, names, conf=0.12)
         calibration = calibrate_from_scout(
             scout,
             w,
             h,
             is_demo=_is_demo_model(weights),
-            manual_ppm=manual_ppm if manual_ppm and manual_ppm > 0 else None,
+            manual_ppm=manual_ppm if manual_ppm and manual_ppm > 0 else cad_suggested_ppm,
             manual_conf=manual_conf if manual_conf and manual_conf > 0 else None,
         )
         used_ppm = calibration.pixels_per_meter
         used_conf = calibration.confidence
+        if cad_suggested_ppm and not manual_ppm and abs(used_ppm - cad_suggested_ppm) > 15:
+            # Promedio ponderado: CAD + scout
+            used_ppm = 0.55 * cad_suggested_ppm + 0.45 * used_ppm
+            calibration.pixels_per_meter = used_ppm
+            calibration.ppm_note = f"{calibration.ppm_note}+CAD"
+    elif cad_suggested_ppm and (not manual_ppm or manual_ppm <= 0):
+        used_ppm = cad_suggested_ppm
 
-    results = _run_predict(model, image, used_conf)
-    detections = _extract_detections(results, names)
+    detections, infer_settings = predict_detections(
+        model, base_bgr, names, used_conf, settings=infer_settings
+    )
 
     if not detections and used_conf > 0.03:
         for retry_conf in (0.10, 0.06, 0.03):
             if retry_conf >= used_conf:
                 continue
-            results = _run_predict(model, image, retry_conf)
-            detections = _extract_detections(results, names)
+            detections, infer_settings = predict_detections(
+                model, base_bgr, names, retry_conf, settings=infer_settings
+            )
             used_conf = retry_conf
             if detections:
                 if calibration:
@@ -432,7 +480,7 @@ def analyze_plano(
         room=DEFAULT_RULES.room,
     )
     engine = ValidationEngine(rules=rules)
-    issues = engine.validate(detections)
+    issues = engine.validate(detections) + cad_issues
 
     bgr = _draw_clean_overlay(base_bgr, issues)
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
@@ -444,8 +492,11 @@ def analyze_plano(
     status = (
         f"Detecciones: {len(detections)} · "
         f"Errores: {n_err} · Avisos: {n_warn} · Revisión: {n_info} · "
-        f"Escala: {used_ppm:.0f} px/m · Confianza: {used_conf:.2f}{auto_tag}"
+        f"Escala: {used_ppm:.0f} px/m · Confianza: {used_conf:.2f}{auto_tag} · "
+        f"{infer_settings.note}"
     )
+    if cad_note:
+        status += f" · {cad_note}"
     return rgb, detections, issues, status, calibration
 
 
@@ -467,14 +518,14 @@ def format_detections_table(detections: list[Detection]) -> str:
 
 def format_issues_table(issues: list[ValidationIssue]) -> str:
     if not issues:
-        return "_✅ No se encontraron incidencias con las reglas actuales._"
+        return "_No se encontraron incidencias con las reglas actuales._"
 
     lines = [
         "| Tipo | Regla | Cantidad | Ejemplo |",
         "|------|-------|----------|---------|",
     ]
     for g in summarize_issues(issues):
-        tipo = "🔴 Error" if g["severity"] == "error" else "🟠 Aviso"
+        tipo = "Error" if g["severity"] == "error" else "Aviso"
         lines.append(
             f"| {tipo} | {g['label']} | {g['count']}× | {g['sample_message']} |"
         )
@@ -489,6 +540,7 @@ def analyze_plano_json(
     *,
     auto_calibrate: bool = True,
     user_prompt: str = "",
+    dxf_path: str | Path | None = None,
 ) -> dict:
     """Respuesta estructurada para la API / interfaz chat."""
     from rules.prompt_checks import run_prompt_checks
@@ -506,6 +558,7 @@ def analyze_plano_json(
         auto_calibrate=use_auto,
         manual_ppm=manual_ppm,
         manual_conf=manual_conf,
+        dxf_path=dxf_path,
     )
     used_ppm = calibration.pixels_per_meter if calibration else (manual_ppm or 100.0)
     used_conf = calibration.confidence if calibration else (manual_conf or 0.18)

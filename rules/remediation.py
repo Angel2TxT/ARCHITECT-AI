@@ -253,6 +253,47 @@ ISSUE_REMEDIATION: dict[str, dict[str, object]] = {
             "Ajusta al mínimo de referencia de estar / vivienda.",
         ],
     },
+    "CAD_EMPTY_GEOMETRY": {
+        "summary": "El CAD no trae geometría útil en modelspace.",
+        "steps": [
+            "Abre el archivo en AutoCAD y verifica el modelspace.",
+            "Exporta el layout visible a DXF R2018 o a PDF/PNG.",
+        ],
+    },
+    "CAD_NO_STRUCTURE_LAYER": {
+        "summary": "Nombra capas de muros/estructura de forma clara.",
+        "steps": [
+            "Usa capas tipo MUROS, WALL, ESTRUCTURA, COLUMNAS.",
+            "Separa mobiliario de cerramientos para mejor detección.",
+        ],
+    },
+    "CAD_FURNITURE_HEAVY": {
+        "summary": "Reduce ruido de mobiliario antes de revisar con IA.",
+        "steps": [
+            "Congela capas de mobiliario/bloques decorativos.",
+            "Exporta solo muros, ejes y vanos a PDF/PNG o DXF limpio.",
+        ],
+    },
+    "TYPED_BATHROOM_NO_WINDOW": {
+        "summary": "Añade ventilación natural o mecánica al baño.",
+        "steps": [
+            "Coloca ventana al exterior o ducto de ventilación.",
+            "Documenta extracción mecánica si no hay vano.",
+        ],
+    },
+    "TYPED_KITCHEN_NO_WINDOW": {
+        "summary": "Asegura ventilación/iluminación en cocina.",
+        "steps": [
+            "Añade ventana o domo; coordina con campana/extracción.",
+        ],
+    },
+    "TYPED_CORRIDOR_NARROW": {
+        "summary": "Ensancha el pasillo al mínimo de circulación.",
+        "steps": [
+            "Mide el claro libre del corredor en planta.",
+            "Ajusta a ≥ 0.90 m (referencia local de circulación).",
+        ],
+    },
 }
 
 

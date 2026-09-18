@@ -1,7 +1,7 @@
-"""Conversión de planos (imagen, PDF) a PNG para el pipeline YOLO.
+"""Conversión de planos (imagen, PDF, DXF, DWG) a PNG para el pipeline YOLO.
 
-DXF/DWG ya no se aceptan en el análisis IA; sí pueden subirse como
-documentación en proyectos casa hogar (storage_service).
+DWG se intenta con ezdwg → ODA/LibreDWG/AutoCAD → DXF → PNG.
+Si se obtiene DXF intermedio, se guarda para análisis geométrico.
 """
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PREVIEW_DPI = 120
-ANALYZE_DPI = 200
+ANALYZE_DPI = 220
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
-CAD_EXTENSIONS = {".dxf", ".dwg"}  # solo referencia / legacy; no en análisis
+CAD_EXTENSIONS = {".dxf", ".dwg"}
 PDF_EXTENSIONS = {".pdf"}
-SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | PDF_EXTENSIONS
-ANALYSIS_FORMAT_HINT = "PNG, JPG, WEBP, TIFF o PDF"
+SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | PDF_EXTENSIONS | CAD_EXTENSIONS
+ANALYSIS_FORMAT_HINT = "PNG, JPG, WEBP, TIFF, PDF, DXF o DWG"
 
 
 class CadConversionError(Exception):
@@ -38,6 +38,9 @@ class PreparedUpload:
     image_path: Path
     was_converted: bool
     conversion_note: str | None = None
+    dxf_path: Path | None = None
+    pdf_page_index: int | None = None
+    pdf_page_count: int | None = None
 
 
 def is_supported_filename(filename: str) -> bool:
@@ -473,55 +476,132 @@ def _dwg_bytes_to_png(content: bytes, dpi: int = 200) -> bytes:
     )
 
 
+def _page_ink_score(page, fitz, dpi: int = 72) -> float:
+    """Heurística: páginas con más tinta (no blancas) suelen ser la planta."""
+    try:
+        zoom = dpi / 72.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        samples = pix.samples
+        if not samples:
+            return 0.0
+        # Muestreo cada N bytes para no cargar todo
+        step = max(1, len(samples) // 12000)
+        dark = 0
+        total = 0
+        for i in range(0, len(samples), step * 3):
+            if i + 2 >= len(samples):
+                break
+            r, g, b = samples[i], samples[i + 1], samples[i + 2]
+            total += 1
+            if r < 245 or g < 245 or b < 245:
+                dark += 1
+        return dark / max(total, 1)
+    except Exception:
+        return 0.0
+
+
 def pdf_bytes_to_png(
-    content: bytes, dpi: int = 200, page_index: int = 0
-) -> tuple[bytes, str | None]:
-    """Renderiza una página del PDF a PNG (por defecto la primera)."""
+    content: bytes, dpi: int = 200, page_index: int | None = None
+) -> tuple[bytes, str | None, int, int]:
+    """
+    Rasteriza una página del PDF a PNG.
+    Si page_index es None, elige la página con más contenido dibujado.
+    Devuelve (png, nota, índice_elegido, total_páginas).
+    """
     fitz = _require_pymupdf()
     doc = fitz.open(stream=content, filetype="pdf")
     try:
         if doc.page_count == 0:
             raise CadConversionError("El PDF no tiene páginas.")
-        idx = max(0, min(page_index, doc.page_count - 1))
+
+        if page_index is None:
+            if doc.page_count == 1:
+                idx = 0
+            else:
+                scores = [
+                    (_page_ink_score(doc[i], fitz), i) for i in range(doc.page_count)
+                ]
+                scores.sort(reverse=True)
+                idx = scores[0][1]
+        else:
+            idx = max(0, min(int(page_index), doc.page_count - 1))
+
         page = doc[idx]
-        zoom = dpi / 72.0
+        # DPI adaptativo: páginas grandes no necesitan 300 dpi (memoria).
+        rect = page.rect
+        page_w = max(rect.width, 1)
+        # Aprox px a dpi pedido
+        target_long = max(page_w, rect.height) * (dpi / 72.0)
+        use_dpi = dpi
+        if target_long > 4500:
+            use_dpi = max(150, int(dpi * 4500 / target_long))
+
+        zoom = use_dpi / 72.0
         matrix = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=matrix, alpha=False)
         png = pix.tobytes("png")
         if len(png) < 100:
             raise CadConversionError("La página del PDF está vacía o no se pudo rasterizar.")
+
         note = None
         if doc.page_count > 1:
             note = (
-                f"PDF con {doc.page_count} páginas: se analizó la página {idx + 1}. "
-                "Si el plano está en otra hoja, exporta esa página como imagen."
+                f"PDF con {doc.page_count} páginas: se analizó la página {idx + 1} "
+                f"(la de mayor contenido dibujado). DPI efectivo {use_dpi}."
             )
-        return png, note
+        elif use_dpi != dpi:
+            note = f"PDF rasterizado a {use_dpi} DPI para contener el tamaño."
+        return png, note, idx, doc.page_count
     finally:
         doc.close()
 
 
-def cad_bytes_to_png(content: bytes, filename: str, dpi: int = 200) -> bytes:
+def cad_bytes_to_png(
+    content: bytes, filename: str, dpi: int = 200
+) -> tuple[bytes, bytes | None]:
+    """
+    Convierte DXF/DWG a PNG.
+    Devuelve (png_bytes, dxf_bytes_opcional) para análisis geométrico.
+    """
     ext = Path(filename or "").suffix.lower()
     if ext == ".dxf":
-        return _dxf_bytes_to_png(content, dpi=dpi)
+        return _dxf_bytes_to_png(content, dpi=dpi), content
     if ext == ".dwg":
-        return _dwg_bytes_to_png(content, dpi=dpi)
+        png = _dwg_via_ezdwg(content, dpi=dpi)
+        if png:
+            # Intentar también DXF para geometría (best-effort)
+            dxf_bytes = _dwg_to_dxf_bytes_legacy(content)
+            return png, dxf_bytes
+        dxf_bytes = _dwg_to_dxf_bytes_legacy(content)
+        if dxf_bytes:
+            return _dxf_bytes_to_png(dxf_bytes, dpi=dpi), dxf_bytes
+        raise CadConversionError(
+            "No se pudo leer este .dwg.\n\n"
+            "1) Instala el conversor integrado:\n"
+            '   pip install "ezdwg[dxf,plot]" ezdxf matplotlib\n'
+            "   Reinicia la app.\n\n"
+            "2) Si falla, en AutoCAD → Guardar como → DXF o PNG."
+        )
     raise CadConversionError(f"Formato CAD no soportado: {ext}")
 
 
 def plano_bytes_to_png(
     content: bytes, filename: str, dpi: int = 200
-) -> tuple[bytes, str | None]:
-    """Convierte PDF a PNG. Devuelve (png_bytes, nota_opcional)."""
+) -> tuple[bytes, str | None, dict]:
+    """Convierte PDF/CAD a PNG. Devuelve (png, nota, meta)."""
     ext = Path(filename or "").suffix.lower()
+    meta: dict = {}
     if ext in PDF_EXTENSIONS:
-        return pdf_bytes_to_png(content, dpi=dpi)
+        png, note, idx, count = pdf_bytes_to_png(content, dpi=dpi)
+        meta["pdf_page_index"] = idx
+        meta["pdf_page_count"] = count
+        return png, note, meta
     if ext in CAD_EXTENSIONS:
-        raise CadConversionError(
-            f"DXF/DWG no se usan en el análisis IA. Exporta a {ANALYSIS_FORMAT_HINT}, "
-            "o súbelos como documentación en Casa hogar."
-        )
+        png, dxf_bytes = cad_bytes_to_png(content, filename, dpi=dpi)
+        if dxf_bytes:
+            meta["dxf_bytes"] = dxf_bytes
+        label = "DXF" if ext == ".dxf" else "DWG"
+        return png, f"Plano convertido desde {label} para el análisis.", meta
     raise CadConversionError(f"Formato no convertible: {ext}")
 
 
@@ -537,11 +617,6 @@ def prepare_upload(
     safe_name = Path(filename or "plano.png").name
     ext = Path(safe_name).suffix.lower() or ".png"
 
-    if ext in CAD_EXTENSIONS:
-        raise CadConversionError(
-            f"DXF/DWG no se usan en el análisis IA. Usa {ANALYSIS_FORMAT_HINT}. "
-            "Los archivos CAD sí se pueden subir en documentación de Casa hogar."
-        )
     if ext not in SUPPORTED_EXTENSIONS:
         raise CadConversionError(
             f"Formato «{ext}» no soportado. Usa {ANALYSIS_FORMAT_HINT}."
@@ -560,7 +635,9 @@ def prepare_upload(
         )
 
     try:
-        png_bytes, extra_note = plano_bytes_to_png(content, safe_name)
+        png_bytes, extra_note, meta = plano_bytes_to_png(
+            content, safe_name, dpi=ANALYZE_DPI
+        )
     except CadConversionError:
         raise
     except Exception as exc:
@@ -570,6 +647,15 @@ def prepare_upload(
 
     raster_path = work_dir / "converted.png"
     raster_path.write_bytes(png_bytes)
+
+    dxf_path = None
+    dxf_bytes = meta.get("dxf_bytes")
+    if isinstance(dxf_bytes, (bytes, bytearray)) and dxf_bytes:
+        dxf_path = work_dir / "source.dxf"
+        dxf_path.write_bytes(dxf_bytes)
+    elif ext == ".dxf":
+        dxf_path = original_path
+
     labels = {".dxf": "DXF", ".dwg": "DWG", ".pdf": "PDF"}
     label = labels.get(ext, ext.upper().lstrip("."))
     note = extra_note or f"Plano convertido desde {label} para el análisis."
@@ -580,6 +666,9 @@ def prepare_upload(
         image_path=raster_path,
         was_converted=True,
         conversion_note=note,
+        dxf_path=dxf_path,
+        pdf_page_index=meta.get("pdf_page_index"),
+        pdf_page_count=meta.get("pdf_page_count"),
     )
 
 
@@ -587,7 +676,8 @@ async def cad_bytes_to_png_async(
     content: bytes, filename: str, dpi: int = ANALYZE_DPI
 ) -> bytes:
     """Ejecuta la conversión CAD en un hilo para no bloquear el servidor web."""
-    return await asyncio.to_thread(cad_bytes_to_png, content, filename, dpi)
+    png, _dxf = await asyncio.to_thread(cad_bytes_to_png, content, filename, dpi)
+    return png
 
 
 async def prepare_upload_async(
@@ -597,6 +687,9 @@ async def prepare_upload_async(
 
 
 async def pdf_bytes_to_png_async(
-    content: bytes, dpi: int = ANALYZE_DPI, page_index: int = 0
+    content: bytes, dpi: int = ANALYZE_DPI, page_index: int | None = None
 ) -> tuple[bytes, str | None]:
-    return await asyncio.to_thread(pdf_bytes_to_png, content, dpi, page_index)
+    png, note, _idx, _count = await asyncio.to_thread(
+        pdf_bytes_to_png, content, dpi, page_index
+    )
+    return png, note

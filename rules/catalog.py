@@ -38,6 +38,16 @@ ISSUE_LABELS: dict[str, str] = {
     "DOOR_SIZE_UNIFORMITY": "Puertas con tamaños no uniformes",
     "ROOM_OVERLAP": "Recintos superpuestos en planta",
     "LIVING_AREA_LOW": "Estancia / área social insuficiente",
+    "CAD_EMPTY_GEOMETRY": "CAD sin geometría dibujable",
+    "CAD_NO_STRUCTURE_LAYER": "CAD sin capas típicas de muros",
+    "CAD_STRUCTURE_LAYERS_OK": "Capas de estructura detectadas en CAD",
+    "CAD_OPENING_LAYERS": "Capas de vanos detectadas en CAD",
+    "CAD_FURNITURE_HEAVY": "CAD con mucho mobiliario/bloques",
+    "STAIR_DETECTED_REVIEW": "Escalera detectada — revisar huella/descanso",
+    "COLUMN_GRID_SPARSE": "Pocas columnas para la planta",
+    "TYPED_BATHROOM_NO_WINDOW": "Baño tipado sin ventana",
+    "TYPED_KITCHEN_NO_WINDOW": "Cocina tipada sin ventana",
+    "TYPED_CORRIDOR_NARROW": "Pasillo tipado estrecho",
 }
 
 NORM_BUNDLE_ID = "chiapas_mx"

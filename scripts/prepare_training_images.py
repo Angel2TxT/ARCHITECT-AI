@@ -70,7 +70,7 @@ def file_to_png(path: Path, dpi: int) -> list[tuple[str, bytes]]:
     if ext in CAD_EXT:
         from services.cad_service import cad_bytes_to_png
 
-        png = cad_bytes_to_png(path.read_bytes(), path.name)
+        png, _dxf = cad_bytes_to_png(path.read_bytes(), path.name)
         out.append(("", png))
         return out
 

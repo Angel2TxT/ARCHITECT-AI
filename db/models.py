@@ -78,6 +78,12 @@ class User(Base):
         back_populates="user",
         foreign_keys="RefundRequest.user_id",
     )
+    notifications: Mapped[list["UserNotification"]] = relationship(
+        back_populates="user",
+        foreign_keys="UserNotification.user_id",
+        cascade="all, delete-orphan",
+        order_by="UserNotification.created_at.desc()",
+    )
 
 
 class Plan(Base):
@@ -745,3 +751,57 @@ class SupportMessage(Base):
 
     ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
     author: Mapped[User] = relationship()
+
+
+class NotificationKind(str, enum.Enum):
+    home_invite = "home_invite"
+    home_assigned = "home_assigned"
+    home_mention = "home_mention"
+    home_comment = "home_comment"
+    home_section_status = "home_section_status"
+    home_stage = "home_stage"
+    home_project_completed = "home_project_completed"
+    home_ai_review = "home_ai_review"
+    home_reopen = "home_reopen"
+    billing_plan = "billing_plan"
+    billing_payment_failed = "billing_payment_failed"
+    billing_canceled = "billing_canceled"
+    billing_refund = "billing_refund"
+    usage_limit = "usage_limit"
+    security_password = "security_password"
+    support_reply = "support_reply"
+    support_ticket_closed = "support_ticket_closed"
+    staff_ticket = "staff_ticket"
+    staff_refund = "staff_refund"
+    admin_account = "admin_account"
+
+
+class UserNotification(Base):
+    """Notificación in-app persistente (campana)."""
+
+    __tablename__ = "user_notifications"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(48), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    body: Mapped[str] = mapped_column(String(500), default="")
+    link: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    entity_type: Mapped[str | None] = mapped_column(String(48), nullable=True, index=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship(
+        back_populates="notifications", foreign_keys=[user_id]
+    )
+    actor: Mapped[User | None] = relationship(foreign_keys=[actor_user_id])

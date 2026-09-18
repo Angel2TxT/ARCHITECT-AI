@@ -3,11 +3,16 @@ path: datasets/cubicasa_yolo
 train: images/train
 val: images/val
 
-# Clases actuales del modelo en producción (best.pt).
-# Para ampliar detección (stair, bathroom, kitchen, column, parking…):
-# 1) Añade nombres aquí y sube nc
-# 2) Etiqueta dataset (ver docs/ENTRENAMIENTO_PLANOS.md)
-# 3) Reentrena con scripts/train.py y actualiza pesos
+# Dataset CubiCasa (histórico, 4 clases). Para ResPlan ampliado usa config/data_resplan.yaml
+path: datasets/cubicasa_yolo
+train: images/train
+val: images/val
+
+# Clases del best.pt CubiCasa. Tras entrenar ResPlan, apunta Ajustes a
+# runs/detect/plano_resplan_s/weights/best.pt (8 clases).
+#
+# Inferencia: tiles + imgsz adaptativo (core/tiled_infer.py).
+# Dataset profesional abierto: scripts/resplan_to_yolo.py (CC BY 4.0).
 nc: 4
 names:
   0: door
@@ -15,10 +20,5 @@ names:
   2: wall
   3: room
 
-# Futuro (no activo hasta reentrenar):
-# 4: stair
-# 5: bathroom
-# 6: kitchen
-# 7: column
-# 8: parking
-# 9: corridor
+# Ampliadas en ResPlan (data_resplan.yaml):
+# 4: stair  5: bathroom  6: kitchen  7: parking

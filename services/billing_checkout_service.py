@@ -12,8 +12,9 @@ from fastapi import HTTPException
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from db.models import Plan, Subscription, SubscriptionStatus, User
+from db.models import Plan, Subscription, SubscriptionStatus, User, NotificationKind
 from services.auth_service import ALGORITHM, SECRET_KEY
+from services.notification_service import notify
 from services.stripe_service import (
     APP_BASE_URL,
     STRIPE_CURRENCY,
@@ -593,6 +594,18 @@ def _set_subscription_status_by_stripe_id(
     )
     if row:
         row.status = status
+        if status == SubscriptionStatus.past_due and row.user_id:
+            notify(
+                db,
+                row.user_id,
+                kind=NotificationKind.billing_payment_failed,
+                title="Pago fallido",
+                body="No pudimos cobrar tu suscripción. Actualiza tu método de pago para evitar la suspensión.",
+                link="/legacy-app?plans=1",
+                entity_type="subscription",
+                entity_id=stripe_sub_id,
+                dedupe_hours=24,
+            )
         db.commit()
 
 

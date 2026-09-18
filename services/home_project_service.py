@@ -29,6 +29,7 @@ from db.models import (
     HomeProjectStage,
     HomeProjectStatus,
     HomeStageStatus,
+    NotificationKind,
     User,
     UserRole,
 )
@@ -38,6 +39,11 @@ from services.email_service import (
     send_section_review_email,
     send_mention_email,
     send_reopen_alert_email,
+)
+from services.notification_service import (
+    home_project_link,
+    notify,
+    notify_home_members,
 )
 from services.qa_service import answer_construction_question
 from services.storage_service import (
@@ -739,6 +745,23 @@ def _notify_reopen(
     admin_override: bool = False,
 ) -> None:
     actor_name = actor.full_name or actor.email
+    member_ids = list(_project_member_emails(db, project).values())
+    notify_home_members(
+        db,
+        member_user_ids=member_ids,
+        actor_user_id=actor.id,
+        kind=NotificationKind.home_reopen,
+        title=f"Reapertura en «{project.name}»",
+        body=f"{actor_name} reabrió {target_label}. Motivo: {reason[:160]}",
+        project_id=project.id,
+        entity_type="home_reopen",
+        entity_id=f"{project.id}:{target_label[:40]}",
+        metadata={"admin_override": admin_override, "reason": reason[:200]},
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
     for email, uid in _project_member_emails(db, project).items():
         if uid == actor.id:
             continue
@@ -954,6 +977,28 @@ def advance_to_next_stage(
     _sync_project_current_stage(project)
     db.commit()
     db.refresh(project)
+
+    actor_name = user.full_name or user.email
+    if current >= 9 and project.status == HomeProjectStatus.completed:
+        _notify_stage_or_project(
+            db,
+            project,
+            user,
+            kind=NotificationKind.home_project_completed,
+            title=f"Proyecto completado · {project.name}",
+            body=f"{actor_name} completó las 9 etapas del expediente.",
+            entity_id=f"{project.id}:completed",
+        )
+    else:
+        _notify_stage_or_project(
+            db,
+            project,
+            user,
+            kind=NotificationKind.home_stage,
+            title=f"Etapa avanzada · {project.name}",
+            body=f"{actor_name} avanzó de la etapa {current} a la {project.current_stage}.",
+            entity_id=f"{project.id}:stage:{project.current_stage}",
+        )
     return project, advisory
 
 
@@ -1213,6 +1258,18 @@ def _notify_mentions(
         user = db.query(User).filter(User.id == uid).first()
         if not user:
             continue
+        notify(
+            db,
+            user.id,
+            kind=NotificationKind.home_mention,
+            title=f"Te mencionaron en «{project.name}»",
+            body=f"{actor_name} en {section.title}: {(body or '')[:160]}",
+            link=home_project_link(project.id),
+            entity_type="home_section",
+            entity_id=section.id,
+            actor_user_id=actor.id,
+            metadata={"section_title": section.title},
+        )
         send_mention_email(
             to_email=user.email,
             project_name=project.name,
@@ -1221,6 +1278,10 @@ def _notify_mentions(
             author_name=actor_name,
             comment=body,
         )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def _notify_assignee(
@@ -1235,6 +1296,21 @@ def _notify_assignee(
     user = db.query(User).filter(User.id == assignee_id).first()
     if not user:
         return
+    notify(
+        db,
+        user.id,
+        kind=NotificationKind.home_assigned,
+        title=f"Apartado asignado · {project.name}",
+        body=f"{actor.full_name or actor.email} te asignó «{section.title}»",
+        link=home_project_link(project.id),
+        entity_type="home_section",
+        entity_id=section.id,
+        actor_user_id=actor.id,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
     send_section_assigned_email(
         to_email=user.email,
         project_name=project.name,
@@ -1257,6 +1333,32 @@ def _notify_status_change(
     user = db.query(User).filter(User.id == section.assigned_to_user_id).first()
     if not user:
         return
+    status_label = {
+        "needs_details": "requiere detalles",
+        "needs_correction": "requiere corrección",
+        "in_review": "en revisión",
+        "approved": "aprobado",
+        "completed": "completado",
+        "pending": "pendiente",
+        "in_progress": "en progreso",
+    }.get(new_status.value, new_status.value)
+    extra = f" Comentario: {comment[:120]}" if comment else ""
+    notify(
+        db,
+        user.id,
+        kind=NotificationKind.home_section_status,
+        title=f"Estado actualizado · {section.title}",
+        body=f"{actor.full_name or actor.email} marcó el apartado como {status_label}.{extra}",
+        link=home_project_link(project.id),
+        entity_type="home_section",
+        entity_id=section.id,
+        actor_user_id=actor.id,
+        metadata={"status": new_status.value},
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
     send_section_review_email(
         to_email=user.email,
         project_name=project.name,
@@ -1266,6 +1368,66 @@ def _notify_status_change(
         new_status=new_status.value,
         comment=comment,
     )
+
+
+def _notify_section_comment(
+    db: Session,
+    project: HomeProject,
+    section: HomeProjectSection,
+    actor: User,
+    body: str,
+) -> None:
+    """Avisa al responsable del apartado (si no es quien comentó)."""
+    assignee_id = section.assigned_to_user_id
+    if not assignee_id or assignee_id == actor.id:
+        return
+    mentioned = {m.lower() for m in _extract_mentions(body)}
+    assignee = db.query(User).filter(User.id == assignee_id).first()
+    if assignee and assignee.email.lower() in mentioned:
+        return
+    notify(
+        db,
+        assignee_id,
+        kind=NotificationKind.home_comment,
+        title=f"Nuevo comentario · {section.title}",
+        body=f"{actor.full_name or actor.email}: {(body or '')[:160]}",
+        link=home_project_link(project.id),
+        entity_type="home_section",
+        entity_id=section.id,
+        actor_user_id=actor.id,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _notify_stage_or_project(
+    db: Session,
+    project: HomeProject,
+    actor: User,
+    *,
+    kind: NotificationKind,
+    title: str,
+    body: str,
+    entity_id: str | None = None,
+) -> None:
+    member_ids = list(_project_member_emails(db, project).values())
+    notify_home_members(
+        db,
+        member_user_ids=member_ids,
+        actor_user_id=actor.id,
+        kind=kind,
+        title=title,
+        body=body,
+        project_id=project.id,
+        entity_type="home_project",
+        entity_id=entity_id or project.id,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def _last_review_payload(db: Session, section_id: int) -> dict | None:
@@ -1911,6 +2073,7 @@ def add_section_comment(
     )
     db.commit()
     _notify_mentions(db, project, section, user, body)
+    _notify_section_comment(db, project, section, user, body)
     return comment
 
 
@@ -1992,6 +2155,25 @@ def invite_project_member(
                 user_id=target.id,
                 role=member_role,
             )
+        )
+        notify(
+            db,
+            target.id,
+            kind=NotificationKind.home_invite,
+            title=f"Te añadieron a «{project.name}»",
+            body=f"{user.full_name or user.email} te dio acceso como {member_role.value}.",
+            link=home_project_link(project.id),
+            entity_type="home_project",
+            entity_id=project.id,
+            actor_user_id=user.id,
+            metadata={"role": member_role.value},
+        )
+        _log_event(
+            db,
+            project=project,
+            actor_user_id=user.id,
+            event_type=HomeProjectEventType.member_invited,
+            metadata={"email": email, "role": member_role.value, "direct_add": True},
         )
         db.commit()
         return {"status": "member_added", "email": email, "role": member_role.value}
@@ -2077,6 +2259,17 @@ def accept_project_invite(db: Session, user: User, token: str) -> HomeProject:
         actor_user_id=user.id,
         event_type=HomeProjectEventType.member_joined,
         metadata={"email": user.email, "role": invite.role.value},
+    )
+    notify(
+        db,
+        project.user_id,
+        kind=NotificationKind.home_invite,
+        title=f"Se unió a «{project.name}»",
+        body=f"{user.full_name or user.email} aceptó la invitación.",
+        link=home_project_link(project.id),
+        entity_type="home_project",
+        entity_id=project.id,
+        actor_user_id=user.id,
     )
     db.commit()
     return project

@@ -19,9 +19,11 @@ from db.models import (
     HomeProjectAiReviewStatus,
     HomeProjectDocument,
     HomeProjectEventType,
+    HomeProjectMember,
     HomeProjectSection,
     HomeProjectSectionStatus,
     Message,
+    NotificationKind,
     User,
 )
 from services.cad_service import (
@@ -29,6 +31,7 @@ from services.cad_service import (
     is_supported_filename,
     prepare_upload_async,
 )
+from services.notification_service import home_project_link, notify_many
 from services.storage_service import analysis_dir, save_annotated_jpeg
 from services.subscription_service import (
     assert_can_analyze,
@@ -308,6 +311,7 @@ async def create_ai_review_from_document(
             conf=0.0,
             auto_calibrate=True,
             user_prompt=prompt,
+            dxf_path=prepared.dxf_path,
         )
         analysis.pixels_per_meter = result.get("pixels_per_meter_used", 100.0)
         analysis.confidence = result.get("confidence_used", 0.18)
@@ -428,6 +432,28 @@ async def create_ai_review_from_document(
 
     if not is_admin_user(user):
         record_analysis_usage(db, user.id)
+
+    open_n = _open_findings_count(findings)
+    if open_n > 0:
+        member_ids = {project.user_id}
+        for m in (
+            db.query(HomeProjectMember.user_id)
+            .filter(HomeProjectMember.project_id == project.id)
+            .all()
+        ):
+            member_ids.add(int(m[0]))
+        notify_many(
+            db,
+            member_ids,
+            kind=NotificationKind.home_ai_review,
+            title=f"Hallazgos IA · {project.name}",
+            body=f"{user.full_name or user.email} generó una revisión con {open_n} hallazgo(s) abierto(s) en la etapa {stage_number}.",
+            link=home_project_link(project.id),
+            entity_type="home_ai_review",
+            entity_id=review.id,
+            actor_user_id=user.id,
+            metadata={"open_findings": open_n, "stage_number": stage_number},
+        )
 
     db.commit()
     db.refresh(review)

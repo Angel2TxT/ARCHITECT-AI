@@ -17,6 +17,8 @@ from db.models import Analysis, Chat, Message, User
 from services.cad_service import (
     PREVIEW_DPI,
     CadConversionError,
+    cad_bytes_to_png_async,
+    is_cad_filename,
     is_pdf_filename,
     is_supported_filename,
     pdf_bytes_to_png_async,
@@ -68,7 +70,7 @@ async def analyze(
     if not is_supported_filename(filename):
         raise HTTPException(
             400,
-            "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.",
+            "Formato no soportado. Usa PNG, JPG, WEBP, TIFF, PDF, DXF o DWG.",
         )
 
     wpath = _resolve_weights(weights)
@@ -146,6 +148,7 @@ async def analyze(
             conf=conf,
             auto_calibrate=use_auto,
             user_prompt=message.strip(),
+            dxf_path=prepared.dxf_path,
         )
         analysis.pixels_per_meter = result.get("pixels_per_meter_used", ppm or 100.0)
         analysis.confidence = result.get("confidence_used", conf or 0.18)
@@ -316,6 +319,7 @@ async def analyze_followup(
 
     try:
         use_auto = auto_calibrate.strip().lower() not in ("0", "false", "no", "off")
+        dxf_candidate = Path(image_path).parent / "source.dxf"
         result = analyze_plano_json(
             str(image_path),
             weights=wpath,
@@ -323,6 +327,7 @@ async def analyze_followup(
             conf=conf or analysis.confidence,
             auto_calibrate=use_auto,
             user_prompt=prompt,
+            dxf_path=dxf_candidate if dxf_candidate.is_file() else None,
         )
         analysis.pixels_per_meter = result.get("pixels_per_meter_used", analysis.pixels_per_meter)
         analysis.confidence = result.get("confidence_used", analysis.confidence)
@@ -371,7 +376,7 @@ async def plano_preview(
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF o PDF.")
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG, WEBP, TIFF, PDF, DXF o DWG.")
 
     mime_map = {
         ".png": "image/png",
@@ -388,7 +393,11 @@ async def plano_preview(
         if is_pdf_filename(filename):
             png, pdf_note = await pdf_bytes_to_png_async(content, dpi=PREVIEW_DPI)
             mime = "image/png"
-            note = pdf_note or "Vista previa desde PDF (página 1)"
+            note = pdf_note or "Vista previa desde PDF"
+        elif is_cad_filename(filename):
+            png = await cad_bytes_to_png_async(content, filename, dpi=PREVIEW_DPI)
+            mime = "image/png"
+            note = f"Vista previa desde {ext.upper().lstrip('.')}"
         else:
             png = content
             mime = mime_map.get(ext, "image/png")

@@ -33,6 +33,8 @@ Hasta entonces, Casa hogar usa alcance **`planta_integral_2d`**: detecta lo posi
 
 Mejorar detección = **más planos como los tuyos, bien etiquetados**, y analizar **una planta recortada** cuando sea posible.
 
+En producción el motor ya hace **tiling + imgsz adaptativo** (`core/tiled_infer.py`) y acepta **DXF/DWG** con análisis de capas. Eso mejora recall en láminas grandes **sin** reentrenar; el salto de calidad tipada (baño, escalera, columna…) sigue requiriendo etiquetas + `train.py`.
+
 ---
 
 ## Qué puedes entregar (formatos)

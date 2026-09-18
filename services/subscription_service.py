@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 from db.models import (
     HomeProject,
     HomeProjectDocument,
+    NotificationKind,
     Plan,
     Subscription,
     SubscriptionStatus,
@@ -19,6 +20,7 @@ from db.models import (
     User,
     UserRole,
 )
+from services.notification_service import maybe_notify_usage_threshold, notify
 
 
 def period_key(dt: datetime | None = None) -> str:
@@ -389,6 +391,24 @@ def record_analysis_usage(db: Session, user_id: int) -> None:
     usage = get_usage(db, user_id)
     usage.analyses_count += 1
     db.commit()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return
+    sub = ensure_subscription(db, user)
+    plan = sub.plan
+    unlimited = is_analyses_unlimited(user, plan)
+    limit = plan.analyses_limit_monthly if plan else 0
+    maybe_notify_usage_threshold(
+        db,
+        user,
+        used=usage.analyses_count,
+        limit=limit,
+        unlimited=unlimited,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def change_plan(
@@ -404,6 +424,7 @@ def change_plan(
     if not plan:
         raise HTTPException(404, "Plan no encontrado")
     sub = ensure_subscription(db, user)
+    prev_slug = sub.plan.slug if sub.plan else None
 
     # Sin bypass (p. ej. change-plan desde la UI): no permitir bajadas de precio.
     if not bypass_checkout and not is_admin_user(user):
@@ -451,6 +472,23 @@ def change_plan(
         sub.stripe_subscription_id = payment_ref
     elif not is_paid_plan(plan):
         sub.stripe_subscription_id = None
+
+    if prev_slug != plan.slug:
+        notify(
+            db,
+            user.id,
+            kind=NotificationKind.billing_plan,
+            title=f"Plan {plan.name} activado",
+            body=(
+                f"Tu suscripción pasó de {prev_slug or 'ninguno'} a {plan.slug}."
+                if prev_slug
+                else f"Ahora tienes el plan {plan.name}."
+            ),
+            link="/legacy-app?account=1",
+            entity_type="plan",
+            entity_id=plan.slug,
+            metadata={"from": prev_slug, "to": plan.slug},
+        )
 
     db.commit()
     return subscription_payload(db, user)

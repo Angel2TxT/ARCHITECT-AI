@@ -9,12 +9,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from db.models import (
     BillingReceipt,
+    NotificationKind,
     Plan,
     RefundRequest,
     RefundRequestStatus,
     SubscriptionStatus,
     User,
 )
+from services.notification_service import notify, notify_many, staff_user_ids
 from services.subscription_service import (
     _period_bounds,
     ensure_subscription,
@@ -214,6 +216,21 @@ def cancel_subscription(db: Session, user: User) -> dict:
     db.add(sub)
     db.commit()
 
+    notify(
+        db,
+        user.id,
+        kind=NotificationKind.billing_canceled,
+        title="Suscripción cancelada",
+        body=f"Cancelaste {canceled_plan['name']}. Quedaste en el plan Gratis.",
+        link="/legacy-app?account=1",
+        entity_type="subscription",
+        entity_id=user.id,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return {
         "ok": True,
         "message": "Suscripción cancelada. Quedaste en el plan Gratis.",
@@ -256,6 +273,22 @@ def request_refund(db: Session, user: User, *, reason: str = "") -> dict:
     db.add(row)
     db.commit()
     db.refresh(row)
+
+    notify_many(
+        db,
+        staff_user_ids(db),
+        kind=NotificationKind.staff_refund,
+        title="Solicitud de reembolso pendiente",
+        body=f"{user.full_name or user.email} pidió reembolso de ${amount / 100:.2f}.",
+        link="/app/admin#billing/refunds",
+        entity_type="refund_request",
+        entity_id=row.id,
+        actor_user_id=user.id,
+    )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
 
     return {
         "ok": True,
@@ -332,6 +365,22 @@ def review_refund(
     row.reviewed_by = admin.id
     row.reviewed_at = datetime.utcnow()
     db.add(row)
+    notify(
+        db,
+        row.user_id,
+        kind=NotificationKind.billing_refund,
+        title="Reembolso aprobado" if approve else "Reembolso rechazado",
+        body=(
+            "Tu solicitud de reembolso fue aprobada (simulado)."
+            if approve
+            else (row.admin_note or "Tu solicitud de reembolso fue rechazada.")
+        )[:500],
+        link="/legacy-app?account=1",
+        entity_type="refund_request",
+        entity_id=row.id,
+        actor_user_id=admin.id,
+        metadata={"approved": approve},
+    )
     db.commit()
     db.refresh(row)
     return {

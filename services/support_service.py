@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session, joinedload
 
 from db.models import (
+    NotificationKind,
     SupportMessage,
     SupportTicket,
     SupportTicketPriority,
@@ -12,6 +13,7 @@ from db.models import (
     User,
     UserRole,
 )
+from services.notification_service import notify, notify_many, staff_user_ids
 
 
 def is_support_user(user: User) -> bool:
@@ -97,6 +99,19 @@ def create_ticket(
             body=body,
             is_staff=False,
         )
+    )
+    db.flush()
+    notify_many(
+        db,
+        staff_user_ids(db),
+        kind=NotificationKind.staff_ticket,
+        title="Nuevo ticket de soporte",
+        body=f"{user.full_name or user.email}: {subject}",
+        link="/app/admin#support/support-inbox",
+        entity_type="support_ticket",
+        entity_id=ticket.id,
+        actor_user_id=user.id,
+        metadata={"subject": subject},
     )
     db.commit()
     return get_ticket(db, ticket.id)
@@ -184,6 +199,35 @@ def add_message(
     else:
         if ticket.status in (SupportTicketStatus.pending, SupportTicketStatus.resolved):
             ticket.status = SupportTicketStatus.open
+    if staff and ticket.user_id != author.id:
+        notify(
+            db,
+            ticket.user_id,
+            kind=NotificationKind.support_reply,
+            title=f"Respuesta de soporte · {ticket.subject}",
+            body=(body or "")[:200],
+            link="/legacy-app?support=1",
+            entity_type="support_ticket",
+            entity_id=ticket.id,
+            actor_user_id=author.id,
+        )
+    elif not staff:
+        recipients = staff_user_ids(db)
+        if ticket.assigned_to:
+            recipients = [ticket.assigned_to] + [
+                u for u in recipients if u != ticket.assigned_to
+            ]
+        notify_many(
+            db,
+            recipients,
+            kind=NotificationKind.staff_ticket,
+            title=f"Respuesta del usuario · {ticket.subject}",
+            body=(body or "")[:200],
+            link="/app/admin#support/support-inbox",
+            entity_type="support_ticket",
+            entity_id=ticket.id,
+            actor_user_id=author.id,
+        )
     db.commit()
     return get_ticket(db, ticket.id)
 
@@ -205,6 +249,20 @@ def update_ticket(
         ticket.assigned_to = assign_self.id
     elif assigned_to is not None:
         ticket.assigned_to = assigned_to if assigned_to > 0 else None
+
+    if status in ("resolved", "closed"):
+        label = "resuelto" if status == "resolved" else "cerrado"
+        notify(
+            db,
+            ticket.user_id,
+            kind=NotificationKind.support_ticket_closed,
+            title=f"Ticket {label} · {ticket.subject}",
+            body="Puedes reabrir el hilo respondiendo desde Ayuda si aún necesitas asistencia.",
+            link="/legacy-app?support=1",
+            entity_type="support_ticket",
+            entity_id=ticket.id,
+        )
+
     db.commit()
     return get_ticket(db, ticket.id)
 

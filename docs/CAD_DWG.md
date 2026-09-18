@@ -1,26 +1,38 @@
-# Planos para análisis IA: imágenes y PDF
+# Planos para análisis IA: imágenes, PDF y CAD
 
-El **análisis con IA** acepta solo:
+El **análisis con IA** acepta:
 
 | Formato | Notas |
 |---------|--------|
 | Imágenes | PNG, JPG, WEBP, BMP, TIF/TIFF |
-| PDF | Se rasteriza la 1ª página con **pymupdf** |
+| PDF | Rasteriza la página con **más contenido dibujado** (pymupdf), DPI adaptativo |
+| DXF | Raster + análisis de capas/geometría (`ezdxf`) |
+| DWG | Convierte con **ezdwg** → ODA / LibreDWG / AutoCAD → DXF/PNG |
 
-**DXF / DWG ya no se usan en el análisis.** Exporta a PNG/JPG/PDF desde AutoCAD, o súbelos como **documentación** en Casa hogar (ahí sí están).
-
-## Dependencia PDF
+## Dependencias
 
 ```bash
 pip install pymupdf
+pip install "ezdwg[dxf,plot]" ezdxf matplotlib   # CAD opcional pero recomendado
 ```
 
-Health: `/api/health` → `"cad": { "pdf": true, ... }`
+Health: `/api/health` → `"cad": { "pdf": true, "dxf": true, "dwg": true, ... }`
 
-## Casa hogar (documentación)
+## Pipeline mejorado
 
-En proyectos casa hogar se permiten también: `.dxf`, `.dwg`, `.doc`, `.docx`, `.xls`, `.xlsx` (almacenamiento; sin conversión YOLO).
+1. Conversión a PNG (y DXF intermedio si aplica)
+2. Inferencia YOLO por **tiles** en planos grandes + NMS
+3. `imgsz` adaptativo (640 / 960 / 1280)
+4. Avisos de capas CAD + calibración de escala asistida por extents DXF
+5. Reglas tipadas listas para clases ampliadas tras reentrenar
 
-## Código legacy CAD
+## Casa hogar
 
-`services/cad_service.py` aún contiene helpers DXF/DWG por si se reactivan o para scripts de entrenamiento (`scripts/prepare_training_images.py`), pero `SUPPORTED_EXTENSIONS` del análisis **excluye** CAD.
+En documentación de proyectos también: `.doc`, `.docx`, `.xls`, `.xlsx` (almacenamiento).
+
+## Código
+
+- `services/cad_service.py` — conversión
+- `services/dxf_geometry.py` — capas / escala CAD
+- `core/tiled_infer.py` — tiles + NMS
+- `core/pipeline.py` — orquestación
