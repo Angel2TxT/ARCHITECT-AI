@@ -186,7 +186,9 @@
           </div>
           <div class="home-assist-chat-head-actions">
             <span class="home-ai-scope-badge">Apoyo</span>
-            <button type="button" class="home-assist-chat-close" id="btnHomeAssistClose" aria-label="Cerrar chat">✕</button>
+            <button type="button" class="home-assist-chat-close" id="btnHomeAssistClose" aria-label="Cerrar chat">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
           </div>
         </header>
         <div class="home-assist-chat-messages" id="homeAssistChatMessages" role="log" aria-live="polite"></div>
@@ -422,15 +424,15 @@
     const meta = ev.metadata || {};
     let extra = "";
     if (ev.event_type === "section_status_changed" && meta.to) {
-      extra = ` → ${sectionStatusLabel(meta.to)}`;
+      extra = ` a ${sectionStatusLabel(meta.to)}`;
     } else if (ev.event_type === "section_reopened" && meta.to) {
-      extra = ` → ${sectionStatusLabel(meta.to)}`;
+      extra = ` a ${sectionStatusLabel(meta.to)}`;
       if (meta.reason) extra += ` — «${escapeHtml(meta.reason)}»`;
     } else if (ev.event_type === "stage_reopened" && meta.stage_number) {
       extra = ` (etapa ${meta.stage_number})`;
       if (meta.reason) extra += ` — «${escapeHtml(meta.reason)}»`;
     } else if (ev.event_type === "stage_advanced" && meta.to_stage) {
-      extra = ` → etapa ${meta.to_stage}`;
+      extra = ` a etapa ${meta.to_stage}`;
     } else if (ev.event_type === "stage_completed" && meta.stage_number) {
       extra = ` (etapa ${meta.stage_number})`;
     } else if (ev.event_type === "member_removed" && meta.email) {
@@ -1152,7 +1154,7 @@
   function renderDocList(docs, projectId, editable, stage, opts) {
     const options = opts || {};
     if (!docs.length) {
-      return `<li class="text-xs opacity-50 py-1">${escapeHtml(options.emptyHint || "Sin archivos aún")}</li>`;
+      return `<li class="home-doc-empty">${escapeHtml(options.emptyHint || "Sin archivos aún")}</li>`;
     }
     const allowAi = !!(
       stage?.ai_plan_review ||
@@ -1162,20 +1164,28 @@
     return docs
       .map((d) => {
         const canAi = allowAi && editable && isPlanReviewableDoc(d.filename);
+        const ext = (d.filename || "").split(".").pop()?.toUpperCase() || "FILE";
         return `
         <li class="home-doc-item">
-          <button type="button" class="home-doc-name" data-dl-url="${escapeHtml(d.download_url)}" data-dl-name="${escapeHtml(d.filename)}">${escapeHtml(d.filename)}</button>
-          <span class="home-doc-meta">${formatBytes(d.file_size)}</span>
-          ${
-            canAi
-              ? `<button type="button" class="btn-secondary text-xs py-1 px-2 home-doc-ai-review" data-doc-id="${d.id}" data-section-id="${d.section_id || ""}" title="Revisar planta 2D con IA">Revisar con IA</button>`
-              : ""
-          }
-          ${
-            editable
-              ? `<button type="button" class="home-doc-delete" data-doc-id="${d.id}" title="Eliminar">×</button>`
-              : ""
-          }
+          <span class="home-doc-ext" aria-hidden="true">${escapeHtml(ext.slice(0, 4))}</span>
+          <div class="home-doc-main">
+            <button type="button" class="home-doc-name" data-dl-url="${escapeHtml(d.download_url)}" data-dl-name="${escapeHtml(d.filename)}" title="${escapeHtml(d.filename)}">${escapeHtml(shortFilename(d.filename, 42))}</button>
+            <span class="home-doc-meta">${formatBytes(d.file_size)}</span>
+          </div>
+          <div class="home-doc-actions">
+            ${
+              canAi
+                ? `<button type="button" class="home-doc-ai-btn home-doc-ai-review" data-doc-id="${d.id}" data-section-id="${d.section_id || ""}" title="Revisar planta 2D con IA">IA</button>`
+                : ""
+            }
+            ${
+              editable
+                ? `<button type="button" class="home-doc-delete" data-doc-id="${d.id}" title="Eliminar" aria-label="Eliminar">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                  </button>`
+                : ""
+            }
+          </div>
         </li>`;
       })
       .join("");
@@ -1226,32 +1236,34 @@
         const canUpload = editable && slot.key !== "_other";
         const canRemoveSlot = editable && slot.key !== "_other";
         const statusLabel = slot.filled ? "Listo" : slot.required ? "Falta" : "Opcional";
-        const acceptLabel = (slot.accept || []).join(", ") || "varios formatos";
+        const acceptLabel = (slot.accept || []).slice(0, 4).join(" · ") || "varios";
         return `
         <div class="home-slot-row ${slot.filled ? "is-filled" : ""} ${slot.required && !slot.filled ? "is-missing" : ""}" data-slot-key="${escapeHtml(slot.key)}">
           <div class="home-slot-head">
-            <div>
-              <p class="home-slot-title">${escapeHtml(slot.title)}${slot.required ? " *" : ""}</p>
+            <div class="home-slot-copy">
+              <p class="home-slot-title">${escapeHtml(slot.title)}${slot.required ? '<span class="home-slot-req">*</span>' : ""}</p>
               <p class="home-slot-formats">${escapeHtml(acceptLabel)}</p>
             </div>
             <div class="home-slot-head-actions">
-              <span class="home-slot-status">${statusLabel}</span>
+              <span class="home-slot-status ${slot.filled ? "is-ok" : slot.required ? "is-miss" : ""}">${statusLabel}</span>
               ${
                 canRemoveSlot
-                  ? `<button type="button" class="home-slot-delete" data-section-id="${sec.id}" data-slot-key="${escapeHtml(slot.key)}" data-slot-title="${escapeHtml(slot.title)}" title="Eliminar espacio">×</button>`
+                  ? `<button type="button" class="home-slot-delete" data-section-id="${sec.id}" data-slot-key="${escapeHtml(slot.key)}" data-slot-title="${escapeHtml(slot.title)}" title="Eliminar espacio" aria-label="Eliminar espacio">
+                      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>`
                   : ""
               }
             </div>
           </div>
           <ul class="home-doc-list home-doc-list--panel">${renderDocList(docs, project.id, editable, stage, {
-            emptyHint: "Aún sin archivo",
+            emptyHint: "Sin archivo",
             aiPlan: !!slot.ai_plan_review,
           })}</ul>
           ${
             canUpload
-              ? `<label class="home-doc-upload btn-secondary text-xs py-1.5 px-2.5 inline-flex cursor-pointer mt-2">
+              ? `<label class="home-doc-upload home-slot-upload">
                   <input type="file" class="home-section-file-input" data-section-id="${sec.id}" data-slot-key="${escapeHtml(slot.key)}" accept="${escapeHtml(slotAcceptAttr(slot.accept))}" hidden />
-                  Subir aquí
+                  Subir
                 </label>`
               : ""
           }
@@ -1259,7 +1271,9 @@
       })
       .join("");
     return `
-      <p class="home-review-panel-hint home-slots-hint">${escapeHtml(hint)}</p>
+      <div class="home-slots-summary">
+        <span>${escapeHtml(hint)}</span>
+      </div>
       <div class="home-slots-list">${rows}</div>
       ${manageBar}`;
   }
@@ -1377,7 +1391,7 @@
         <details class="home-ai-scope">
           <summary class="home-ai-scope-summary">
             <span>Alcance de la revisión</span>
-            <span class="home-ai-scope-chevron" aria-hidden="true">▾</span>
+            <span class="material-symbols-outlined home-ai-scope-chevron" aria-hidden="true">expand_more</span>
           </summary>
           <div class="home-ai-scope-grid">
             <div class="home-ai-scope-col">
@@ -1413,7 +1427,7 @@
       <details class="home-ai-link" ${linked ? "open" : ""}>
         <summary class="home-ai-link-summary">
           <span>${linked ? "Análisis vinculado del workspace" : "Vincular análisis del workspace"}</span>
-          <span class="home-ai-scope-chevron" aria-hidden="true">▾</span>
+          <span class="material-symbols-outlined home-ai-scope-chevron" aria-hidden="true">expand_more</span>
         </summary>
         <div class="home-ai-link-body">
           ${
@@ -1486,18 +1500,17 @@
               <header class="home-section-card-head">
                 <div class="home-section-card-topline">
                   <h5 class="home-section-card-title">${escapeHtml(sec.title)}</h5>
-                  <button type="button" class="home-module-expand-btn" data-open-section="${sec.id}" aria-label="Abrir apartado">⋯</button>
+                  <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
                 </div>
-                <span class="${statusCls}">${sectionStatusLabel(sec.status)}</span>
                 ${
                   sec.description
                     ? `<p class="home-section-card-desc is-truncated">${escapeHtml(sec.description)}</p>`
                     : ""
                 }
-                <div class="home-module-meta-row home-module-meta-stack">
-                  <span class="home-module-files">${filesLabel}</span>
-                  <span class="home-module-assignee">${assigneeName ? `Asignado: ${escapeHtml(assigneeName)}` : "Sin asignar"}</span>
-                  <span class="home-module-comments">${commentsCount} comentario${commentsCount === 1 ? "" : "s"}</span>
+                <div class="home-module-meta-row home-module-meta-chips">
+                  <span class="home-chip">${filesLabel}</span>
+                  <span class="home-chip">${assigneeName ? escapeHtml(assigneeName) : "Sin asignar"}</span>
+                  ${commentsCount ? `<span class="home-chip">${commentsCount} com.</span>` : ""}
                 </div>
               </header>
             </article>`;
@@ -1509,8 +1522,8 @@
       <div class="home-sections-block">
         <div class="home-sections-toolbar">
           <div class="home-sections-toolbar-copy">
-            <p class="home-sections-heading">Apartados documentales</p>
-            <p class="home-sections-progress"><span class="hp-progress-full">${progress.done}/${progress.total} completados · ${progress.with_files} con archivos · ${progress.needs_action || 0} requieren acción · ${progress.without_docs || 0} sin docs</span><span class="hp-progress-short">${progress.done}/${progress.total} listos · ${progress.without_docs || 0} sin docs</span></p>
+            <p class="home-sections-heading">Apartados</p>
+            <p class="home-sections-progress"><span class="hp-progress-full">${progress.done}/${progress.total} listos · ${progress.with_files} con archivos${progress.needs_action ? ` · ${progress.needs_action} por revisar` : ""}</span><span class="hp-progress-short">${progress.done}/${progress.total} listos</span></p>
           </div>
           ${
             editable
@@ -1564,36 +1577,40 @@
     return `<div class="home-module-overlay" id="homeModuleOverlay">
       <article class="home-module-float home-module-float--review" data-section-id="${openSection.id}" role="dialog" aria-modal="true">
         <div class="home-module-float-head">
-          <div>
-            <p class="home-module-float-kicker">${escapeHtml(stageLabel)} · Entregable</p>
+          <div class="home-module-float-head-copy">
+            <p class="home-module-float-kicker">${escapeHtml(stageLabel)}</p>
             <h4 class="home-module-float-title">${escapeHtml(openSection.title)}</h4>
+            ${
+              openSection.description
+                ? `<p class="home-module-float-desc">${escapeHtml(openSection.description)}</p>`
+                : ""
+            }
           </div>
           <div class="home-module-float-actions">
             <span class="home-section-status is-${openSection.status}">${sectionStatusLabel(openSection.status)}</span>
             ${
               editable && canDeleteSec
                 ? `<details class="home-module-more">
-                    <summary class="home-module-more-btn" aria-label="Más opciones">⋯</summary>
+                    <summary class="home-module-more-btn" aria-label="Más opciones">
+                      <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+                    </summary>
                     <div class="home-module-more-menu" role="menu">
                       <button type="button" class="home-section-delete home-module-more-danger" data-section-id="${openSection.id}" role="menuitem">Eliminar apartado</button>
                     </div>
                   </details>`
                 : ""
             }
-            <button type="button" class="home-module-close-btn" id="btnCloseModuleOverlay" aria-label="Cerrar">✕</button>
+            <button type="button" class="home-module-close-btn" id="btnCloseModuleOverlay" aria-label="Cerrar">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
           </div>
         </div>
         ${
-          openSection.description
-            ? `<p class="home-module-float-desc">${escapeHtml(openSection.description)}</p>`
-            : `<p class="home-module-float-desc">Archivos separados por tipo de entregable + decisión del equipo.</p>`
+          !sectionWorkable
+            ? `<p class="home-module-banner">Sin responsable asignado: solo el propietario puede trabajar este apartado hasta asignar a alguien.</p>`
+            : ""
         }
-        <div class="home-module-details">
-          ${
-            !sectionWorkable
-              ? `<p class="home-module-banner">Sin responsable asignado: solo el propietario puede trabajar este apartado hasta asignar a alguien.</p>`
-              : ""
-          }
+        <div class="home-module-split">
           <section class="home-deliverable-panel">
             <div class="home-deliverable-head">
               <div>
@@ -1605,7 +1622,9 @@
             ${renderLastReview(openSection)}
             ${renderSectionSlots(openSection, project, editable && sectionWorkable, stage)}
           </section>
-          ${renderReviewBlock(project, openSection, canReview(project) && sectionWorkable, stage)}
+          <aside class="home-module-decision-col">
+            ${renderReviewBlock(project, openSection, canReview(project) && sectionWorkable, stage)}
+          </aside>
         </div>
       </article>
     </div>`;
@@ -1625,7 +1644,9 @@
           <span class="home-member-role">${m.role === "owner" ? "Propietario" : m.role === "editor" ? "Editor" : "Lector"}</span>
           ${
             editable && m.role !== "owner"
-              ? `<button type="button" class="home-member-remove" data-user-id="${m.user_id}" title="Quitar">×</button>`
+              ? `<button type="button" class="home-member-remove" data-user-id="${m.user_id}" title="Quitar" aria-label="Quitar colaborador">
+                  <span class="material-symbols-outlined" aria-hidden="true">person_remove</span>
+                </button>`
               : ""
           }
         </li>`
@@ -1654,36 +1675,62 @@
 
   function renderFilesBlock(project, editable) {
     const files = project.files || [];
-    const rows = files.length
-      ? files
+    if (!files.length) {
+      return `
+      <div class="home-files-block">
+        <p class="home-section-title mb-2">Archivos del proyecto</p>
+        <p class="text-sm opacity-50 py-6 text-center">Sin archivos en el proyecto</p>
+      </div>`;
+    }
+
+    const byStage = {};
+    files.forEach((f) => {
+      const key = String(f.stage_number || 0);
+      if (!byStage[key]) byStage[key] = [];
+      byStage[key].push(f);
+    });
+    const stageOrder = Object.keys(byStage).sort((a, b) => Number(a) - Number(b));
+    const groups = stageOrder
+      .map((key) => {
+        const items = byStage[key];
+        const stageTitle =
+          (project.stages || []).find((s) => String(s.stage_number) === key)?.title ||
+          `Etapa ${key}`;
+        const rows = items
           .map(
             (f) => `
-          <tr>
-            <td><button type="button" class="home-doc-name" data-dl-url="${escapeHtml(f.download_url)}" data-dl-name="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</button></td>
-            <td class="text-xs opacity-70">Etapa ${f.stage_number}${f.section_title ? " · " + escapeHtml(f.section_title) : ""}</td>
-            <td class="text-xs opacity-60">${formatBytes(f.file_size)}</td>
-            <td class="text-right">${editable ? `<button type="button" class="home-doc-delete" data-doc-id="${f.id}">×</button>` : ""}</td>
-          </tr>`
+            <li class="home-file-row">
+              <span class="home-doc-ext" aria-hidden="true">${escapeHtml(
+                ((f.filename || "").split(".").pop() || "FILE").toUpperCase().slice(0, 4)
+              )}</span>
+              <div class="home-file-row-main">
+                <button type="button" class="home-doc-name" data-dl-url="${escapeHtml(f.download_url)}" data-dl-name="${escapeHtml(f.filename)}" title="${escapeHtml(f.filename)}">${escapeHtml(shortFilename(f.filename, 48))}</button>
+                <span class="home-file-row-meta">${f.section_title ? escapeHtml(f.section_title) + " · " : ""}${formatBytes(f.file_size)}</span>
+              </div>
+              ${editable ? `<button type="button" class="home-doc-delete" data-doc-id="${f.id}" title="Eliminar" aria-label="Eliminar">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              </button>` : ""}
+            </li>`
           )
-          .join("")
-      : `<tr><td colspan="4" class="text-sm opacity-50 py-4 text-center">Sin archivos en el proyecto</td></tr>`;
+          .join("");
+        return `
+          <section class="home-files-group">
+            <header class="home-files-group-head">
+              <h4>Etapa ${escapeHtml(key)} · ${escapeHtml(stageTitle)}</h4>
+              <span>${items.length} archivo${items.length === 1 ? "" : "s"}</span>
+            </header>
+            <ul class="home-files-group-list">${rows}</ul>
+          </section>`;
+      })
+      .join("");
 
     return `
       <div class="home-files-block">
-        <p class="home-section-title mb-3">Archivos del proyecto</p>
-        <div class="home-files-table-wrap overflow-x-auto">
-          <table class="home-files-table w-full text-sm">
-            <thead>
-              <tr>
-                <th class="text-left">Archivo</th>
-                <th class="text-left">Ubicación</th>
-                <th class="text-left">Tamaño</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+        <div class="home-files-block-head">
+          <p class="home-section-title">Archivos del proyecto</p>
+          <p class="home-files-count">${files.length} en total · agrupados por etapa</p>
         </div>
+        <div class="home-files-groups">${groups}</div>
       </div>`;
   }
 
@@ -1833,21 +1880,19 @@
           <div class="home-project-header-copy">
             <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Proyecto · ${project.my_role === "admin" ? "Administrador" : project.my_role === "owner" ? "Propietario" : project.my_role === "editor" ? "Editor" : "Lector"}</p>
             <h3 class="home-project-title font-semibold tracking-tight">${escapeHtml(project.name)}</h3>
-            <div class="home-project-header-meta">
-              <p class="home-project-subtitle text-sm opacity-65">${escapeHtml(project.client_name || "Cliente no indicado")}${project.location ? " · " + escapeHtml(project.location) : ""}</p>
-              ${
-                Number.isFinite(Number(project.latitude)) && Number.isFinite(Number(project.longitude))
-                  ? `<div class="hp-detail-map-wrap"><div id="hpDetailMap" class="hp-detail-map" role="img" aria-label="Mapa del proyecto"></div></div>`
-                  : ""
-              }
-              ${
-                isCompleted
-                  ? '<p class="home-project-status-badge is-completed">Proyecto completado</p>'
-                  : ""
-              }
+            <div class="home-project-meta-chips">
+              ${project.client_name ? `<span class="home-chip">${escapeHtml(project.client_name)}</span>` : `<span class="home-chip is-muted">Sin cliente</span>`}
+              ${project.location ? `<span class="home-chip home-chip--with-icon" title="${escapeHtml(project.location)}"><span class="material-symbols-outlined" aria-hidden="true">location_on</span>${escapeHtml(project.location.length > 42 ? project.location.slice(0, 40) + "…" : project.location)}</span>` : ""}
+              ${isCompleted ? '<span class="home-chip is-success">Completado</span>' : `<span class="home-chip">${project.progress_percent || 0}%</span>`}
             </div>
           </div>
-          <div class="flex flex-wrap gap-2 home-header-actions">
+          <div class="home-header-side">
+            ${
+              Number.isFinite(Number(project.latitude)) && Number.isFinite(Number(project.longitude))
+                ? `<div class="hp-detail-map-wrap"><div id="hpDetailMap" class="hp-detail-map" role="img" aria-label="Mapa del proyecto"></div></div>`
+                : ""
+            }
+            <div class="flex flex-wrap gap-2 home-header-actions">
             <button type="button" class="btn-secondary text-xs py-2 px-3" id="btnBackToIA"><span class="hp-btn-full">Volver a IA</span><span class="hp-btn-short">Volver</span></button>
             ${
               isCompleted
@@ -1855,6 +1900,7 @@
                 : `<button type="button" class="btn-secondary text-xs py-2 px-3 ${stageAdvanceable ? "" : "home-action-disabled"}" id="btnAdvanceStage" ${stageAdvanceable ? "" : "disabled"} title="${stageAdvanceable ? "Completar etapa actual" : "Solo propietario o administrador"}"><span class="hp-btn-full">Completar etapa</span><span class="hp-btn-short">Completar</span></button>`
             }
             <button type="button" class="btn-secondary text-xs py-2 px-3 text-red-600 dark:text-red-400 ${projectDeletable ? "" : "home-action-disabled"}" id="btnDeleteProject" ${projectDeletable ? "" : "disabled"} title="${projectDeletable ? "Eliminar proyecto" : "Solo propietario o administrador"}">Eliminar</button>
+            </div>
           </div>
         </div>
         <div class="home-view-tabs flex flex-wrap gap-2 mt-4 pb-1">
@@ -3282,7 +3328,7 @@
     }
     if (coordsEl) {
       if (lat != null && lng != null) {
-        coordsEl.textContent = `📍 ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+        coordsEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">my_location</span> ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
         coordsEl.classList.remove("hidden");
         coordsEl.hidden = false;
       } else {

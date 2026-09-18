@@ -34,7 +34,7 @@
     if (!deferredPrompt) {
       // Ya instalada o el navegador no ofrece el prompt (Safari/Firefox).
       const tip =
-        "En Chrome o Edge: menú ⋮ → «Instalar ARCHITECT» o el icono ⊕ en la barra de direcciones.";
+        "En Chrome o Edge: menú (tres puntos) > Instalar ARCHITECT, o el icono de instalar en la barra de direcciones.";
       if (typeof window.showToast === "function") window.showToast(tip);
       else window.alert(tip);
       return;

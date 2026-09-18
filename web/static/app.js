@@ -1453,7 +1453,12 @@ function buildResultsPanel(msg) {
     msg.customFindings.slice(0, 3).forEach((cf) => {
       const row = document.createElement("p");
       row.className = `custom-finding custom-finding--${cf.severity || "info"}`;
-      row.textContent = (cf.severity === "ok" ? "✓ " : "• ") + (cf.message || "");
+      const icon = document.createElement("span");
+      icon.className = "material-symbols-outlined custom-finding-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = cf.severity === "ok" ? "check_circle" : "circle";
+      row.appendChild(icon);
+      row.appendChild(document.createTextNode(cf.message || ""));
       cfSec.appendChild(row);
     });
     panel.appendChild(cfSec);
@@ -2594,7 +2599,7 @@ function buildAssistantMessage(data) {
   }
 
   (data.custom_findings || []).forEach((cf) => {
-    if (cf.severity === "ok") text += `\n- ✓ ${cf.message}`;
+    if (cf.severity === "ok") text += `\n- [OK] ${cf.message}`;
     else if (cf.message) text += `\n- ${cf.message}`;
   });
 

@@ -1171,7 +1171,7 @@
         ${kpiCard("science", "Invitados", s.guest_trials ?? 0, `${g?.totals?.asks ?? 0} preguntas`)}
         ${kpiCard("analytics", "Análisis totales", s.analyses_total ?? 0, `${s.analyses_demo ?? 0} demo`)}
       </div>
-      <p class="admin-hint">La gestión detallada de invitados está en Cuentas → Invitados.</p>
+      <p class="admin-hint">La gestión detallada de invitados está en Cuentas &gt; Invitados.</p>
       <button type="button" class="btn-secondary" data-section="guests">Ir a invitados</button>`;
   }
 
