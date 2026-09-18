@@ -12,3 +12,6 @@ venv/
 frontend/node_modules/
 frontend/dist/
 *.zip
+secrets/
+*-firebase-adminsdk-*.json
+google-services.json

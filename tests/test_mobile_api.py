@@ -12,6 +12,8 @@ def test_mobile_health_endpoint():
     assert payload["ok"] is True
     assert payload["service"] == "mobile"
     assert "/api/mobile/register" in payload["endpoints"]
+    assert "/api/mobile/device-token" in payload["endpoints"]
+    assert "fcm_configured" in payload
 
 
 def test_mobile_register_requires_valid_body():
