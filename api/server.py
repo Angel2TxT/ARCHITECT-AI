@@ -128,6 +128,28 @@ def _all_weights() -> list[Path]:
     return sorted(runs.rglob("best.pt"), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def _weights_public_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
+def _model_label(path: Path) -> str:
+    parts = path.parts
+    try:
+        idx = parts.index("detect")
+        run_name = parts[idx + 1] if idx + 1 < len(parts) else path.parent.parent.name
+    except ValueError:
+        run_name = path.parent.parent.name
+    labels = {
+        "plano_resplan_s": "ResPlan — 8 clases (puertas, ventanas, muros, baño…)",
+        "plano_elementos": "CubiCasa — 4 clases (puertas, ventanas, muros, room)",
+        "demo_planos": "Demo — modelo de prueba",
+    }
+    return labels.get(run_name, run_name.replace("_", " "))
+
+
 def _db_ok() -> tuple[bool, str | None]:
     try:
         with engine.connect() as conn:
@@ -172,7 +194,7 @@ def health():
         "database_error": db_err,
         "cad": cad,
         "knowledge": k,
-        "model_weights": str(weights) if weights else None,
+        "model_weights": _weights_public_path(weights) if weights else None,
         "model_ready": bool(weights and weights.is_file()),
         "mail": mail,
         "hints": hints,
@@ -185,17 +207,30 @@ def get_config():
     candidates = _all_weights()
     weights = candidates[0] if candidates else None
     default = (
-        str(weights)
+        _weights_public_path(weights)
         if weights
-        else str(ROOT / "runs/detect/demo_planos/weights/best.pt")
+        else "runs/detect/demo_planos/weights/best.pt"
     )
     wpath = Path(default)
     if not wpath.is_absolute():
         wpath = ROOT / wpath
     demo_ready = (ROOT / "runs/detect/demo_planos/weights/best.pt").is_file()
+    available = []
+    for p in candidates:
+        available.append(
+            {
+                "id": p.parent.parent.name,
+                "label": _model_label(p),
+                "path": _weights_public_path(p),
+                "mtime": int(p.stat().st_mtime),
+                "size_mb": round(p.stat().st_size / (1024 * 1024), 1),
+                "recommended": bool(candidates) and p == candidates[0],
+            }
+        )
     return {
-        "weights": str(wpath),
+        "weights": default,
         "weights_exists": wpath.is_file(),
+        "available_models": available,
         "demo_ready": demo_ready,
         "default_ppm": 100,
         "default_conf": 0.05,

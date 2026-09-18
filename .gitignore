@@ -12,6 +12,8 @@ venv/
 frontend/node_modules/
 frontend/dist/
 *.zip
-secrets/
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
 *-firebase-adminsdk-*.json
 google-services.json

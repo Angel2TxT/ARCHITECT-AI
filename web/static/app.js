@@ -11,12 +11,13 @@ let previewObjectUrl = null;
 let previewRequestId = 0;
 let pendingPrompt = null;
 let settings = { weights: "", ppm: 100, conf: 0.25, autoCalibrate: true, lastAuto: null };
+let availableModels = [];
+let modelReady = false;
 let isLoading = false;
 let attachPreviewLoading = false;
 let ensureChatInFlight = null;
 const filePreviewCache = new Map();
 
-let modelReady = false;
 let currentToolMode = "default";
 let isGuestMode = false;
 window.getIsGuestMode = () => isGuestMode;
@@ -147,22 +148,25 @@ async function loadConfig() {
     const res = await fetch("/api/config");
     const cfg = await res.json();
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    availableModels = Array.isArray(cfg.available_models) ? cfg.available_models : [];
+    const normalizedSaved = normalizeWeightsPath(saved.weights || "");
+    const defaultWeights = normalizeWeightsPath(cfg.weights || "");
     settings = {
-      weights: saved.weights || cfg.weights,
+      weights: pickKnownWeights(normalizedSaved) || defaultWeights,
       ppm: saved.ppm ?? (cfg.default_ppm || 100),
       conf: saved.conf ?? (cfg.default_conf || 0.25),
       autoCalibrate:
         saved.autoCalibrate ?? cfg.auto_calibrate_default ?? true,
       lastAuto: saved.lastAuto || null,
     };
-    $("#weightsPath").value = settings.weights;
+    renderModelPicker();
     $("#ppmInput").value = settings.ppm;
     $("#confInput").value = settings.conf;
     const autoEl = $("#autoCalibrate");
     if (autoEl) autoEl.checked = settings.autoCalibrate;
     syncCalibrationInputs();
 
-    modelReady = cfg.weights_exists;
+    modelReady = cfg.weights_exists || availableModels.length > 0;
     const banner = $("#setupBanner");
     if (!modelReady) {
       banner.hidden = false;
@@ -178,6 +182,99 @@ async function loadConfig() {
     }
   } catch (_) {
     /* offline */
+  }
+}
+
+function normalizeWeightsPath(raw) {
+  if (!raw) return "";
+  let p = String(raw).replace(/\\/g, "/");
+  const marker = "/runs/detect/";
+  const idx = p.toLowerCase().indexOf(marker.slice(1)); // runs/detect/
+  if (idx >= 0) {
+    p = p.slice(idx);
+  }
+  const absIdx = p.toLowerCase().indexOf("runs/detect/");
+  if (absIdx >= 0) p = p.slice(absIdx);
+  return p.replace(/^\/+/, "");
+}
+
+function pickKnownWeights(path) {
+  if (!path || !availableModels.length) return path || "";
+  const norm = normalizeWeightsPath(path).toLowerCase();
+  const hit = availableModels.find((m) => {
+    const mp = normalizeWeightsPath(m.path).toLowerCase();
+    return mp === norm || norm.endsWith(mp) || mp.endsWith(norm) || norm.includes(`/${m.id}/`);
+  });
+  return hit ? hit.path : path;
+}
+
+function modelShortName(path) {
+  const hit = availableModels.find(
+    (m) => normalizeWeightsPath(m.path) === normalizeWeightsPath(path)
+  );
+  if (hit) return hit.label;
+  const id = normalizeWeightsPath(path).split("/")[2] || path;
+  return id || "Modelo";
+}
+
+function renderModelPicker() {
+  const picker = $("#modelPicker");
+  const select = $("#modelSelect");
+  const hidden = $("#weightsPath");
+  const currentLbl = $("#modelCurrentLabel");
+  if (hidden) hidden.value = settings.weights || "";
+  if (currentLbl) {
+    currentLbl.textContent = settings.weights
+      ? `Activo: ${modelShortName(settings.weights)}`
+      : "Sin modelo seleccionado";
+  }
+  if (select) {
+    select.innerHTML = "";
+    if (!availableModels.length) {
+      const opt = document.createElement("option");
+      opt.value = settings.weights || "";
+      opt.textContent = settings.weights ? modelShortName(settings.weights) : "Sin modelos";
+      select.appendChild(opt);
+    } else {
+      availableModels.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m.path;
+        opt.textContent = `${m.label}${m.recommended ? " · reciente" : ""}`;
+        if (normalizeWeightsPath(m.path) === normalizeWeightsPath(settings.weights)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+  }
+  if (picker) {
+    picker.innerHTML = "";
+    (availableModels.length ? availableModels : []).forEach((m) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "model-card";
+      btn.setAttribute("role", "option");
+      const active =
+        normalizeWeightsPath(m.path) === normalizeWeightsPath(settings.weights);
+      if (active) btn.classList.add("is-active");
+      btn.innerHTML = `
+        <span class="model-card-icon material-symbols-outlined" aria-hidden="true">psychology</span>
+        <span class="model-card-body">
+          <strong>${escapeHtml(m.label)}</strong>
+          <small>${escapeHtml(m.id)} · ${m.size_mb} MB${m.recommended ? " · más reciente" : ""}</small>
+        </span>
+        <span class="model-card-check material-symbols-outlined" aria-hidden="true">${active ? "check_circle" : "radio_button_unchecked"}</span>`;
+      btn.addEventListener("click", () => {
+        settings.weights = m.path;
+        if (hidden) hidden.value = m.path;
+        if (select) select.value = m.path;
+        renderModelPicker();
+      });
+      picker.appendChild(btn);
+    });
+    if (!availableModels.length) {
+      picker.innerHTML = `<p class="model-picker-empty">No hay modelos .pt en <code>runs/detect</code>.</p>`;
+    }
   }
 }
 
@@ -251,10 +348,13 @@ function syncCalibrationInputs() {
 }
 
 function saveSettings() {
+  const weightsEl = $("#weightsPath");
+  const selectEl = $("#modelSelect");
+  const picked = (weightsEl?.value || selectEl?.value || settings.weights || "").trim();
+  settings.weights = normalizeWeightsPath(picked) || settings.weights;
+
   const isAdmin = PlanoAuth.getUser()?.role === "admin";
   if (isAdmin) {
-    const weightsEl = $("#weightsPath");
-    if (weightsEl) settings.weights = weightsEl.value.trim() || settings.weights;
     settings.autoCalibrate = $("#autoCalibrate")?.checked ?? true;
     if (!settings.autoCalibrate) {
       settings.ppm = parseFloat($("#ppmInput").value) || 100;
@@ -262,7 +362,8 @@ function saveSettings() {
     }
   }
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  showToast("Configuración guardada");
+  renderModelPicker();
+  showToast(`Modelo: ${modelShortName(settings.weights)}`);
 }
 
 function syncSettingsAdminVisibility() {
@@ -3202,10 +3303,9 @@ async function loadNormsPanel() {
 const openSettings = () => {
   setNavActive("settings");
   syncSettingsAdminVisibility();
+  renderModelPicker();
   const isAdmin = PlanoAuth.getUser()?.role === "admin";
   if (isAdmin) {
-    const weightsEl = $("#weightsPath");
-    if (weightsEl) weightsEl.value = settings.weights;
     const ppmEl = $("#ppmInput");
     if (ppmEl) ppmEl.value = settings.ppm;
     const confEl = $("#confInput");
@@ -3452,6 +3552,14 @@ $("#settingsForm").onsubmit = (e) => {
   $("#settingsModal").close();
 };
 $("#autoCalibrate")?.addEventListener("change", syncCalibrationInputs);
+$("#modelSelect")?.addEventListener("change", (e) => {
+  const path = e.target.value;
+  if (!path) return;
+  settings.weights = path;
+  const hidden = $("#weightsPath");
+  if (hidden) hidden.value = path;
+  renderModelPicker();
+});
 
 function isMobileLayout() {
   return window.matchMedia("(max-width: 767px)").matches;
