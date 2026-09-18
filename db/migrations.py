@@ -688,6 +688,41 @@ def _ensure_user_notifications_table() -> None:
         print("  Tabla user_notifications creada.")
 
 
+def _ensure_user_device_tokens_table() -> None:
+    collate = "utf8mb4_0900_ai_ci"
+    with engine.begin() as conn:
+        r = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'user_device_tokens'"
+            )
+        )
+        if r.scalar() != 0:
+            return
+
+        conn.execute(
+            text(
+                f"""
+                CREATE TABLE user_device_tokens (
+                    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    token VARCHAR(512) NOT NULL,
+                    platform VARCHAR(16) NOT NULL DEFAULT 'android',
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_user_device_tokens_token (token),
+                    INDEX ix_udt_user_id (user_id),
+                    CONSTRAINT fk_udt_user FOREIGN KEY (user_id)
+                        REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE={collate}
+                """
+            )
+        )
+        print("  Tabla user_device_tokens creada.")
+
+
 def apply_pending_migrations() -> None:
     """Aplica ALTER TABLE pendientes sin borrar datos."""
     _ensure_analysis_corrections_column()
@@ -704,3 +739,4 @@ def apply_pending_migrations() -> None:
     _ensure_usage_asks_count()
     _ensure_home_project_geo_columns()
     _ensure_user_notifications_table()
+    _ensure_user_device_tokens_table()

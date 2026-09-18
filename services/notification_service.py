@@ -92,6 +92,26 @@ def notify(
         db.add(row)
     except Exception:
         return None
+
+    # Push al móvil (best-effort; no rompe la notificación in-app).
+    try:
+        from services.fcm_service import send_push_to_user
+
+        send_push_to_user(
+            db,
+            int(user_id),
+            title=row.title,
+            body=row.body or "",
+            data={
+                "kind": row.kind,
+                "link": row.link or "",
+                "entity_type": row.entity_type or "",
+                "entity_id": row.entity_id or "",
+            },
+        )
+    except Exception:
+        pass
+
     return row
 
 

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
@@ -18,9 +19,19 @@ from api.routes.auth import (
 from api.schemas import LoginRequest, RegisterRequest, UpdateProfileRequest
 from db.database import get_db
 from db.models import User
+from services.fcm_service import (
+    fcm_configured,
+    register_device_token,
+    unregister_device_token,
+)
 from services.subscription_service import subscription_payload
 
 router = APIRouter(prefix="/api/mobile", tags=["mobile"])
+
+
+class DeviceTokenBody(BaseModel):
+    token: str = Field(..., min_length=10, max_length=512)
+    platform: Literal["android", "ios", "web"] = "android"
 
 
 @router.get("/health")
@@ -30,13 +41,15 @@ def mobile_health():
         "ok": True,
         "service": "mobile",
         "message": "API móvil lista",
-        "version": "1.1",
+        "version": "1.2",
+        "fcm_configured": fcm_configured(),
         "endpoints": [
             "/api/mobile/health",
             "/api/mobile/register",
             "/api/mobile/login",
             "/api/mobile/me",
             "/api/mobile/analyze",
+            "/api/mobile/device-token",
             "/api/mobile/home-projects",
             "/api/mobile/home-projects/catalog",
             "/api/mobile/home-projects/{id}/stages/{n}/ai-reviews",
@@ -99,6 +112,38 @@ def mobile_patch_me(
     """Actualiza el nombre del perfil."""
     result = patch_me_endpoint(body, user, db)
     return {"ok": True, "user": result.get("user")}
+
+
+@router.post("/device-token")
+def mobile_register_device_token(
+    body: DeviceTokenBody,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Registra el token FCM del dispositivo para recibir push."""
+    try:
+        row = register_device_token(
+            db, user.id, body.token, platform=body.platform
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {
+        "ok": True,
+        "id": row.id,
+        "platform": row.platform,
+        "fcm_configured": fcm_configured(),
+    }
+
+
+@router.delete("/device-token")
+def mobile_unregister_device_token(
+    body: DeviceTokenBody,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Elimina el token FCM (p. ej. al cerrar sesión)."""
+    ok = unregister_device_token(db, user.id, body.token)
+    return {"ok": ok}
 
 
 @router.post("/analyze")

@@ -84,6 +84,10 @@ class User(Base):
         cascade="all, delete-orphan",
         order_by="UserNotification.created_at.desc()",
     )
+    device_tokens: Mapped[list["UserDeviceToken"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class Plan(Base):
@@ -805,3 +809,27 @@ class UserNotification(Base):
         back_populates="notifications", foreign_keys=[user_id]
     )
     actor: Mapped[User | None] = relationship(foreign_keys=[actor_user_id])
+
+
+class UserDeviceToken(Base):
+    """Token FCM de un dispositivo (app móvil) para push."""
+
+    __tablename__ = "user_device_tokens"
+    __table_args__ = (
+        UniqueConstraint("token", name="uq_user_device_tokens_token"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    token: Mapped[str] = mapped_column(String(512), nullable=False)
+    platform: Mapped[str] = mapped_column(String(16), default="android")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="device_tokens")
