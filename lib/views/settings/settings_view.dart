@@ -7,6 +7,7 @@ import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/models/auth_models.dart';
 import 'package:movil_architect/views/billing/billing_view.dart';
 import 'package:movil_architect/views/billing/usage_limits_view.dart';
+import 'package:movil_architect/views/dashboard/widgets/dashboard_drawer.dart';
 import 'package:movil_architect/views/login/login_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
 import 'package:movil_architect/views/profile/profile_view.dart';
@@ -17,16 +18,27 @@ class SettingsView extends StatefulWidget {
     super.key,
     this.controller,
     this.onAllChatsDeleted,
+    this.onNewChat,
+    this.onChatOpen,
+    this.onChatDeleted,
+    this.onStageAdmin,
+    this.onPlans,
   });
 
   final DashboardController? controller;
   final VoidCallback? onAllChatsDeleted;
+  final VoidCallback? onNewChat;
+  final ValueChanged<String>? onChatOpen;
+  final ValueChanged<String>? onChatDeleted;
+  final VoidCallback? onStageAdmin;
+  final VoidCallback? onPlans;
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
 }
 
 class _SettingsViewState extends State<SettingsView> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late final DashboardController _dashboardController;
   late final SettingsController _settingsController;
   late final bool _ownsDashboardController;
@@ -165,11 +177,30 @@ class _SettingsViewState extends State<SettingsView> {
     final cardColor = Theme.of(context).cardColor;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      drawer: DashboardDrawer(
+        controller: _dashboardController,
+        onNewChat: widget.onNewChat ?? () {},
+        onSettings: () {},
+        onChatOpen: widget.onChatOpen ?? (_) {},
+        onChatDeleted: widget.onChatDeleted,
+        onStageAdmin: widget.onStageAdmin ?? () {},
+        onPlans: widget.onPlans ?? () {},
+      ),
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: 'Menú',
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: Icon(
+            Icons.menu_rounded,
+            size: 26,
+            color: colorScheme.onSurface,
+          ),
+        ),
         title: Text(
           'Ajustes',
           style: TextStyle(
@@ -471,6 +502,28 @@ class _EnterpriseCard extends StatelessWidget {
 
   final SubscriptionModel subscription;
 
+  static String _subscriptionStatusLabel(String status) {
+    switch (status.toLowerCase().trim()) {
+      case 'active':
+        return 'Activo';
+      case 'canceled':
+      case 'cancelled':
+        return 'Cancelado';
+      case 'past_due':
+        return 'Pago pendiente';
+      case 'trialing':
+        return 'Prueba';
+      case 'incomplete':
+        return 'Incompleto';
+      case 'unpaid':
+        return 'Sin pagar';
+      case 'paused':
+        return 'Pausado';
+      default:
+        return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final plan = subscription.plan;
@@ -528,7 +581,7 @@ class _EnterpriseCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      subscription.status,
+                      _subscriptionStatusLabel(subscription.status),
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                   ],

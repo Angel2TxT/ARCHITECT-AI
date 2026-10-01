@@ -181,6 +181,36 @@ class _BillingViewState extends State<BillingView> {
     return '${receipt.title} · $date';
   }
 
+  Future<void> _downloadReceiptsZip() async {
+    try {
+      final bytes =
+          await AppServices.instance.billingService.exportReceiptsZip();
+      final file = await AppServices.instance.billingService
+          .writeTempFile(bytes, 'comprobantes.zip');
+      await OpenFilex.open(file.path);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      AppNotifications.error(context, error.message);
+    }
+  }
+
+  Future<void> _submitRefund() async {
+    try {
+      await AppServices.instance.billingService
+          .requestRefund(_refundReason.text);
+      _refundReason.clear();
+      await _load();
+      if (!mounted) return;
+      AppNotifications.success(
+        context,
+        'Reembolso solicitado',
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      AppNotifications.error(context, error.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -265,20 +295,7 @@ class _BillingViewState extends State<BillingView> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () async {
-                          try {
-                            final bytes = await AppServices
-                                .instance.billingService
-                                .exportReceiptsZip();
-                            final file = await AppServices
-                                .instance.billingService
-                                .writeTempFile(bytes, 'comprobantes.zip');
-                            await OpenFilex.open(file.path);
-                          } on ApiException catch (error) {
-                            if (!mounted) return;
-                            AppNotifications.error(context, error.message);
-                          }
-                        },
+                        onPressed: _downloadReceiptsZip,
                         icon: const Icon(Icons.folder_zip_outlined, size: 18),
                         label: const Text('Descargar ZIP'),
                       ),
@@ -304,22 +321,7 @@ class _BillingViewState extends State<BillingView> {
                     const SizedBox(height: 10),
                     LoginPrimaryButton(
                       label: 'Solicitar reembolso',
-                      onPressed: () async {
-                        try {
-                          await AppServices.instance.billingService
-                              .requestRefund(_refundReason.text);
-                          _refundReason.clear();
-                          await _load();
-                          if (!mounted) return;
-                          AppNotifications.success(
-                            context,
-                            'Reembolso solicitado',
-                          );
-                        } on ApiException catch (error) {
-                          if (!mounted) return;
-                          AppNotifications.error(context, error.message);
-                        }
-                      },
+                      onPressed: _submitRefund,
                     ),
                   ],
                 ],

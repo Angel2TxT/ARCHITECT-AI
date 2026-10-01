@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/models/billing_models.dart';
 
 class PlanCarousel extends StatefulWidget {
@@ -21,8 +22,12 @@ class PlanCarousel extends StatefulWidget {
 }
 
 class _PlanCarouselState extends State<PlanCarousel> {
+  static const _autoPlayInterval = Duration(seconds: 4);
+
   late final PageController _pageController;
   int _index = 0;
+  Timer? _autoPlayTimer;
+  bool _userInteracting = false;
 
   List<BillingPlan> get _orderedPlans {
     final plans = widget.plans;
@@ -42,11 +47,30 @@ class _PlanCarouselState extends State<PlanCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.86, initialPage: 0);
+    _pageController = PageController(viewportFraction: 1, initialPage: 0);
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(_autoPlayInterval, (_) => _advance());
+  }
+
+  void _advance() {
+    if (!mounted || _userInteracting || widget.selectingSlug != null) return;
+    final count = _orderedPlans.length;
+    if (count <= 1 || !_pageController.hasClients) return;
+    final next = (_index + 1) % count;
+    _pageController.animateToPage(
+      next,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
+    _autoPlayTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -76,9 +100,21 @@ class _PlanCarouselState extends State<PlanCarousel> {
       children: [
         SizedBox(
           height: 460,
-          child: PageView.builder(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollStartNotification &&
+                  notification.dragDetails != null) {
+                _userInteracting = true;
+                _autoPlayTimer?.cancel();
+              } else if (notification is ScrollEndNotification &&
+                  _userInteracting) {
+                _userInteracting = false;
+                _startAutoPlay();
+              }
+              return false;
+            },
+            child: PageView.builder(
             controller: _pageController,
-            padEnds: false,
             itemCount: plans.length,
             onPageChanged: (value) => setState(() => _index = value),
             itemBuilder: (context, index) {
@@ -93,6 +129,7 @@ class _PlanCarouselState extends State<PlanCarousel> {
                 ),
               );
             },
+          ),
           ),
         ),
         if (plans.length > 1)
@@ -123,15 +160,19 @@ class PlanPricingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const ink = AppColors.ink;
-    const muted = AppColors.muted;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final cardColor = isDark
+        ? colorScheme.surfaceContainerHighest
+        : Colors.white;
+    final ink = colorScheme.onSurface;
+    final muted = colorScheme.onSurfaceVariant;
 
     return Material(
-      color: Colors.white,
+      color: cardColor,
       surfaceTintColor: Colors.transparent,
-      elevation: isDark ? 10 : 4,
-      shadowColor: Colors.black.withValues(alpha: isDark ? 0.6 : 0.18),
+      elevation: isDark ? 0 : 4,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
@@ -140,7 +181,7 @@ class PlanPricingCard extends StatelessWidget {
           children: [
             Text(
               plan.name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: _serif,
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
@@ -154,7 +195,7 @@ class PlanPricingCard extends StatelessWidget {
               children: [
                 Text(
                   plan.priceAmountLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: _serif,
                     fontSize: 48,
                     fontWeight: FontWeight.w700,
@@ -162,8 +203,8 @@ class PlanPricingCard extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 6, bottom: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 6, bottom: 8),
                   child: Text(
                     '/mes',
                     style: TextStyle(
@@ -180,7 +221,7 @@ class PlanPricingCard extends StatelessWidget {
               plan.description.isEmpty
                   ? 'Funciones básicas para probar la plataforma.'
                   : plan.description,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 height: 1.4,
                 color: muted,
@@ -196,12 +237,12 @@ class PlanPricingCard extends StatelessWidget {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.check, size: 20, color: ink),
+                      Icon(Icons.check, size: 20, color: ink),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           plan.displayFeatures[index],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             color: ink,
                             height: 1.3,
@@ -222,13 +263,13 @@ class PlanPricingCard extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: ink,
                   disabledForegroundColor: muted,
-                  side: const BorderSide(color: ink, width: 1.2),
+                  side: BorderSide(color: ink, width: 1.2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: isSelecting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(

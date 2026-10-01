@@ -176,9 +176,12 @@ class _AssistantBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
     final content = message.content;
     final verdict = content.verdict;
-    final toneColor = verdict != null ? verdictColor(verdict.tone) : AppColors.ink;
+    final toneColor =
+        verdict != null ? verdictColor(verdict.tone) : colorScheme.onSurface;
     final annotatedImage = _annotatedImage;
     final showPlanIndicator =
         content.hasImage || content.analysisId != null;
@@ -206,15 +209,17 @@ class _AssistantBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,8 +257,8 @@ class _AssistantBubble extends StatelessWidget {
           if (structuredDetail.isNotEmpty) ...[
             MarkdownText(
               data: structuredDetail,
-              style: const TextStyle(
-                color: AppColors.ink,
+              style: TextStyle(
+                color: colorScheme.onSurface,
                 height: 1.4,
                 fontSize: 13.5,
               ),
@@ -274,7 +279,7 @@ class _AssistantBubble extends StatelessWidget {
           if (bodyText.isNotEmpty)
             MarkdownText(
               data: bodyText,
-              style: const TextStyle(color: AppColors.ink, height: 1.45),
+              style: TextStyle(color: colorScheme.onSurface, height: 1.45),
             ),
           if (suggestions.isNotEmpty) ...[
             if (bodyText.isNotEmpty) const SizedBox(height: 12),
@@ -283,7 +288,7 @@ class _AssistantBubble extends StatelessWidget {
                 '**Sugerencias**',
                 for (final item in suggestions) '- $item',
               ].join('\n'),
-              style: const TextStyle(color: AppColors.ink, height: 1.45),
+              style: TextStyle(color: colorScheme.onSurface, height: 1.45),
             ),
           ],
         ],
@@ -296,21 +301,26 @@ class _PlanAnalyzedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.dashboardIconBg,
+        color: isDark
+            ? colorScheme.surfaceContainerHigh
+            : AppColors.dashboardIconBg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.architecture, size: 14, color: AppColors.ink),
-          SizedBox(width: 6),
+          Icon(Icons.architecture, size: 14, color: colorScheme.onSurface),
+          const SizedBox(width: 6),
           Text(
             'Plano analizado',
             style: TextStyle(
-              color: AppColors.ink,
+              color: colorScheme.onSurface,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -326,25 +336,28 @@ class AiReplyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.dashboardIconBg,
+            color: isDark
+                ? colorScheme.surfaceContainerHigh
+                : AppColors.dashboardIconBg,
             shape: BoxShape.circle,
           ),
           child: Padding(
-            padding: EdgeInsets.all(5),
+            padding: const EdgeInsets.all(5),
             child: Icon(
               Icons.auto_awesome,
               size: 12,
-              color: AppColors.ink,
+              color: colorScheme.onSurface,
             ),
           ),
         ),
-        SizedBox(width: 8),
-   
       ],
     );
   }

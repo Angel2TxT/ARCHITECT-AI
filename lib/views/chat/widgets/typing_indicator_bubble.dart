@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/views/chat/widgets/chat_message_bubble.dart';
 
 /// Burbuja del asistente con tres puntos animados (estado "escribiendo…").
@@ -36,28 +35,32 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isDark
+              ? null
+              : const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const AiReplyHeader(),
-            const SizedBox(height: 12),
+            const SizedBox(width: 10),
             AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
@@ -73,8 +76,8 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
                         child: Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.muted,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurfaceVariant,
                             shape: BoxShape.circle,
                           ),
                         ),

@@ -171,6 +171,27 @@ class _DashboardViewState extends State<DashboardView> {
         builder: (_) => SettingsView(
           controller: _controller,
           onAllChatsDeleted: _closeChat,
+          onNewChat: () {
+            Navigator.of(context).pop();
+            _startNewChat();
+          },
+          onChatOpen: (chatId) {
+            Navigator.of(context).pop();
+            _activateChat(chatId);
+          },
+          onChatDeleted: (chatId) {
+            if (_chatController?.chatId == chatId) {
+              _closeChat();
+            }
+          },
+          onStageAdmin: () {
+            Navigator.of(context).pop();
+            _openCasaHogar();
+          },
+          onPlans: () {
+            Navigator.of(context).pop();
+            _openPlans();
+          },
         ),
       ),
     );
