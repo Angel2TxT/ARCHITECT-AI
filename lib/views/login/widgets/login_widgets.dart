@@ -9,22 +9,22 @@ class LoginAppMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Image.asset(
-          'assets/icons/app_icon.png',
+          'assets/icons/logo.png',
           width: _logoSize,
           height: _logoSize,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.medium,
-          cacheWidth: 240,
-          cacheHeight: 240,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'ARCHITECT',
           style: TextStyle(
-            color: AppColors.ink,
+            color: colorScheme.onSurface,
             fontSize: 13,
             fontWeight: FontWeight.w800,
             letterSpacing: 4,
@@ -61,11 +61,16 @@ class LoginPillField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: AppColors.loginFieldFill,
+        color: isDark ? colorScheme.surfaceContainerHighest : AppColors.loginFieldFill,
         borderRadius: BorderRadius.circular(999),
+        border: isDark ? Border.all(color: colorScheme.outlineVariant) : null,
       ),
       alignment: Alignment.center,
       child: TextField(
@@ -76,15 +81,17 @@ class LoginPillField extends StatelessWidget {
         autocorrect: autocorrect,
         onSubmitted: onSubmitted,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: AppColors.ink,
+        style: TextStyle(
+          color: colorScheme.onSurface,
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(
-            color: AppColors.iosHint,
+          hintStyle: TextStyle(
+            color: isDark
+                ? colorScheme.onSurface.withValues(alpha: 0.45)
+                : AppColors.iosHint,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
@@ -121,15 +128,21 @@ class LoginPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bgColor = isDark ? Colors.white : Colors.black;
+    final fgColor = isDark ? Colors.black : Colors.white;
+    final disabledBg = isDark ? Colors.white38 : Colors.black54;
+
     return SizedBox(
       height: 56,
       width: double.infinity,
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.black54,
+          backgroundColor: bgColor,
+          foregroundColor: fgColor,
+          disabledBackgroundColor: disabledBg,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
@@ -141,12 +154,12 @@ class LoginPrimaryButton extends StatelessWidget {
           ),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.4,
-                  color: Colors.white,
+                  color: fgColor,
                 ),
               )
             : Text(label),
@@ -160,10 +173,13 @@ class LoginSocialDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dividerColor = isDark ? const Color(0xFF3A3A3E) : AppColors.iosDivider;
+
+    return Row(
       children: [
-        Expanded(child: Divider(color: AppColors.iosDivider, height: 1)),
-        Padding(
+        Expanded(child: Divider(color: dividerColor, height: 1)),
+        const Padding(
           padding: EdgeInsets.symmetric(horizontal: 14),
           child: Text(
             'O CONTINÚA CON',
@@ -175,7 +191,7 @@ class LoginSocialDivider extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.iosDivider, height: 1)),
+        Expanded(child: Divider(color: dividerColor, height: 1)),
       ],
     );
   }
@@ -188,16 +204,23 @@ class LoginGoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       height: 52,
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.ink,
-          backgroundColor: AppColors.loginFieldFill,
+          foregroundColor: colorScheme.onSurface,
+          backgroundColor: isDark
+              ? colorScheme.surfaceContainerHighest
+              : AppColors.loginFieldFill,
           elevation: 0,
-          side: BorderSide.none,
+          side: isDark
+              ? BorderSide(color: colorScheme.outlineVariant)
+              : BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
@@ -231,6 +254,9 @@ class LoginLegalFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final linkColor = isDark ? Colors.white : AppColors.ink;
+
     return Text.rich(
       TextSpan(
         style: const TextStyle(
@@ -246,10 +272,10 @@ class LoginLegalFooter extends StatelessWidget {
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
               onTap: () {},
-              child: const Text(
+              child: Text(
                 'Términos de Servicio',
                 style: TextStyle(
-                  color: AppColors.ink,
+                  color: linkColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.underline,
@@ -263,10 +289,10 @@ class LoginLegalFooter extends StatelessWidget {
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
               onTap: () {},
-              child: const Text(
+              child: Text(
                 'Política de Privacidad',
                 style: TextStyle(
-                  color: AppColors.ink,
+                  color: linkColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.underline,

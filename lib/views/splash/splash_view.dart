@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:movil_architect/controllers/splash_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/config/app_config.dart';
-import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/views/dashboard/dashboard_view.dart';
 import 'package:movil_architect/views/login/login_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
@@ -80,36 +79,36 @@ class _SplashViewState extends State<SplashView> {
   }
 
   Widget _splashContent() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/icons/app_icon.png',
+            'assets/icons/logo.png',
             width: 120,
             height: 120,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
-            cacheWidth: 240,
-            cacheHeight: 240,
           ),
           const SizedBox(height: 28),
-          const Text(
+          Text(
             'ARCHITECT',
             style: TextStyle(
-              color: AppColors.ink,
+              color: colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w800,
               letterSpacing: 4,
             ),
           ),
           const SizedBox(height: 32),
-          const SizedBox(
+          SizedBox(
             width: 28,
             height: 28,
             child: CircularProgressIndicator(
               strokeWidth: 2.4,
-              color: AppColors.ink,
+              color: colorScheme.onSurface,
             ),
           ),
         ],
@@ -182,7 +181,7 @@ class _SplashViewState extends State<SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {

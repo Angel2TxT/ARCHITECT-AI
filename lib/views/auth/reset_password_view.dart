@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
-import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
 
 class ResetPasswordView extends StatefulWidget {
@@ -82,14 +81,17 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Restablecer contraseña'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.ink,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(

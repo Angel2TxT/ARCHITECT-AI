@@ -63,8 +63,11 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
@@ -77,11 +80,11 @@ class _LoginViewState extends State<LoginView> {
                 children: [
                   const Center(child: LoginAppMark()),
                   const SizedBox(height: 40),
-                  const Text(
+                  Text(
                     'Iniciar sesión',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.ink,
+                      color: colorScheme.onSurface,
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -160,6 +163,9 @@ class _LoginViewState extends State<LoginView> {
                           ),
                         );
                       },
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.onSurface,
+                      ),
                       child: const Text('Crear cuenta'),
                     ),
                   ),
@@ -178,6 +184,9 @@ class _LoginViewState extends State<LoginView> {
                         ),
                       );
                     },
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.onSurface,
+                    ),
                     child: const Text('Continuar sin cuenta'),
                   ),
                   const SizedBox(height: 16),
