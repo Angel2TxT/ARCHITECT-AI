@@ -14,13 +14,16 @@ class ChatSummary {
   final int messageCount;
 
   factory ChatSummary.fromJson(Map<String, dynamic> json) {
+    final count = json['message_count'] as int? ??
+        json['messages_count'] as int? ??
+        (json['messages'] is List ? (json['messages'] as List).length : 0);
     return ChatSummary(
       id: (json['id'] ?? '').toString(),
       title: json['title'] as String? ?? 'Conversación',
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)
           : null,
-      messageCount: json['message_count'] as int? ?? 0,
+      messageCount: count,
     );
   }
 

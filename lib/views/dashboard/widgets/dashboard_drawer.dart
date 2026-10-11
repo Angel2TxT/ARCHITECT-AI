@@ -68,7 +68,10 @@ class _DashboardDrawerState extends State<DashboardDrawer> {
 
   List<ChatSummary> get _filteredChats {
     final query = _searchController.text.trim().toLowerCase();
-    final items = widget.controller.chats;
+    final items = widget.controller.chats.where((item) {
+      if (item.title == 'Nuevo chat' && item.messageCount == 0) return false;
+      return true;
+    }).toList();
     if (query.isEmpty) return items;
     return items
         .where((item) => item.title.toLowerCase().contains(query))

@@ -5,6 +5,7 @@ abstract final class AppNotifications {
 
   static const successColor = Color(0xFF1B8A5A);
   static const errorColor = Color(0xFFD64545);
+  static const infoColor = Color(0xFF2563EB);
 
   static void success(BuildContext context, String message) {
     _show(context, message, successColor);
@@ -12,6 +13,10 @@ abstract final class AppNotifications {
 
   static void error(BuildContext context, String message) {
     _show(context, message, errorColor);
+  }
+
+  static void info(BuildContext context, String message) {
+    _show(context, message, infoColor);
   }
 
   static void result(

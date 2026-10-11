@@ -44,23 +44,29 @@ class SettingsController extends ChangeNotifier {
   }
 
   Future<void> load() async {
+    if (_disposed) return;
     final url = await _settingsStorage.getServerUrl();
+    if (_disposed) return;
     urlController.text = url;
     _notify();
   }
 
   Future<void> setDarkMode(bool enabled) async {
+    if (_disposed) return;
     await _themeService.setDarkMode(enabled);
     _notify();
   }
+
   Future<bool> save() async {
-    final normalized =
-        AppConfig.resolveForPlatform(urlController.text);
-    if (normalized.isEmpty) {
+    if (_disposed) return false;
+    final raw = urlController.text.trim();
+    if (raw.isEmpty) {
       _errorMessage = 'Ingresa una URL válida.';
       _notify();
       return false;
     }
+
+    final normalized = AppConfig.resolveForPlatform(raw);
 
     _isLoading = true;
     _errorMessage = null;
@@ -69,7 +75,9 @@ class SettingsController extends ChangeNotifier {
 
     try {
       await _apiClient.setBaseUrl(normalized);
-      urlController.text = normalized;
+      if (!_disposed) {
+        urlController.text = normalized;
+      }
       final health = await _mobileApiService.health();
       if (!health.ok) {
         _errorMessage = 'La URL respondió pero el servicio no está listo.';
@@ -90,14 +98,21 @@ class SettingsController extends ChangeNotifier {
   }
 
   Future<void> testConnection() async {
+    if (_disposed) return;
+    final raw = urlController.text.trim();
+    if (raw.isEmpty) {
+      _errorMessage = 'Ingresa una URL válida.';
+      _notify();
+      return;
+    }
+
     _isTesting = true;
     _errorMessage = null;
     _successMessage = null;
     _notify();
 
     try {
-      final resolved =
-          AppConfig.resolveForPlatform(urlController.text);
+      final resolved = AppConfig.resolveForPlatform(raw);
       _apiClient.applyBaseUrl(resolved);
       final health = await _mobileApiService.health();
       _successMessage = health.ok

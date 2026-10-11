@@ -247,6 +247,7 @@ class _DashboardAskBarState extends State<DashboardAskBar> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChanged);
     _dictation = SpeechDictationController(
       onListeningChanged: (_) {
         if (mounted) setState(() {});
@@ -258,8 +259,13 @@ class _DashboardAskBarState extends State<DashboardAskBar> {
     );
   }
 
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
     _dictation.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -290,6 +296,10 @@ class _DashboardAskBarState extends State<DashboardAskBar> {
     final barColor = isDark
         ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.95)
         : const Color(0xF0FFFFFF);
+    final isFocused = _focusNode.hasFocus;
+    final borderColor = isFocused
+        ? (isDark ? Colors.white : Colors.black)
+        : (isDark ? const Color(0xFF4A4A50) : const Color(0xFFCBD5E1));
 
     return Container(
       height: 56,
@@ -298,11 +308,15 @@ class _DashboardAskBarState extends State<DashboardAskBar> {
       decoration: BoxDecoration(
         color: barColor,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: borderColor,
+          width: isFocused ? 1.8 : 1.4,
+        ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: isDark ? 0.25 : 0.09),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.25 : 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),

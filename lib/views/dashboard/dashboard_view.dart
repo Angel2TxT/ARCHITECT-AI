@@ -94,6 +94,20 @@ class _DashboardViewState extends State<DashboardView> {
       return;
     }
 
+    if (_chatController?.messages.isEmpty == true &&
+        _chatController?.state == ChatState.success) {
+      final emptyId = chatId;
+      _closeChat();
+      _controller.deleteChat(emptyId).catchError((_) {});
+      if (mounted) {
+        AppNotifications.info(
+          context,
+          'La conversación estaba vacía y se descartó.',
+        );
+      }
+      return;
+    }
+
     _scrollToBottom();
   }
 
@@ -104,19 +118,15 @@ class _DashboardViewState extends State<DashboardView> {
     setState(() {});
   }
 
-  Future<void> _newChat() async {
+  void _newChat() {
     _closeChat();
     _controller.askController.clear();
-    final chatId = await _controller.createNewChat();
-    if (chatId != null && mounted) {
-      await _activateChat(chatId);
-    }
+    _controller.clearPendingPlano();
+    if (mounted) setState(() {});
   }
 
-  Future<void> _startNewChat() async {
-    await _newChat();
-    if (!mounted) return;
-    await _openAttachmentPicker();
+  void _startNewChat() {
+    _newChat();
   }
 
   void _openCasaHogar() {

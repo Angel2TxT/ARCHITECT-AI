@@ -342,6 +342,10 @@ class DashboardAskBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xF0FFFFFF),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFFCBD5E1),
+          width: 1.4,
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x18000000),

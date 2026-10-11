@@ -287,7 +287,17 @@ class DashboardController extends ChangeNotifier {
         subscription: me.subscription,
       );
 
-      _chats = await _mobileApiService.listChats();
+      final rawChats = await _mobileApiService.listChats();
+      final validChats = <ChatSummary>[];
+      for (final chat in rawChats) {
+        if (chat.title == 'Nuevo chat' && chat.messageCount == 0) {
+          // Chat huérfano sin mensajes creado previamente: limpiar del servidor
+          _mobileApiService.deleteChat(chat.id).catchError((_) {});
+        } else {
+          validChats.add(chat);
+        }
+      }
+      _chats = validChats;
       await _loadPinnedChats();
       _sortChats();
       _analyses = await _mobileApiService.listAnalyses();

@@ -103,6 +103,8 @@ class SubscriptionModel {
   final String status;
   final UsageModel usage;
 
+  bool get isPro => isUnlimited || plan.slug.toLowerCase().contains('pro');
+
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) {
     return SubscriptionModel(
       plan: PlanModel.fromJson(json['plan'] as Map<String, dynamic>? ?? {}),
