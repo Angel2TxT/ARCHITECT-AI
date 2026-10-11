@@ -120,7 +120,8 @@ class _GuestViewState extends State<GuestView> {
                 _GuestTopBar(
                   analysesRemaining: _controller.analysesRemaining,
                   asksRemaining: _controller.asksRemaining,
-                  onBack: () => Navigator.of(context).maybePop(),
+                  onClose: () => Navigator.of(context).maybePop(),
+                  onRegister: _openRegister,
                 ),
                 Expanded(child: _buildMainContent()),
                 _buildComposer(),
@@ -180,6 +181,7 @@ class _GuestViewState extends State<GuestView> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: _openRegister,
                   child: const Text('Crear cuenta para continuar'),
@@ -202,10 +204,7 @@ class _GuestViewState extends State<GuestView> {
                     ? 'Dime tu pregunta'
                     : 'Adjunta un plano para analizarlo',
           ),
-          TextButton(
-            onPressed: _openRegister,
-            child: const Text('Crear cuenta para continuar'),
-          ),
+          const SizedBox(height: 12),
         ],
       ],
     );
@@ -216,47 +215,107 @@ class _GuestTopBar extends StatelessWidget {
   const _GuestTopBar({
     required this.analysesRemaining,
     required this.asksRemaining,
-    required this.onBack,
+    required this.onClose,
+    required this.onRegister,
   });
 
   final int analysesRemaining;
   final int asksRemaining;
-  final VoidCallback onBack;
+  final VoidCallback onClose;
+  final VoidCallback onRegister;
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: onBack,
-            tooltip: 'Volver',
-            icon: Icon(Icons.arrow_back_rounded, size: 24, color: iconColor),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF2A2A2E) : const Color(0xFFE9E9ED),
+            width: 1,
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+            child: Row(
               children: [
-                Text(
-                  'Prueba sin cuenta',
-                  style: TextStyle(
-                    color: iconColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
+                IconButton(
+                  onPressed: onClose,
+                  tooltip: 'Cerrar',
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 24,
+                    color: colorScheme.onSurface,
                   ),
                 ),
-                Text(
-                  'Análisis restantes: $analysesRemaining  ·  '
-                  'Preguntas restantes: $asksRemaining',
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Prueba sin cuenta',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Análisis restantes: $analysesRemaining  ·  '
+                        'Preguntas restantes: $asksRemaining',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: 48),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
+            child: SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: FilledButton(
+                onPressed: onRegister,
+                style: FilledButton.styleFrom(
+                  backgroundColor: isDark ? Colors.white : Colors.black,
+                  foregroundColor: isDark ? Colors.black : Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_add_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Crear cuenta para continuar',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

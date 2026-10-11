@@ -31,6 +31,7 @@ class AppServices {
   late final PushNotificationService pushNotificationService;
 
   bool _initialized = false;
+  bool get isInitialized => _initialized;
 
   Future<void> init() async {
     if (_initialized) return;
