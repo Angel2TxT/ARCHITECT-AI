@@ -46,3 +46,7 @@ app.*.map.json
 
 # Antigravity IDE
 .antigravity/
+
+# Web / Node artifacts
+node_modules/
+.flutter_web.*

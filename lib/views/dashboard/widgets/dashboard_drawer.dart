@@ -704,52 +704,38 @@ class _DrawerUserFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-    final isDark = colorScheme.brightness == Brightness.dark;
-    final cardColor = isDark
-        ? colorScheme.surfaceContainerHighest
-        : Colors.white;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
-      child: Material(
-        color: cardColor,
-        elevation: isDark ? 0 : 1,
-        shadowColor: Colors.black.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(24),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          child: Row(
-            children: [
-              _NewChatButton(onTap: onNewChat),
-              const Spacer(),
-              Material(
-                color: const Color(0xFFF4CFCF),
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onSettings,
-                  customBorder: const CircleBorder(),
-                  child: SizedBox(
-                    width: 52,
-                    height: 52,
-                    child: Center(
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20,
-                        ),
-                      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        children: [
+          _NewChatButton(onTap: onNewChat),
+          const Spacer(),
+          Material(
+            color: const Color(0xFFF4CFCF),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onSettings,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
