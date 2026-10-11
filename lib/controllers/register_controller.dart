@@ -19,20 +19,25 @@ class RegisterController extends ChangeNotifier {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _disposed = false;
 
   bool get obscurePassword => _obscurePassword;
   bool get obscureConfirmPassword => _obscureConfirmPassword;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
   void toggleObscurePassword() {
     _obscurePassword = !_obscurePassword;
-    notifyListeners();
+    _notify();
   }
 
   void toggleObscureConfirmPassword() {
     _obscureConfirmPassword = !_obscureConfirmPassword;
-    notifyListeners();
+    _notify();
   }
 
   bool _isValidEmail(String email) {
@@ -66,13 +71,13 @@ class RegisterController extends ChangeNotifier {
     final validationError = _validateForm();
     if (validationError != null) {
       _errorMessage = validationError;
-      notifyListeners();
+      _notify();
       return false;
     }
 
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       final fullName = fullNameController.text.trim();
@@ -81,7 +86,7 @@ class RegisterController extends ChangeNotifier {
         password: passwordController.text,
         fullName: fullName.isEmpty ? null : fullName,
       );
-      return true;
+      return !_disposed;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return false;
@@ -90,18 +95,19 @@ class RegisterController extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _notify();
     }
   }
 
   void clearError() {
     if (_errorMessage == null) return;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     fullNameController.dispose();
     emailController.dispose();
     passwordController.dispose();

@@ -31,6 +31,7 @@ class SettingsController extends ChangeNotifier {
   bool _isTesting = false;
   String? _errorMessage;
   String? _successMessage;
+  bool _disposed = false;
 
   bool get isLoading => _isLoading;
   bool get isTesting => _isTesting;
@@ -38,29 +39,33 @@ class SettingsController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
 
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     final url = await _settingsStorage.getServerUrl();
     urlController.text = url;
-    notifyListeners();
+    _notify();
   }
 
   Future<void> setDarkMode(bool enabled) async {
     await _themeService.setDarkMode(enabled);
-    notifyListeners();
+    _notify();
   }
   Future<bool> save() async {
     final normalized =
         AppConfig.resolveForPlatform(urlController.text);
     if (normalized.isEmpty) {
       _errorMessage = 'Ingresa una URL válida.';
-      notifyListeners();
+      _notify();
       return false;
     }
 
     _isLoading = true;
     _errorMessage = null;
     _successMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       await _apiClient.setBaseUrl(normalized);
@@ -71,7 +76,7 @@ class SettingsController extends ChangeNotifier {
         return false;
       }
       _successMessage = 'Servidor configurado correctamente.';
-      return true;
+      return !_disposed;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return false;
@@ -80,7 +85,7 @@ class SettingsController extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _notify();
     }
   }
 
@@ -88,7 +93,7 @@ class SettingsController extends ChangeNotifier {
     _isTesting = true;
     _errorMessage = null;
     _successMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       final resolved =
@@ -110,12 +115,13 @@ class SettingsController extends ChangeNotifier {
     } finally {
       await _apiClient.refreshBaseUrl();
       _isTesting = false;
-      notifyListeners();
+      _notify();
     }
   }
 
   @override
   void dispose() {
+    _disposed = true;
     urlController.dispose();
     super.dispose();
   }

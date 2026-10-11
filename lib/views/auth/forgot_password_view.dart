@@ -32,8 +32,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     });
     try {
       await AppServices.instance.authService.forgotPassword(_email.text);
+      if (!mounted) return;
       setState(() => _message = 'Si el correo existe, te enviamos un enlace.');
     } on ApiException catch (error) {
+      if (!mounted) return;
       setState(() => _error = error.message);
     } finally {
       if (mounted) setState(() => _loading = false);

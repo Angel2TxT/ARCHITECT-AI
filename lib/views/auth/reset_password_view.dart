@@ -42,12 +42,19 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
       _error = null;
     });
     try {
-      _valid = await AppServices.instance.authService
+      final valid = await AppServices.instance.authService
           .validateResetToken(_token.text.trim());
-      if (!_valid) _error = 'El enlace no es válido o ya expiró.';
+      if (!mounted) return;
+      setState(() {
+        _valid = valid;
+        if (!_valid) _error = 'El enlace no es válido o ya expiró.';
+      });
     } on ApiException catch (error) {
-      _valid = false;
-      _error = error.message;
+      if (!mounted) return;
+      setState(() {
+        _valid = false;
+        _error = error.message;
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -60,7 +67,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     }
     if (!_valid) {
       await _validate();
-      if (!_valid) return;
+      if (!_valid || !mounted) return;
     }
     setState(() {
       _loading = true;
@@ -71,8 +78,10 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
         token: _token.text,
         password: _password.text,
       );
+      if (!mounted) return;
       setState(() => _message = 'Contraseña actualizada. Ya puedes iniciar sesión.');
     } on ApiException catch (error) {
+      if (!mounted) return;
       setState(() => _error = error.message);
     } finally {
       if (mounted) setState(() => _loading = false);

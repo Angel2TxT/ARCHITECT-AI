@@ -21,11 +21,16 @@ class LoginController extends ChangeNotifier {
   bool _isLoading = false;
   bool _googleEnabled = false;
   String? _errorMessage;
+  bool _disposed = false;
 
   bool get obscurePassword => _obscurePassword;
   bool get isLoading => _isLoading;
   bool get googleEnabled => _googleEnabled;
   String? get errorMessage => _errorMessage;
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
 
   Future<void> loadGoogleAvailability() async {
     try {
@@ -34,12 +39,12 @@ class LoginController extends ChangeNotifier {
     } catch (_) {
       _googleEnabled = false;
     }
-    notifyListeners();
+    _notify();
   }
 
   void toggleObscurePassword() {
     _obscurePassword = !_obscurePassword;
-    notifyListeners();
+    _notify();
   }
 
   UserCredentials get credentials => UserCredentials(
@@ -52,13 +57,13 @@ class LoginController extends ChangeNotifier {
 
     if (!user.isValid) {
       _errorMessage = 'Ingresa correo y contraseña.';
-      notifyListeners();
+      _notify();
       return false;
     }
 
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       await AppServices.instance.apiClient.refreshBaseUrl();
@@ -66,7 +71,7 @@ class LoginController extends ChangeNotifier {
         email: user.email,
         password: user.password,
       );
-      return true;
+      return !_disposed;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return false;
@@ -75,14 +80,14 @@ class LoginController extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _notify();
     }
   }
 
   Future<bool> completeGoogle(String accessToken) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
     try {
       await _authService.completeOAuth(accessToken);
       final me = await AppServices.instance.mobileApiService.me();
@@ -90,7 +95,7 @@ class LoginController extends ChangeNotifier {
         user: me.user,
         subscription: me.subscription,
       );
-      return true;
+      return !_disposed;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return false;
@@ -99,18 +104,19 @@ class LoginController extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _notify();
     }
   }
 
   void clearError() {
     if (_errorMessage == null) return;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     emailController.dispose();
     passwordController.dispose();
     super.dispose();

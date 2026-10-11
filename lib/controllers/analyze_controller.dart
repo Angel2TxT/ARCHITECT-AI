@@ -23,6 +23,7 @@ class AnalyzeController extends ChangeNotifier {
   String? _selectedFileName;
   AnalysisResult? _result;
   PlanoPreview? _preview;
+  bool _disposed = false;
 
   AnalyzeState get state => _state;
   String? get errorMessage => _errorMessage;
@@ -31,11 +32,15 @@ class AnalyzeController extends ChangeNotifier {
   AnalysisResult? get result => _result;
   PlanoPreview? get preview => _preview;
 
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
   void setFile(File file, String name) {
     _selectedFile = file;
     _selectedFileName = name;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
     _loadPreview(file);
   }
 
@@ -43,26 +48,28 @@ class AnalyzeController extends ChangeNotifier {
     _selectedFile = null;
     _selectedFileName = null;
     _preview = null;
-    notifyListeners();
+    _notify();
   }
 
   Future<void> _loadPreview(File file) async {
     try {
-      _preview = await _mobileApiService.previewPlano(file);
-      notifyListeners();
+      final preview = await _mobileApiService.previewPlano(file);
+      if (_disposed) return;
+      _preview = preview;
+      _notify();
     } catch (_) {}
   }
 
   Future<bool> analyze() async {
     if (_selectedFile == null) {
       _errorMessage = 'Selecciona un plano para analizar.';
-      notifyListeners();
+      _notify();
       return false;
     }
 
     _state = AnalyzeState.uploading;
     _errorMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       _result = await _mobileApiService.analyze(
@@ -70,7 +77,7 @@ class AnalyzeController extends ChangeNotifier {
         message: messageController.text,
       );
       _state = AnalyzeState.success;
-      return true;
+      return !_disposed;
     } on ApiException catch (error) {
       _state = AnalyzeState.error;
       _errorMessage = error.message;
@@ -84,7 +91,7 @@ class AnalyzeController extends ChangeNotifier {
       }());
       return false;
     } finally {
-      notifyListeners();
+      _notify();
     }
   }
 
@@ -92,11 +99,12 @@ class AnalyzeController extends ChangeNotifier {
     _state = AnalyzeState.idle;
     _errorMessage = null;
     _result = null;
-    notifyListeners();
+    _notify();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     messageController.dispose();
     super.dispose();
   }
