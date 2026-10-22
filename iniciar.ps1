@@ -11,6 +11,18 @@ foreach ($c in $conns) {
 if (-not (Test-Path .\.venv\Scripts\python.exe)) {
     Write-Host "Creando entorno virtual .venv..." -ForegroundColor Cyan
     python -m venv .venv
+    Write-Host "Instalando dependencias desde requirements.txt..." -ForegroundColor Cyan
+    & .\.venv\Scripts\pip.exe install -r requirements.txt
+}
+
+if (-not (Test-Path .env)) {
+    Write-Host "Creando archivo .env a partir de .env.example..." -ForegroundColor Yellow
+    Copy-Item .env.example .env
+}
+
+if (-not (Test-Path backend\.env)) {
+    Write-Host "Creando archivo backend\.env a partir de .env.example..." -ForegroundColor Yellow
+    Copy-Item .env.example backend\.env
 }
 
 Write-Host "Iniciando servidor ARCHITECT en http://localhost:$port ..." -ForegroundColor Green
