@@ -60,6 +60,7 @@ class _SplashViewState extends State<SplashView>
   late final Animation<double> _indicatorOpacity;
 
   bool _navigating = false;
+  bool _waitingToNavigate = false;
   bool _savingUrl = false;
   bool _bootstrapFinished = false;
 
@@ -78,7 +79,7 @@ class _SplashViewState extends State<SplashView>
   void _initAnimation() {
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3500),
+      duration: const Duration(milliseconds: 5000),
     );
 
     // Fase 1: Líneas técnicas CAD (0.0s - 0.4s)
@@ -214,8 +215,8 @@ class _SplashViewState extends State<SplashView>
     _checkAndNavigate();
   }
 
-  void _checkAndNavigate() {
-    if (!mounted || _navigating) return;
+  Future<void> _checkAndNavigate() async {
+    if (!mounted || _navigating || _waitingToNavigate) return;
 
     if (_controller.status == SplashStatus.serverError) {
       if (_animController.isCompleted) {
@@ -228,6 +229,11 @@ class _SplashViewState extends State<SplashView>
 
     // Navegar únicamente cuando tanto la animación como la inicialización del backend hayan concluido
     if (_animController.isCompleted && _bootstrapFinished) {
+      _waitingToNavigate = true;
+      // Breve pausa para apreciar el logotipo y la marca totalmente terminados
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || _navigating) return;
+
       final status = _controller.status;
       if (status == SplashStatus.readyDashboard) {
         _goTo(const DashboardView());

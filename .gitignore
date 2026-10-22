@@ -49,4 +49,4 @@ app.*.map.json
 
 # Web / Node artifacts
 node_modules/
-.flutter_web.*
+.flutter_web.*
