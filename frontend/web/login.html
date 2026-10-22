@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARCHITECT</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ARCHITECT" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
+  <link href="/static/fonts/inter.css" rel="stylesheet" />
+  <link href="/static/fonts/material-symbols.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=168" />
+  <script src="/static/pwa.js?v=1" defer></script>
+  <style id="loader-critical">
+    body.app-loading { overflow: hidden; }
+    #appLoader.app-loader--visible {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    html.dark #appLoader.app-loader--visible { background: #000; }
+    #appLoader .app-loader-spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: plano-loader-spin 0.7s linear infinite;
+    }
+    html.dark #appLoader .app-loader-spinner {
+      border-color: rgba(255, 255, 255, 0.15);
+      border-top-color: #fff;
+    }
+    @keyframes plano-loader-spin { to { transform: rotate(360deg); } }
+  </style>
+  <script>
+    (function () {
+      var KEY = "plano_ia_theme";
+      var saved = localStorage.getItem(KEY);
+      if (saved !== "light" && saved !== "dark") {
+        saved = "dark";
+        localStorage.setItem(KEY, saved);
+      }
+      var dark = saved === "dark";
+      var root = document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(dark ? "dark" : "light");
+      root.setAttribute("data-theme", dark ? "dark" : "light");
+      root.style.colorScheme = dark ? "dark" : "light";
+    })();
+  </script>
+</head>
+<body class="auth-page app-loading">
+  <div id="appLoader" class="app-loader app-loader--visible" role="status" aria-live="polite" aria-busy="true">
+    <div class="app-loader-inner">
+      <img src="/static/brand/architect-icon.png?v=3" alt="" class="app-loader-brand-img" width="52" height="52" />
+      <div class="app-loader-spinner" aria-hidden="true"></div>
+      <p class="app-loader-text" id="appLoaderText">Cargando...</p>
+    </div>
+  </div>
+  <script src="/static/loader-bootstrap.js?v=1"></script>
+
+  <div class="auth-bg" aria-hidden="true">
+    <div class="auth-bg-pattern"></div>
+  </div>
+
+  <header class="auth-topbar">
+    <div class="auth-topbar-inner">
+      <a href="/" class="auth-topbar-brand">
+        <img src="/static/brand/architect-icon.png?v=3" alt="" class="brand-mark-img" width="32" height="32" />
+        <span class="auth-topbar-brand-text">ARCHITECT</span>
+      </a>
+      <nav class="auth-topbar-nav" aria-label="Volver al sitio">
+        <a href="/" class="auth-topbar-link">Inicio</a>
+        <a href="/#pricing" class="auth-topbar-link auth-topbar-link--hide-mobile">Planes</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="auth-layout auth-layout--login-only">
+    <div class="auth-form-column">
+      <main class="auth-shell">
+        <div class="auth-card glass-panel" id="authCard">
+          <div class="auth-card-brand">
+            <img src="/static/brand/architect-logo.png?v=3" alt="ARCHITECT" class="brand-logo-img" />
+          </div>
+          <header class="auth-header">
+            <p class="auth-kicker">Studio</p>
+            <h2 class="auth-title" id="authViewTitle">Accede a tu cuenta</h2>
+            <p class="auth-subtitle" id="authViewSubtitle">Revisa planos con IA y normativa de referencia</p>
+          </header>
+
+          <div id="authMainViews">
+            <div class="auth-tabs" role="tablist" id="authTabs">
+              <span class="auth-tab-indicator" id="authTabIndicator" aria-hidden="true"></span>
+              <button type="button" class="auth-tab active" data-tab="login" role="tab" aria-selected="true">
+                Iniciar sesión
+              </button>
+              <button type="button" class="auth-tab" data-tab="register" role="tab" aria-selected="false">
+                Registrarse
+              </button>
+            </div>
+
+            <div class="auth-panels" id="authPanels" data-tab="login">
+              <form id="loginForm" class="auth-panel auth-panel--active" autocomplete="on">
+                <div class="auth-field">
+                  <label for="loginEmail">Correo electrónico</label>
+                  <input
+                    type="email"
+                    id="loginEmail"
+                    class="auth-input"
+                    required
+                    autocomplete="email"
+                    placeholder="tu@correo.com"
+                  />
+                </div>
+                <div class="auth-field">
+                  <div class="auth-field-head">
+                    <label for="loginPassword">Contraseña</label>
+                    <button type="button" class="auth-link-btn" id="btnForgotPassword">¿Olvidaste tu contraseña?</button>
+                  </div>
+                  <div class="auth-input-wrap">
+                    <input
+                      type="password"
+                      id="loginPassword"
+                      class="auth-input"
+                      required
+                      autocomplete="current-password"
+                      placeholder="••••••••"
+                    />
+                    <button type="button" class="auth-toggle-pw" data-target="loginPassword" aria-label="Mostrar contraseña">
+                      <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                  </div>
+                </div>
+                <p id="loginError" class="auth-error hidden" role="alert"></p>
+                <button type="submit" class="auth-submit btn-primary">
+                  Entrar
+                  <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+                <div id="googleLoginWrap" class="auth-google-wrap hidden">
+                  <p class="auth-divider">o</p>
+                  <button type="button" class="auth-google-btn" id="btnGoogleLogin">
+                    <span class="auth-google-icon" aria-hidden="true">G</span>
+                    Continuar con Google
+                  </button>
+                </div>
+              </form>
+
+              <form id="registerForm" class="auth-panel" autocomplete="on" hidden>
+                <div class="auth-field">
+                  <label for="regName">Nombre (opcional)</label>
+                  <input type="text" id="regName" class="auth-input" autocomplete="name" placeholder="Tu nombre" />
+                </div>
+                <div class="auth-field">
+                  <label for="regEmail">Correo electrónico</label>
+                  <input type="email" id="regEmail" class="auth-input" required autocomplete="email" placeholder="tu@correo.com" />
+                </div>
+                <div class="auth-field">
+                  <label for="regPassword">Contraseña</label>
+                  <div class="auth-input-wrap">
+                    <input
+                      type="password"
+                      id="regPassword"
+                      class="auth-input"
+                      required
+                      minlength="8"
+                      autocomplete="new-password"
+                      placeholder="Mínimo 8 caracteres"
+                    />
+                    <button type="button" class="auth-toggle-pw" data-target="regPassword" aria-label="Mostrar contraseña">
+                      <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                  </div>
+                </div>
+                <p id="regError" class="auth-error hidden" role="alert"></p>
+                <button type="submit" class="auth-submit btn-primary">
+                  Crear cuenta
+                  <span class="material-symbols-outlined">person_add</span>
+                </button>
+                <div id="googleRegisterWrap" class="auth-google-wrap hidden">
+                  <p class="auth-divider">o</p>
+                  <button type="button" class="auth-google-btn" id="btnGoogleRegister">
+                    <span class="auth-google-icon" aria-hidden="true">G</span>
+                    Registrarse con Google
+                  </button>
+                </div>
+                <p class="auth-footnote">
+                  Plan Gratis: 5 análisis al mes con modelo demo.
+                  Al registrarte aceptas los
+                  <a href="/terminos" target="_blank" rel="noopener">términos y condiciones</a>
+                  y la
+                  <a href="/privacidad" target="_blank" rel="noopener">política de privacidad</a>.
+                </p>
+              </form>
+            </div>
+          </div>
+
+          <div id="authForgotView" class="auth-alt-view hidden">
+            <form id="forgotForm" class="auth-panel auth-panel--active" autocomplete="on">
+              <p class="auth-alt-intro">
+                Escribe tu correo y te enviaremos un enlace para restablecer la contraseña (válido 1 hora).
+              </p>
+              <div class="auth-field">
+                <label for="forgotEmail">Correo electrónico</label>
+                <input type="email" id="forgotEmail" class="auth-input" required autocomplete="email" placeholder="tu@correo.com" />
+              </div>
+              <p id="forgotError" class="auth-error hidden" role="alert"></p>
+              <p id="forgotSuccess" class="auth-success hidden" role="status"></p>
+              <button type="submit" class="auth-submit btn-primary">
+                Enviar enlace
+                <span class="material-symbols-outlined">mail</span>
+              </button>
+              <button type="button" class="auth-back-inline" id="btnBackFromForgot">
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                Volver a iniciar sesión
+              </button>
+            </form>
+          </div>
+
+          <div id="authResetView" class="auth-alt-view hidden">
+            <form id="resetForm" class="auth-panel auth-panel--active" autocomplete="on">
+              <p class="auth-alt-intro" id="resetIntro">Elige una nueva contraseña para tu cuenta.</p>
+              <div class="auth-field">
+                <label for="resetPassword">Nueva contraseña</label>
+                <div class="auth-input-wrap">
+                  <input
+                    type="password"
+                    id="resetPassword"
+                    class="auth-input"
+                    required
+                    minlength="8"
+                    autocomplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                  <button type="button" class="auth-toggle-pw" data-target="resetPassword" aria-label="Mostrar contraseña">
+                    <span class="material-symbols-outlined">visibility</span>
+                  </button>
+                </div>
+              </div>
+              <div class="auth-field">
+                <label for="resetPassword2">Confirmar contraseña</label>
+                <div class="auth-input-wrap">
+                  <input
+                    type="password"
+                    id="resetPassword2"
+                    class="auth-input"
+                    required
+                    minlength="8"
+                    autocomplete="new-password"
+                    placeholder="Repite la contraseña"
+                  />
+                  <button type="button" class="auth-toggle-pw" data-target="resetPassword2" aria-label="Mostrar contraseña">
+                    <span class="material-symbols-outlined">visibility</span>
+                  </button>
+                </div>
+              </div>
+              <p id="resetError" class="auth-error hidden" role="alert"></p>
+              <p id="resetSuccess" class="auth-success hidden" role="status"></p>
+              <button type="submit" class="auth-submit btn-primary" id="resetSubmitBtn">
+                Guardar contraseña
+                <span class="material-symbols-outlined">lock_reset</span>
+              </button>
+              <button type="button" class="auth-back-inline" id="btnBackFromReset">
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                Ir a iniciar sesión
+              </button>
+            </form>
+          </div>
+
+          <div id="dbStatus" class="auth-db-warn hidden" role="status"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <footer class="auth-site-footer">
+    <div class="auth-site-footer-inner">
+      <div class="auth-site-footer-brand">
+        <img src="/static/brand/architect-logo.png?v=3" alt="ARCHITECT" class="brand-logo-img brand-logo-img--footer" />
+        <p class="auth-site-footer-desc">
+          Revisión asistida de planos arquitectónicos en planta, chat de construcción y gestión de proyectos de vivienda.
+        </p>
+        <p class="auth-site-footer-copy">© 2026 ARCHITECT. Todos los derechos reservados.</p>
+      </div>
+      <div class="auth-site-footer-links">
+        <div>
+          <h4>Plataforma</h4>
+          <a href="/legacy-app">Workspace</a>
+          <a href="/casa-hogar">Casa hogar</a>
+          <a href="/docs" target="_blank" rel="noopener">API (FastAPI)</a>
+        </div>
+        <div>
+          <h4>Acceso</h4>
+          <a href="/login">Ingresar</a>
+          <a href="/login#register">Crear cuenta</a>
+          <a href="/">Landing</a>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="/terminos">Términos y condiciones</a>
+          <a href="/privacidad">Política de privacidad</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/billing.js?v=1"></script>
+  <script src="/static/auth.js?v=30"></script>
+</body>
+</html>

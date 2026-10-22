@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="ARCHITECT — Revisión profesional de planos arquitectónicos" />
+  <title>ARCHITECT</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ARCHITECT" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
+  <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
+  <script src="/static/vendor/tailwind.js"></script>
+  <link href="/static/fonts/inter.css" rel="stylesheet" />
+  <link href="/static/fonts/material-symbols.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=175" />
+  <link rel="stylesheet" href="/static/vendor/leaflet.css" />
+  <style id="loader-critical">
+    body.app-loading { overflow: hidden; }
+    #appLoader.app-loader--visible {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    html.dark #appLoader.app-loader--visible { background: #000; }
+    #appLoader .app-loader-spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: plano-loader-spin 0.7s linear infinite;
+    }
+    html.dark #appLoader .app-loader-spinner {
+      border-color: rgba(255, 255, 255, 0.15);
+      border-top-color: #fff;
+    }
+    @keyframes plano-loader-spin { to { transform: rotate(360deg); } }
+  </style>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#000000",
+            "on-primary": "#ffffff",
+            background: "#ffffff",
+            surface: "#ffffff",
+            "on-surface": "#000000",
+            secondary: "#000000",
+            "inverse-surface": "#000000",
+            "inverse-on-surface": "#ffffff",
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          },
+          maxWidth: {
+            "container-max": "1440px",
+          },
+          spacing: {
+            gutter: "24px",
+            "margin-desktop": "64px",
+            "margin-mobile": "20px",
+          },
+        },
+      },
+    };
+  </script>
+  <script>
+    (function () {
+      var KEY = "plano_ia_theme";
+      var saved = localStorage.getItem(KEY);
+      if (saved !== "light" && saved !== "dark") {
+        saved = "dark";
+        localStorage.setItem(KEY, saved);
+      }
+      var dark = saved === "dark";
+      var root = document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(dark ? "dark" : "light");
+      root.setAttribute("data-theme", dark ? "dark" : "light");
+      root.style.colorScheme = dark ? "dark" : "light";
+    })();
+  </script>
+</head>
+<body class="app-loading bg-white text-black overflow-hidden font-sans antialiased dark:bg-black dark:text-white">
+  <div id="appLoader" class="app-loader app-loader--visible" role="status" aria-live="polite" aria-busy="true">
+    <div class="app-loader-inner">
+      <img src="/static/brand/architect-icon.png?v=3" alt="" class="app-loader-brand-img" width="52" height="52" />
+      <div class="app-loader-spinner" aria-hidden="true"></div>
+      <p class="app-loader-text" id="appLoaderText">Cargando…</p>
+    </div>
+  </div>
+  <script src="/static/loader-bootstrap.js?v=2"></script>
+
+  <div class="mesh-bg" aria-hidden="true">
+    <div class="mesh-pattern w-full h-full"></div>
+  </div>
+
+  <div class="app-shell flex h-screen w-full">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 z-40 flex h-full flex-col border-r px-3 py-6 backdrop-blur-xl">
+      <nav class="sidebar-rail" id="sidebarRail" aria-label="Accesos rápidos">
+        <button type="button" class="sidebar-rail-btn" id="railExpand" title="Abrir panel" aria-label="Abrir panel">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn sidebar-rail-btn--accent" id="railNewChat" title="Nuevo chat" aria-label="Nuevo chat">
+          <span class="material-symbols-outlined">edit_square</span>
+        </button>
+        <div class="sidebar-rail-divider" aria-hidden="true"></div>
+        <button type="button" class="sidebar-rail-btn" id="railWorkspace" title="Revisión IA" aria-label="Revisión IA" data-rail-target="btnWorkspace">
+          <span class="material-symbols-outlined">auto_awesome</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railHomeProjects" title="Casa hogar" aria-label="Casa hogar" data-rail-target="btnHomeProjects">
+          <span class="material-symbols-outlined">home_work</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railSearchChats" title="Buscar chats" aria-label="Buscar chats">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railPlans" title="Planes" aria-label="Planes" data-rail-target="btnPlans">
+          <span class="material-symbols-outlined">workspace_premium</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn" id="railSupport" title="Ayuda" aria-label="Ayuda" data-rail-target="btnSupportHelp">
+          <span class="material-symbols-outlined">support_agent</span>
+        </button>
+        <div class="sidebar-rail-notif" id="notifMount" title="Notificaciones"></div>
+        <button type="button" class="sidebar-rail-btn" id="railSettings" title="Ajustes" aria-label="Ajustes" data-rail-target="btnSettings">
+          <span class="material-symbols-outlined">settings</span>
+        </button>
+        <div class="sidebar-rail-spacer" aria-hidden="true"></div>
+        <button type="button" class="sidebar-rail-btn" id="railAdmin" title="Administración" aria-label="Administración" data-rail-target="btnAdmin" hidden>
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+        </button>
+        <button type="button" class="sidebar-rail-btn sidebar-rail-avatar" id="railAccount" title="Mi cuenta" aria-label="Mi cuenta">
+          <span class="sidebar-rail-avatar-letter" id="railAvatarLetter">IA</span>
+        </button>
+      </nav>
+      <div class="sidebar-inner flex h-full min-h-0 flex-col">
+      <div class="mb-6 flex items-start justify-between gap-2 px-1">
+        <div class="sidebar-brand min-w-0">
+        <img src="/static/brand/architect-icon.png?v=3" alt="" class="brand-mark-img" width="28" height="28" />
+        <div class="sidebar-brand-text min-w-0">
+        <h1 class="text-[15px] font-semibold tracking-tight text-black dark:text-white">ARCHITECT</h1>
+        </div>
+        </div>
+        <div class="sidebar-header-actions shrink-0">
+          <div id="notifMountExpanded" class="sidebar-notif-mount" title="Notificaciones"></div>
+          <button type="button" class="btn-sidebar-toggle shrink-0 rounded-[10px] p-2 transition-colors" id="btnMenu" aria-label="Minimizar panel" title="Minimizar panel lateral">
+            <span class="material-symbols-outlined" id="sidebarToggleIcon">chevron_left</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="usage-box mb-4 px-1" id="usageBar">
+        <button type="button" class="usage-box-btn w-full text-left" id="btnUsagePlans" title="Ver planes y uso">
+        <div class="flex justify-between text-[12px] font-medium">
+          <span id="planLabel">Plan</span>
+          <span id="usageLabel">0 / 5</span>
+        </div>
+        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
+          <div class="usage-fill h-full bg-black transition-all dark:bg-white" id="usageFill" style="width:0%"></div>
+        </div>
+        <p class="usage-asks-label mt-1.5 text-[11px] text-black/55 dark:text-white/50" id="usageAsksLabel">
+          0 / 20 preguntas
+        </p>
+        </button>
+      </div>
+
+      <nav class="sidebar-main-nav mb-2 space-y-0.5" aria-label="Herramientas">
+        <a href="#" id="btnWorkspace" class="nav-item active flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-transform active:scale-[0.98]">
+          <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+          <span class="text-[13px] font-medium">Revisión IA</span>
+        </a>
+        <a href="#" id="btnHomeProjects" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">home_work</span>
+          <span class="text-sm font-medium">Casa hogar</span>
+        </a>
+        <a href="#" id="btnAdmin" class="nav-item hidden flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+          <span class="text-sm font-medium" id="btnAdminLabel">Administración</span>
+        </a>
+        <a href="#" id="btnSupportHelp" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">support_agent</span>
+          <span class="text-sm font-medium">Ayuda</span>
+        </a>
+        <a href="#" id="btnPlans" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">workspace_premium</span>
+          <span class="text-sm font-medium">Planes</span>
+        </a>
+        <a href="#" id="btnSettings" class="nav-item flex items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors">
+          <span class="material-symbols-outlined">settings</span>
+          <span class="text-sm font-medium">Ajustes</span>
+        </a>
+        <button type="button" class="nav-item notif-nav-item flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 transition-colors" id="btnNotifications" title="Notificaciones">
+          <span class="material-symbols-outlined">notifications</span>
+          <span class="text-sm font-medium flex-1 text-left">Notificaciones</span>
+          <span class="notif-nav-badge" id="notifNavBadge" hidden>0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-chats min-h-0 flex-1 flex-col" id="sidebarChats">
+        <div class="sidebar-chats-head px-1 pt-1 pb-2">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h2 class="sidebar-chats-title text-[12px] font-semibold uppercase tracking-[0.08em]">
+              <span class="sidebar-chats-title-dot" aria-hidden="true"></span>
+              Chats
+            </h2>
+            <button type="button" class="btn-new-chat inline-flex items-center gap-1 rounded-[8px] px-2 py-1 text-[11px] font-medium" id="btnNewChat" title="Nuevo chat">
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              Nuevo
+            </button>
+          </div>
+          <div class="sidebar-chats-search relative">
+            <span class="material-symbols-outlined sidebar-chats-search-icon absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px]">search</span>
+            <input id="searchChats" class="sidebar-chats-search-input w-full rounded-[8px] border-none pl-8 pr-3 py-1.5 text-[13px] outline-none" placeholder="Buscar chats…" type="search" autocomplete="off" />
+          </div>
+        </div>
+        <ul class="chat-list min-h-0 flex-1 overflow-y-auto px-1 pb-2" id="chatList"></ul>
+        <p class="sidebar-chats-empty px-2 pb-2 text-[12px]" id="chatListEmpty" hidden>Aún no hay chats. Escribe una pregunta o crea uno nuevo.</p>
+      </div>
+
+      <div class="sidebar-home-projects hidden min-h-0 flex-1 flex-col" id="sidebarHomeProjects" hidden>
+        <div class="home-projects-sidebar-head px-1 pt-1 pb-3">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h2 class="home-sidebar-title text-[15px] font-semibold tracking-tight">Proyectos</h2>
+            <button type="button" class="home-back-to-ia text-[11px] font-medium" id="btnHomeBackToWorkspace" title="Volver a Revisión IA">
+              Volver a IA
+            </button>
+          </div>
+          <div class="home-projects-search relative">
+            <span class="material-symbols-outlined home-projects-search-icon absolute left-3 top-1/2 -translate-y-1/2 text-[16px]">search</span>
+            <input id="homeProjectsSearch" class="home-projects-search-input w-full border-none rounded-[8px] pl-9 pr-3 py-1.5 text-sm outline-none transition-all duration-200" placeholder="Buscar..." type="text" />
+          </div>
+        </div>
+        <ul class="home-projects-list min-h-0 flex-1 overflow-y-auto px-1 pb-2 space-y-2" id="homeProjectsList"></ul>
+        <div class="home-projects-sidebar-foot pt-2 pb-1">
+          <button type="button" class="home-new-project-btn w-full py-2 px-3 rounded-[8px] border shadow-sm font-medium flex items-center justify-center gap-2 transition-colors" id="btnNewHomeProject">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Nuevo proyecto
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer mt-3 border-t pt-3">
+        <div class="guest-sidebar-actions mb-2 hidden flex-col gap-2 px-1" id="guestSidebarActions">
+          <a href="/login" class="guest-auth-btn guest-auth-btn--ghost text-center">Iniciar sesión</a>
+          <a href="/login" class="guest-auth-btn text-center">Crear cuenta</a>
+        </div>
+        <div class="user-pill flex w-full items-center gap-2.5 px-1">
+          <button type="button" class="user-pill-main flex min-w-0 flex-1 items-center gap-2.5 text-left" id="btnAccount" title="Mi cuenta">
+            <div class="avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" id="userAvatar">IA</div>
+            <div class="user-info min-w-0 flex-1">
+              <span class="user-name block truncate text-[13px] font-semibold text-black dark:text-white" id="userName">—</span>
+              <span class="user-role text-[10px]" id="userRole">—</span>
+            </div>
+          </button>
+          <button type="button" class="btn-logout shrink-0 rounded-lg p-1 opacity-60 hover:opacity-100" id="btnLogout" title="Cerrar sesión">
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+          </button>
+        </div>
+      </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main main-content relative flex min-h-0 flex-1 flex-col">
+      <button type="button" class="btn-menu-float btn-sidebar-toggle hidden rounded-[10px] p-2" id="btnMenuFloat" aria-label="Mostrar panel" title="Mostrar panel lateral">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+
+      <div class="guest-trial-bar hidden mx-4 mt-3 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="guestTrialBar">
+        <span class="material-symbols-outlined guest-trial-icon">science</span>
+        <span id="guestTrialText">Prueba gratuita</span>
+        <a href="/login" class="guest-trial-link">Registrarse</a>
+      </div>
+
+      <div class="connection-banner hidden mx-4 mt-3 rounded-[10px] border px-3 py-2 text-[12px] md:mx-8" id="connectionBanner" role="status" hidden>
+        <span class="material-symbols-outlined connection-banner-icon">wifi_off</span>
+        <span id="connectionBannerText">Sin conexión. Reintentaré automáticamente al volver.</span>
+        <button type="button" class="connection-banner-retry" id="btnConnectionRetry" hidden>Reintentar ahora</button>
+      </div>
+
+      <div class="plan-usage-badge hidden mx-4 mt-3 md:mx-8" id="planUsageBadge" role="status">
+        <button type="button" class="plan-usage-badge-btn" id="btnPlanUsageBadge" title="Ver plan y uso">
+          <span class="material-symbols-outlined plan-usage-badge-icon">workspace_premium</span>
+          <span id="planUsageBadgeText">Plan · 0/5</span>
+        </button>
+      </div>
+
+      <div class="impersonation-banner hidden mx-4 mt-3 md:mx-8" id="impersonationBanner" role="status">
+        <div class="impersonation-banner-copy">
+          <span class="material-symbols-outlined">support_agent</span>
+          <div>
+            <strong>Modo soporte</strong>
+            <p id="impersonationBannerText">Estás usando la cuenta de un usuario para diagnosticar.</p>
+          </div>
+        </div>
+        <button type="button" class="impersonation-exit-btn" id="btnExitImpersonation">
+          Volver al panel
+        </button>
+      </div>
+
+      <div class="receipt-email-alert hidden mx-4 mt-3 md:mx-8" id="receiptEmailAlert" role="alert">
+        <div class="receipt-email-alert-body">
+          <span class="material-symbols-outlined receipt-email-alert-icon">mail</span>
+          <div class="receipt-email-alert-copy">
+            <strong id="receiptEmailAlertTitle">No se pudo enviar el comprobante</strong>
+            <p id="receiptEmailAlertMsg">Descárgalo manualmente o reenvíalo desde Mi cuenta.</p>
+          </div>
+        </div>
+        <div class="receipt-email-alert-actions">
+          <button type="button" class="btn-secondary text-xs py-1.5 px-2" id="receiptEmailAlertDownload">Descargar PDF</button>
+          <button type="button" class="btn-link text-xs" id="receiptEmailAlertAccount">Mi cuenta</button>
+          <button type="button" class="receipt-email-alert-close" id="receiptEmailAlertDismiss" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="setup-banner mx-4 mt-3 hidden rounded-[10px] border border-black/15 bg-white px-4 py-2.5 text-[13px] dark:border-white/20 dark:bg-black md:mx-8" id="setupBanner">
+        <strong>Modelo no entrenado.</strong>
+        <span class="ml-1">Ejecuta <code class="rounded bg-black/10 px-1">python scripts/train_demo.py</code></span>
+      </div>
+
+      <div id="homeProjectsPanel" class="home-projects-panel hidden flex min-h-0 flex-1 flex-col overflow-hidden" hidden>
+        <div id="homeOfflineBanner" class="home-offline-banner" hidden role="status" aria-live="polite"></div>
+        <div class="home-projects-body flex min-h-0 flex-1 overflow-hidden">
+          <section class="home-projects-detail flex min-h-0 flex-1 flex-col p-0" id="homeProjectsDetail">
+            <div class="home-projects-empty flex flex-1 flex-col items-center justify-center text-center opacity-60" id="homeProjectsEmpty">
+              <span class="material-symbols-outlined text-4xl mb-2">home_work</span>
+              <p class="text-sm">Selecciona un proyecto o crea uno nuevo</p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="chat-area flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-24 pt-6 md:px-margin-desktop md:pb-28" id="chatArea">
+        <div class="welcome flex flex-1 flex-col items-center justify-center py-6" id="welcome">
+          <div class="welcome-hero mb-8 max-w-xl text-center" id="welcomeHero" data-neon="cyan">
+            <p class="welcome-hero-eyebrow" aria-hidden="true">ARCHITECT</p>
+            <h2 class="welcome-hero-title mb-2 text-[2rem] font-semibold tracking-tight md:text-[2.35rem]" id="welcomeHeroTitle">
+              ¿Qué plano revisamos hoy?
+            </h2>
+            <span class="assistant-mode-badge hidden mt-3 inline-block rounded-full px-3 py-1 text-[11px] font-medium" id="assistantModeBadge"></span>
+          </div>
+        </div>
+
+        <div class="messages mx-auto w-full max-w-3xl" id="messages" hidden></div>
+      </div>
+
+      <!-- Composer dock (fixed) -->
+      <div class="drop-overlay hidden" id="dropOverlay" aria-hidden="true">
+        <div class="drop-overlay-inner glass-panel">
+          <span class="material-symbols-outlined">upload_file</span>
+          <p>Suelta el plano aquí</p>
+          <p class="drop-overlay-sub">Imágenes · PDF · DXF/DWG</p>
+        </div>
+      </div>
+
+      <div class="composer-wrap composer-dock pointer-events-none fixed bottom-0 left-0 right-0 z-30" id="composerDock">
+        <div class="composer-inner pointer-events-auto mx-auto max-w-2xl px-4 pb-3 pt-2">
+          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,application/pdf,.pdf,.dxf,.dwg" hidden />
+
+          <div class="composer-stack mb-2">
+            <div class="attachments-row flex justify-center" id="attachmentsRow" hidden>
+              <div class="attach-chip glass-panel inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2">
+                <div class="attach-thumb h-9 w-9 overflow-hidden rounded-full" id="attachThumb">
+                  <img id="previewImg" alt="" class="h-full w-full object-cover" data-hidden="true" />
+                  <span class="attach-fallback flex h-full w-full items-center justify-center" id="attachFallback" hidden>
+                    <span class="material-symbols-outlined text-[18px]">image</span>
+                  </span>
+                </div>
+                <div class="attach-meta min-w-0 text-left">
+                  <span class="attach-name block max-w-[12rem] truncate text-xs font-semibold" id="attachName"></span>
+                  <span class="attach-type text-[10px] text-on-surface-variant/60" id="attachType"></span>
+                </div>
+                <button type="button" class="attach-remove rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10" id="btnRemoveAttach" aria-label="Quitar archivo">
+                  <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="composer-beam" id="composerBeam">
+            <form class="composer-bar glass-panel flex items-center gap-1 rounded-full p-1 transition-all" id="composerForm">
+              <div class="attach-picker-wrap ml-0.5 shrink-0" id="attachPickerWrap">
+                <button type="button" class="btn-attach-inline flex h-10 w-10 items-center justify-center rounded-full transition-colors" id="btnAttach" aria-label="Adjuntar plano" aria-expanded="false" aria-haspopup="true" title="Elegir tipo de archivo">
+                  <span class="material-symbols-outlined">attach_file</span>
+                </button>
+                <div class="attach-picker-menu glass-panel" id="attachPickerMenu" role="menu" hidden>
+                  <p class="attach-picker-title">Tipo de archivo</p>
+                  <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+                    <span class="material-symbols-outlined">image</span>
+                    <span class="attach-picker-label"><strong>Imagen</strong><small>PNG, JPG, WEBP</small></span>
+                  </button>
+                  <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept="application/pdf,.pdf">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                    <span class="attach-picker-label"><strong>PDF</strong><small>Plano en PDF</small></span>
+                  </button>
+                  <button type="button" class="attach-picker-item" role="menuitem" data-attach-accept=".dxf,.dwg">
+                    <span class="material-symbols-outlined">architecture</span>
+                    <span class="attach-picker-label"><strong>AutoCAD</strong><small>DXF o DWG</small></span>
+                  </button>
+                  <button type="button" class="attach-picker-item attach-picker-item--all" role="menuitem" data-attach-accept="all">
+                    <span class="material-symbols-outlined">folder_open</span>
+                    <span class="attach-picker-label"><strong>Todos</strong><small>Imagen, PDF o CAD</small></span>
+                  </button>
+                </div>
+              </div>
+              <textarea
+                id="messageInput"
+                rows="1"
+                class="composer-input max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2.5 text-[14px] focus:ring-0"
+                placeholder="Pregunta a ARCHITECT…"
+                aria-label="Mensaje"
+              ></textarea>
+              <button type="submit" class="btn-send mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-85 disabled:opacity-30" id="btnSend" aria-label="Enviar" disabled>
+                <span class="material-symbols-outlined">arrow_upward</span>
+              </button>
+            </form>
+            <span class="border-beam" aria-hidden="true"></span>
+          </div>
+          <p class="composer-hint mt-2 hidden text-center text-[10px]" id="composerHint">Imagen, PDF o CAD · arrastra o Ctrl+V</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="modal" id="plansModal">
+    <div class="modal-box glass-panel plans-modal-box">
+      <div class="modal-header plans-modal-header">
+        <h2>Planes y suscripción</h2>
+        <button type="button" class="modal-close" id="btnClosePlans" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="plans-usage-banner" id="plansUsageText"></div>
+      <div class="plans-grid" id="plansGrid"></div>
+      <p class="plans-demo-note" id="plansDemoNote">Proyecto escolar: pasarela simulada (sin cobro real). Al mejorar un plan solo pagas la diferencia; no se permiten bajadas desde aquí.</p>
+      <button type="button" class="plans-portal-btn hidden" id="btnStripePortal">Gestionar suscripción en Stripe</button>
+    </div>
+  </dialog>
+
+  <dialog class="modal settings-modal" id="settingsModal">
+    <div class="modal-box glass-panel settings-modal-box">
+      <div class="modal-header settings-modal-header">
+        <div>
+          <h2>Configuración</h2>
+          <p class="settings-modal-sub">Preferencias de tu cuenta</p>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseSettings" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="settingsForm" class="settings-form">
+        <div class="settings-scroll">
+          <div class="form-group">
+            <label>Apariencia</label>
+            <div class="theme-switch" role="group" aria-label="Tema">
+              <button type="button" class="theme-option" data-theme="light" id="themeLight">Claro</button>
+              <button type="button" class="theme-option active" data-theme="dark" id="themeDark">Oscuro</button>
+            </div>
+            <small>Cambia el tema de la interfaz</small>
+          </div>
+
+          <div class="form-group norms-panel" id="normsPanel">
+            <label>Normativa aplicada</label>
+            <p class="norms-bundle" id="normsBundleTitle">Chiapas, México</p>
+            <ul class="norms-thresholds" id="normsThresholdsList"></ul>
+            <small>Referencia de habitabilidad, vanos, circulación y accesibilidad usada en la revisión.</small>
+          </div>
+
+          <div class="form-group settings-model-block" id="settingsModelBlock">
+            <label for="modelSelect">Modelo de detección</label>
+            <p class="settings-model-current" id="modelCurrentLabel">Cargando modelos…</p>
+            <div class="model-picker" id="modelPicker" role="listbox" aria-label="Modelos disponibles"></div>
+            <select id="modelSelect" class="model-select-native" aria-label="Elegir modelo YOLO"></select>
+            <small>Se usa en Revisión IA y en revisiones de Casa hogar. El cambio aplica al guardar.</small>
+            <input type="hidden" id="weightsPath" value="" />
+          </div>
+
+          <div class="settings-admin-block hidden" id="settingsAdminBlock">
+            <div class="settings-admin-head">
+              <span class="material-symbols-outlined" aria-hidden="true">admin_panel_settings</span>
+              <div>
+                <strong>Ajustes de administrador</strong>
+                <p>Calibración avanzada del motor de análisis</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-row">
+                <input type="checkbox" id="autoCalibrate" checked />
+                <span>Calibración automática (escala y confianza por plano)</span>
+              </label>
+              <small id="autoCalHelp">Se estiman píxeles/m y confianza con puertas, ventanas, recintos y circulación.</small>
+              <p class="auto-cal-readout hidden" id="autoCalReadout"></p>
+            </div>
+            <div class="form-row" id="manualCalRow">
+              <div class="form-group">
+                <label for="ppmInput">Píxeles por metro</label>
+                <input type="number" id="ppmInput" min="10" max="500" step="5" value="100" disabled />
+              </div>
+              <div class="form-group">
+                <label for="confInput">Confianza mínima</label>
+                <input type="number" id="confInput" min="0.01" max="0.95" step="0.01" value="0.25" disabled />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions settings-modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelSettings">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnSaveSettings">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="accountModal">
+    <div class="modal-box glass-panel account-modal-box">
+      <div class="modal-header account-modal-header">
+        <h2>Mi cuenta</h2>
+        <button type="button" class="modal-close" id="btnCloseAccount" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="account-body" id="accountBody"></div>
+      <div class="modal-actions account-modal-actions">
+        <button type="button" class="account-btn account-btn--ghost" id="btnAccountPlans">Ver planes</button>
+        <button type="button" class="account-btn account-btn--solid" id="btnAccountLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal support-help-modal" id="supportHelpModal">
+    <div class="modal-box glass-panel support-help-box">
+      <div class="support-help-hero">
+        <div class="support-help-hero-copy">
+          <span class="support-help-hero-icon" aria-hidden="true">
+            <span class="material-symbols-outlined">support_agent</span>
+          </span>
+          <div>
+            <h2>Ayuda y soporte</h2>
+            <p>Solo para tu cuenta de usuario. El equipo te responde desde la bandeja de soporte.</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseSupportHelp" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="support-help-body" id="supportHelpBodyWrap">
+        <div class="support-help-layout">
+          <div class="support-help-pane" id="supportHelpPane">
+            <section class="support-help-compose">
+              <header class="support-help-pane-head">
+                <h3>Nuevo ticket</h3>
+                <p>Describe el problema con el mayor detalle posible.</p>
+              </header>
+              <form id="supportHelpForm" class="support-help-form">
+                <label>Asunto
+                  <input type="text" id="supportHelpSubject" required minlength="3" maxlength="160" placeholder="Ej. No puedo subir un plano" />
+                </label>
+                <label>Mensaje
+                  <textarea id="supportHelpBody" required minlength="5" rows="3" placeholder="Qué intentabas hacer, qué viste y en qué dispositivo…"></textarea>
+                </label>
+                <button type="submit" class="btn-primary support-help-submit">
+                  <span class="material-symbols-outlined">send</span>
+                  Enviar ticket
+                </button>
+              </form>
+            </section>
+            <section class="support-help-tickets">
+              <header class="support-help-pane-head">
+                <h3>Tus tickets</h3>
+                <p>Historial de conversaciones con soporte.</p>
+              </header>
+              <div class="support-help-list" id="supportHelpList"></div>
+            </section>
+          </div>
+          <div class="support-help-thread" id="supportHelpThread">
+            <div class="support-help-empty-state">
+              <span class="material-symbols-outlined">forum</span>
+              <strong>Selecciona un ticket</strong>
+              <p>Verás aquí la conversación y podrás responder.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="image-viewer-modal" id="imageViewerModal" aria-label="Visor de plano">
+    <div class="image-viewer-shell">
+      <header class="image-viewer-toolbar">
+        <p class="image-viewer-caption" id="imageViewerCaption">Plano</p>
+        <div class="image-viewer-actions">
+          <button type="button" class="iv-btn" id="btnIvZoomOut" title="Alejar" aria-label="Alejar">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <span class="image-viewer-zoom-pct" id="imageViewerZoomPct">100%</span>
+          <button type="button" class="iv-btn" id="btnIvZoomIn" title="Acercar" aria-label="Acercar">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button type="button" class="iv-btn iv-btn--text" id="btnIvFit" title="Ajustar a pantalla">Ajustar</button>
+          <button type="button" class="iv-btn iv-btn--text" id="btnIvZoomReset" title="Tamaño real">1:1</button>
+          <button type="button" class="iv-btn" id="btnCloseImageViewer" title="Cerrar" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </header>
+      <div class="image-viewer-stage" id="imageViewerStage">
+        <img id="imageViewerImg" alt="Plano ampliado" draggable="false" />
+      </div>
+      <p class="image-viewer-hint">Clic en la imagen del chat · rueda o botones para zoom · arrastra para mover · doble clic acerca/aleja</p>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="trialModal">
+    <div class="modal-box glass-panel trial-modal-box">
+      <div class="modal-header">
+        <h2>Prueba terminada</h2>
+        <button type="button" class="modal-close" id="btnCloseTrial" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p class="trial-modal-text text-sm leading-relaxed">
+        Ya usaste tu prueba gratuita en este navegador. Crea una cuenta gratis para seguir con:
+      </p>
+      <ul class="trial-modal-list text-sm leading-relaxed mt-3 space-y-1.5 pl-5 list-disc">
+        <li>Preguntas ilimitadas al asistente (con plan activo)</li>
+        <li>Más análisis de planos al mes</li>
+        <li>Historial de chats y correcciones para mejorar el modelo</li>
+      </ul>
+      <div class="modal-actions mt-5 flex flex-col gap-2 sm:flex-row">
+        <a href="/login" id="trialLoginLink" class="auth-submit btn-primary text-center no-underline">Iniciar sesión</a>
+        <a href="/login" id="trialRegisterLink" class="btn-secondary text-center py-2.5 text-sm no-underline">Crear cuenta gratis</a>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeProjectCreateModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2>Nuevo proyecto casa hogar</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeProjectCreate" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeProjectCreateForm" class="space-y-3">
+        <div class="form-group">
+          <label for="hpCreateName">Nombre del proyecto *</label>
+          <input type="text" id="hpCreateName" required minlength="2" maxlength="160" placeholder="Ej. Casa López — Ocosingo" />
+        </div>
+        <div class="form-group">
+          <label for="hpCreateClient">Cliente</label>
+          <input type="text" id="hpCreateClient" maxlength="120" placeholder="Nombre del cliente" />
+        </div>
+        <div class="form-group hp-location-field">
+          <label for="hpCreateLocation">Ubicación</label>
+          <div class="hp-location-controls">
+            <input type="text" id="hpCreateLocation" maxlength="200" placeholder="Buscar municipio o colonia en Chiapas…" autocomplete="off" />
+            <button type="button" class="hp-location-icon-btn" id="hpLocMyPos" title="Usar mi ubicación" aria-label="Usar mi ubicación">
+              <span class="material-symbols-outlined">my_location</span>
+            </button>
+            <button type="button" class="hp-location-icon-btn" id="hpLocToggleMap" title="Elegir en mapa" aria-label="Elegir en mapa" aria-pressed="false">
+              <span class="material-symbols-outlined">map</span>
+            </button>
+          </div>
+          <input type="hidden" id="hpCreateLat" value="" />
+          <input type="hidden" id="hpCreateLng" value="" />
+          <div id="hpLocationSuggest" class="hp-location-suggest hidden" hidden></div>
+          <div id="hpLocationMapWrap" class="hp-location-map-wrap hidden" hidden>
+            <div id="hpLocationMap" class="hp-location-map" role="application" aria-label="Mapa de ubicación en Chiapas"></div>
+            <p class="hp-location-map-hint">Toca el mapa o arrastra el pin. Búsqueda centrada en Chiapas.</p>
+          </div>
+          <p id="hpLocationCoords" class="hp-location-coords hidden" hidden></p>
+        </div>
+        <div class="form-group">
+          <label for="hpCreateDescription">Descripción</label>
+          <textarea id="hpCreateDescription" rows="3" maxlength="4000" placeholder="Notas iniciales del proyecto"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeProjectCreate">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear proyecto</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeSectionModal">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
+        <h2>Nuevo apartado</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeSection" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeSectionForm" class="home-create-modal-form">
+        <div class="form-group">
+          <label for="homeSectionTitle">Título *</label>
+          <input type="text" id="homeSectionTitle" required minlength="2" maxlength="200" placeholder="Ej. Memoria descriptiva, Fotos de fachada…" />
+        </div>
+        <div class="form-group">
+          <label for="homeSectionDescription">Descripción</label>
+          <textarea id="homeSectionDescription" rows="3" maxlength="4000" placeholder="Qué documentación o imágenes debe incluir este apartado"></textarea>
+        </div>
+        <div class="modal-actions home-create-modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeSection">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear apartado</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeSlotModal">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
+        <h2>Nuevo espacio de archivo</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeSlot" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeSlotForm" class="home-create-modal-form">
+        <div class="form-group">
+          <label for="homeSlotTitle">Nombre *</label>
+          <input type="text" id="homeSlotTitle" required minlength="2" maxlength="120" placeholder="Ej. Plano de instalación, Fotos adicionales…" autocomplete="off" />
+        </div>
+        <label class="home-slot-required-row" for="homeSlotRequired">
+          <span class="home-slot-required-copy">
+            <span class="home-slot-required-title">Obligatorio</span>
+            <span class="home-slot-required-hint">Necesario para completar el apartado</span>
+          </span>
+          <input type="checkbox" id="homeSlotRequired" class="home-slot-required-check" />
+        </label>
+        <div class="modal-actions home-create-modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeSlot">Cancelar</button>
+          <button type="submit" class="btn-primary">Agregar espacio</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="homeInviteModal">
+    <div class="modal-box glass-panel home-create-modal-box">
+      <div class="modal-header home-create-modal-header">
+        <h2>Invitar al proyecto</h2>
+        <button type="button" class="modal-close" id="btnCloseHomeInvite" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="homeInviteForm" class="home-create-modal-form">
+        <div class="form-group">
+          <label for="homeInviteEmail">Correo electrónico *</label>
+          <input type="email" id="homeInviteEmail" required placeholder="colaborador@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label for="homeInviteRole">Permisos</label>
+          <select id="homeInviteRole" class="w-full rounded-lg border px-3 py-2 text-sm">
+            <option value="editor">Editor — puede subir archivos y crear apartados</option>
+            <option value="viewer">Lector — solo consulta</option>
+          </select>
+        </div>
+        <div class="modal-actions home-create-modal-actions">
+          <button type="button" class="btn-secondary" id="btnCancelHomeInvite">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnSubmitHomeInvite">Enviar invitación</button>
+        </div>
+      </form>
+      <div id="homeInviteResult" class="home-invite-result hidden space-y-3" hidden>
+        <p class="text-sm leading-relaxed">Comparte este enlace con <strong id="homeInviteResultEmail"></strong>. Debe iniciar sesión con ese correo (válido 14 días).</p>
+        <div class="flex flex-wrap gap-2 items-stretch">
+          <input type="text" readonly id="homeInviteLink" class="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-mono" />
+          <button type="button" class="btn-primary text-xs py-2 px-3 shrink-0" id="btnCopyInviteLink">Copiar enlace</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-primary text-xs py-2 px-4" id="btnCloseInviteResult">Listo</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="infoModal">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h2 id="infoModalTitle">Info</h2>
+        <button type="button" class="modal-close" id="btnCloseInfo" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="info-modal-body text-sm leading-relaxed" id="infoModalBody"></div>
+    </div>
+  </dialog>
+
+  <div class="sidebar-backdrop hidden" id="sidebarBackdrop" aria-hidden="true"></div>
+  <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/static/vendor/hammer.min.js"></script>
+  <script src="/static/vendor/leaflet.js"></script>
+  <script src="/static/auth.js?v=32"></script>
+  <script src="/static/billing.js?v=2"></script>
+  <script src="/static/dialogs.js?v=4"></script>
+  <script src="/static/notifications.js?v=4"></script>
+  <script src="/static/offline-store.js?v=1"></script>
+  <script src="/static/home-projects.js?v=65"></script>
+  <script src="/static/app.js?v=103"></script>
+  <script src="/static/pwa.js?v=3" defer></script>
+</body>
+</html>

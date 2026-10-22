@@ -1,12 +1,17 @@
 data/
+backend/data/
 datasets/
+backend/datasets/
 runs/
+backend/runs/
 weights/
+backend/weights/
 *.pt
 __pycache__/
 .venv/
 venv/
 .env
+backend/.env
 .tools/
 .npm-cache/
 frontend/node_modules/

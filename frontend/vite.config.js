@@ -7,6 +7,30 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("three")) {
+                return "vendor-three";
+              }
+              if (id.includes("gsap")) {
+                return "vendor-gsap";
+              }
+              if (id.includes("lucide-react")) {
+                return "vendor-icons";
+              }
+              if (id.includes("react") || id.includes("react-dom")) {
+                return "vendor-react";
+              }
+              return "vendor";
+            }
+          }
+        }
+      }
+    },
     server: {
       port: 3000,
       proxy: {

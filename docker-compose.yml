@@ -19,11 +19,11 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: architect-backend
     env_file:
-      - .env
+      - backend/.env
     environment:
       DATABASE_URL: mysql+pymysql://architect:architect_pass@mysql:3306/architect?charset=utf8mb4
       ADMIN_EMAIL: admin@architect.local
@@ -54,7 +54,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - ./backend:/app
+      - ./frontend/web:/frontend/web
     depends_on:
       mysql:
         condition: service_healthy
