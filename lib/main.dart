@@ -54,28 +54,10 @@ class _BootstrapAppState extends State<_BootstrapApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF7F7F8),
         body: Center(
           child: _initError == null
-              ? const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.black87,
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'ARCHITECT',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                  ],
-                )
+              ? const SizedBox.shrink()
               : Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
