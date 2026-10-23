@@ -4,7 +4,6 @@ import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/core/utils/date_utils.dart';
 import 'package:movil_architect/models/home_project_models.dart';
-import 'package:movil_architect/views/home_projects/widgets/home_project_widgets.dart';
 import 'package:movil_architect/views/shared/app_states.dart';
 import 'package:movil_architect/views/shared/attachment_picker_sheet.dart';
 
@@ -45,26 +44,56 @@ class _SectionDetailViewState extends State<SectionDetailView> {
 
   Future<void> _changeStatus() async {
     if (!widget.controller.permissions.canEdit) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg = isDark ? const Color(0xFF141417) : Colors.white;
+    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
     final current = _section?.status ?? 'pending';
+
     final selected = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: sheetBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(
-              title: Text(
-                'Estado del apartado',
-                style: TextStyle(fontWeight: FontWeight.w800),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Estado del apartado',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: primaryBlack,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            for (final status in sectionStatusOptions)
-              ListTile(
-                title: Text(homeProjectStatusLabel(status)),
-                trailing: status == current ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.pop(context, status),
-              ),
-          ],
+              Divider(height: 1, color: borderColor),
+              for (final status in sectionStatusOptions)
+                ListTile(
+                  title: Text(
+                    homeProjectStatusLabel(status),
+                    style: TextStyle(
+                      fontWeight: status == current ? FontWeight.w800 : FontWeight.w600,
+                      color: primaryBlack,
+                    ),
+                  ),
+                  trailing: status == current
+                      ? Icon(Icons.check_circle_rounded, color: primaryBlack, size: 20)
+                      : null,
+                  onTap: () => Navigator.pop(context, status),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -383,9 +412,73 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  Widget _buildStatusPill(
+    String status,
+    bool isDark,
+    Color borderColor,
+    Color primaryBlack,
+    Color tagBg,
+  ) {
+    final label = homeProjectStatusLabel(status);
+    final isDone = status == 'completed';
+
+    if (isDone) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white : const Color(0xFF111111),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle_rounded,
+              size: 13,
+              color: isDark ? const Color(0xFF111111) : Colors.white,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDark ? const Color(0xFF111111) : Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: tagBg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor, width: 1.0),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B),
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0C0C0E) : const Color(0xFFF7F7F8);
+    final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
 
     return ListenableBuilder(
       listenable: widget.controller,
@@ -401,20 +494,35 @@ class _SectionDetailViewState extends State<SectionDetailView> {
         final commentsCount = _commentsTotal ?? section?.commentsCount ?? 0;
 
         return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: bg,
           appBar: AppBar(
+            backgroundColor: bg,
+            foregroundColor: primaryBlack,
+            elevation: 0,
+            scrolledUnderElevation: 0,
             title: Text(
               section?.title ?? 'Apartado',
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+                color: primaryBlack,
+              ),
             ),
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            elevation: 0,
           ),
           floatingActionButton: permissions.canUpload
               ? FloatingActionButton.extended(
                   onPressed: widget.controller.busy ? null : _upload,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Subir archivo'),
+                  backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
+                  foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  icon: const Icon(Icons.upload_file_rounded, size: 18),
+                  label: const Text(
+                    'Subir archivo',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
                 )
               : null,
           body: section == null
@@ -423,6 +531,7 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                   onRetry: () => widget.controller.load(refresh: true),
                 )
               : RefreshIndicator(
+                  color: primaryBlack,
                   onRefresh: () async {
                     setState(() {
                       _extraComments = null;
@@ -431,74 +540,233 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                     await widget.controller.load(refresh: true);
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
                     children: [
                       if (widget.controller.busy)
                         const LinearProgressIndicator(minHeight: 2),
-                      Row(
-                        children: [
-                          HomeStatusChip(status: section.status),
-                          const Spacer(),
-                          if (permissions.canEdit)
-                            TextButton.icon(
-                              onPressed:
-                                  widget.controller.busy ? null : _changeStatus,
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('Cambiar estado'),
+
+                      // 1. TARJETA PRINCIPAL DEL APARTADO (HERO)
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderColor, width: 1.4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? Colors.black.withValues(alpha: 0.3)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
-                        ],
-                      ),
-                      if (section.description.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Text(
-                          section.description,
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            height: 1.4,
-                          ),
+                          ],
                         ),
-                      ],
-                      const SizedBox(height: 22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _buildStatusPill(
+                                  section.status,
+                                  isDark,
+                                  borderColor,
+                                  primaryBlack,
+                                  tagBg,
+                                ),
+                                const Spacer(),
+                                if (permissions.canEdit)
+                                  OutlinedButton.icon(
+                                    onPressed: widget.controller.busy
+                                        ? null
+                                        : _changeStatus,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: primaryBlack,
+                                      side: BorderSide(color: borderColor, width: 1.2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    icon: const Icon(Icons.edit_outlined, size: 14),
+                                    label: const Text(
+                                      'Cambiar estado',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (section.description.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Container(height: 1, color: borderColor),
+                              const SizedBox(height: 12),
+                              Text(
+                                section.description,
+                                style: TextStyle(
+                                  color: secondaryText,
+                                  fontSize: 13,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                            // Progreso de entregas
+                            Builder(
+                              builder: (context) {
+                                final totalSlots = section.slots.length;
+                                final completedSlots = section.slots
+                                    .where((s) =>
+                                        s.filled ||
+                                        section.documents
+                                            .any((d) => d.slotKey == s.key))
+                                    .length;
+                                final progress = totalSlots == 0
+                                    ? 0.0
+                                    : (completedSlots / totalSlots);
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Progreso de entregas',
+                                          style: TextStyle(
+                                            color: mutedText,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$completedSlots de $totalSlots completadas',
+                                          style: TextStyle(
+                                            color: primaryBlack,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: borderColor,
+                                          width: 1.0,
+                                        ),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(999),
+                                        child: LinearProgressIndicator(
+                                          value: progress,
+                                          minHeight: 6,
+                                          backgroundColor: isDark
+                                              ? const Color(0xFF26262B)
+                                              : const Color(0xFFEAEAED),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            isDark
+                                                ? Colors.white
+                                                : const Color(0xFF111111),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // 2. SECCIÓN DE ENTREGAS
+                      const SizedBox(height: 24),
                       Row(
                         children: [
                           Text(
                             'Entregas (${section.slots.length})',
                             style: TextStyle(
-                              color: scheme.onSurface,
+                              color: primaryBlack,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           const Spacer(),
                           if (permissions.canEdit)
-                            TextButton.icon(
-                              onPressed: widget.controller.busy ? null : _addCustomSlot,
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Nueva entrega'),
+                            FilledButton.icon(
+                              onPressed: widget.controller.busy
+                                  ? null
+                                  : _addCustomSlot,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF111111),
+                                foregroundColor: isDark
+                                    ? const Color(0xFF111111)
+                                    : Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              icon: const Icon(Icons.add_rounded, size: 16),
+                              label: const Text(
+                                'Nueva entrega',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       if (section.slots.isEmpty)
                         Container(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: scheme.outlineVariant.withAlpha(60),
-                            ),
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderColor, width: 1.2),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, color: scheme.primary, size: 20),
-                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: tagBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 18,
+                                  color: primaryBlack,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Sin entregas específicas configuradas. Puedes subir tus archivos con el botón de abajo.',
+                                  'Sin entregas específicas configuradas. Puedes subir tus archivos con el botón flotante.',
                                   style: TextStyle(
-                                    color: scheme.onSurfaceVariant,
+                                    color: secondaryText,
                                     fontSize: 13,
+                                    height: 1.35,
                                   ),
                                 ),
                               ),
@@ -508,108 +776,259 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                       else
                         for (final slot in section.slots) ...[
                           _buildSlotCard(context, slot, section, permissions),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                         ],
-                      const SizedBox(height: 22),
+
+                      // 3. SECCIÓN DE DOCUMENTOS
+                      const SizedBox(height: 24),
                       Text(
                         'Documentos (${section.documents.length})',
                         style: TextStyle(
-                          color: scheme.onSurface,
+                          color: primaryBlack,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       if (section.documents.isEmpty)
-                        Text(
-                          'Aún no hay documentos en este apartado.',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderColor, width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: tagBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Icon(
+                                  Icons.folder_open_rounded,
+                                  size: 18,
+                                  color: primaryBlack,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Aún no hay documentos en este apartado.',
+                                  style: TextStyle(
+                                    color: secondaryText,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         )
                       else
                         for (final doc in section.documents) ...[
-                          _buildDocumentTile(context, doc, section, canDeleteDocs),
-                          const SizedBox(height: 8),
+                          _buildDocumentTile(
+                            context,
+                            doc,
+                            section,
+                            canDeleteDocs,
+                          ),
+                          const SizedBox(height: 10),
                         ],
+
+                      // 4. SECCIÓN DE COMENTARIOS
                       const SizedBox(height: 28),
                       Text(
                         'Comentarios ($commentsCount)',
                         style: TextStyle(
-                          color: scheme.onSurface,
+                          color: primaryBlack,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       if (comments.isEmpty)
-                        Text(
-                          'Sin comentarios todavía.',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderColor, width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: tagBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 18,
+                                  color: primaryBlack,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Sin comentarios todavía.',
+                                style: TextStyle(
+                                  color: secondaryText,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
                         )
                       else
                         for (final comment in comments) ...[
-                          Material(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            child: ListTile(
-                              title: Text(
-                                comment.authorName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 1.4,
                               ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Text(comment.body),
-                                    const SizedBox(height: 4),
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: tagBg,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: borderColor),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        comment.authorName.isNotEmpty
+                                            ? comment.authorName[0].toUpperCase()
+                                            : 'U',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                          color: primaryBlack,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        comment.authorName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                          color: primaryBlack,
+                                        ),
+                                      ),
+                                    ),
                                     Text(
                                       formatRelativeTime(comment.createdAt),
                                       style: TextStyle(
-                                        color: scheme.onSurfaceVariant,
-                                        fontSize: 12,
+                                        color: mutedText,
+                                        fontSize: 11,
                                       ),
                                     ),
+                                    if (_canDeleteComment(comment)) ...[
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        tooltip: 'Eliminar',
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 16,
+                                          color: Colors.redAccent,
+                                        ),
+                                        splashRadius: 16,
+                                        onPressed: widget.controller.busy
+                                            ? null
+                                            : () => _deleteComment(comment),
+                                      ),
+                                    ],
                                   ],
                                 ),
-                              ),
-                              trailing: _canDeleteComment(comment)
-                                  ? IconButton(
-                                      tooltip: 'Eliminar',
-                                      onPressed: widget.controller.busy
-                                          ? null
-                                          : () => _deleteComment(comment),
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.redAccent,
-                                      ),
-                                    )
-                                  : null,
+                                const SizedBox(height: 8),
+                                Text(
+                                  comment.body,
+                                  style: TextStyle(
+                                    color: secondaryText,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                         ],
                       if (commentsCount > comments.length) ...[
                         const SizedBox(height: 4),
-                        TextButton(
-                          onPressed: _loadAllComments,
-                          child: Text(
-                            'Ver todos ($commentsCount)',
+                        Align(
+                          alignment: Alignment.center,
+                          child: TextButton(
+                            onPressed: _loadAllComments,
+                            child: Text(
+                              'Ver todos los comentarios ($commentsCount)',
+                              style: TextStyle(
+                                color: primaryBlack,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                       if (permissions.canComment) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         TextField(
                           controller: _commentController,
                           maxLength: 4000,
                           minLines: 2,
                           maxLines: 4,
-                          decoration: const InputDecoration(
+                          style: TextStyle(color: primaryBlack, fontSize: 13),
+                          decoration: InputDecoration(
                             labelText: 'Escribe un comentario',
+                            labelStyle: TextStyle(color: mutedText, fontSize: 13),
                             hintText: 'Puedes mencionar con @correo',
-                            border: OutlineInputBorder(),
+                            hintStyle: TextStyle(color: mutedText, fontSize: 12),
+                            filled: true,
+                            fillColor: cardBg,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: primaryBlack,
+                                width: 1.5,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -618,8 +1037,29 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                           child: FilledButton.icon(
                             onPressed:
                                 widget.controller.busy ? null : _sendComment,
-                            icon: const Icon(Icons.send),
-                            label: const Text('Enviar'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF111111),
+                              foregroundColor: isDark
+                                  ? const Color(0xFF111111)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 10,
+                              ),
+                            ),
+                            icon: const Icon(Icons.send_rounded, size: 15),
+                            label: const Text(
+                              'Enviar',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -637,24 +1077,33 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     HomeProjectSection section,
     HomeProjectPermissions permissions,
   ) {
-    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+
     final slotDocs =
         section.documents.where((d) => d.slotKey == slot.key).toList();
     final isFilled = slot.filled || slotDocs.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isFilled
-              ? (isDark ? const Color(0xFF1E3A2F) : const Color(0xFFD1FADF))
-              : (isDark ? const Color(0xFF2E2E34) : const Color(0xFFE4E7EC)),
-          width: 1.2,
-        ),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -662,27 +1111,24 @@ class _SectionDetailViewState extends State<SectionDetailView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: isFilled
-                      ? const Color(0xFFECFDF3)
-                      : (slot.required
-                          ? const Color(0xFFFEF3F2)
-                          : scheme.surfaceContainerHighest),
-                  shape: BoxShape.circle,
+                      ? (isDark ? Colors.white : const Color(0xFF111111))
+                      : tagBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: borderColor, width: 1.0),
                 ),
                 child: Icon(
                   isFilled
-                      ? Icons.check
+                      ? Icons.check_rounded
                       : (slot.required
                           ? Icons.assignment_late_outlined
                           : Icons.assignment_outlined),
                   color: isFilled
-                      ? const Color(0xFF12B76A)
-                      : (slot.required
-                          ? const Color(0xFFF04438)
-                          : scheme.onSurfaceVariant),
+                      ? (isDark ? const Color(0xFF111111) : Colors.white)
+                      : primaryBlack,
                   size: 20,
                 ),
               ),
@@ -693,30 +1139,35 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                   children: [
                     Text(
                       slot.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
                         fontSize: 15,
+                        color: primaryBlack,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
-                      runSpacing: 4,
+                      runSpacing: 6,
                       children: [
                         if (slot.required)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
+                              horizontal: 8,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3F2),
+                              color: tagBg,
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isDark ? Colors.white24 : Colors.black26,
+                                width: 1.0,
+                              ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Requerido',
                               style: TextStyle(
-                                color: Color(0xFFB42318),
+                                color: primaryBlack,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -724,43 +1175,46 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                           ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
+                            horizontal: 8,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
                             color: isFilled
-                                ? const Color(0xFFECFDF3)
-                                : const Color(0xFFF2F4F7),
+                                ? (isDark
+                                    ? Colors.white12
+                                    : Colors.black.withValues(alpha: 0.05))
+                                : tagBg,
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: borderColor, width: 1.0),
                           ),
                           child: Text(
                             isFilled
                                 ? 'Entregado (${slotDocs.length})'
                                 : 'Pendiente',
                             style: TextStyle(
-                              color: isFilled
-                                  ? const Color(0xFF027A48)
-                                  : const Color(0xFF475467),
+                              color: isFilled ? primaryBlack : mutedText,
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         if (slot.accept.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
+                              horizontal: 8,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest,
+                              color: tagBg,
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: borderColor, width: 1.0),
                             ),
                             child: Text(
                               slot.accept.join(', '),
                               style: TextStyle(
-                                color: scheme.onSurfaceVariant,
+                                color: mutedText,
                                 fontSize: 11,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -772,7 +1226,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
               if (permissions.canEdit)
                 IconButton(
                   tooltip: 'Eliminar entrega',
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: Icon(Icons.close_rounded, size: 18, color: mutedText),
+                  splashRadius: 18,
                   onPressed: widget.controller.busy
                       ? null
                       : () => _deleteSlot(slot),
@@ -780,6 +1235,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
             ],
           ),
           if (permissions.canUpload) ...[
+            const SizedBox(height: 14),
+            Container(height: 1, color: borderColor),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -790,11 +1247,23 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                           preselectedSlotKey: slot.key,
                           preselectedSlotTitle: slot.title,
                         ),
-                icon: const Icon(Icons.upload_file, size: 18),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: primaryBlack,
+                  side: BorderSide(color: borderColor, width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.upload_file_rounded, size: 18),
                 label: Text(
                   isFilled
                       ? 'Subir otro archivo para esta entrega'
                       : 'Subir esta entrega',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -810,7 +1279,13 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     HomeProjectSection section,
     bool canDeleteDocs,
   ) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+
     final matchingSlot =
         section.slots.where((s) => s.key == doc.slotKey).firstOrNull;
     final slotDisplay = matchingSlot?.title ?? doc.slotKey;
@@ -827,68 +1302,104 @@ class _SectionDetailViewState extends State<SectionDetailView> {
       docIcon = Icons.description_outlined;
     }
 
-    return Material(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(16),
-      child: ListTile(
-        leading: Icon(
-          docIcon,
-          color: scheme.primary,
-        ),
-        title: Text(
-          doc.originalFilename,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(_formatSize(doc.fileSize)),
-              if (slotDisplay != null && slotDisplay.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withAlpha(25),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    slotDisplay,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.primary,
-                    ),
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: tagBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: borderColor, width: 1.0),
+            ),
+            child: Icon(docIcon, color: primaryBlack, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  doc.originalFilename,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: primaryBlack,
                   ),
                 ),
-            ],
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: 'Abrir',
-              onPressed: () => _openDoc(doc),
-              icon: const Icon(Icons.open_in_new),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      _formatSize(doc.fileSize),
+                      style: TextStyle(color: mutedText, fontSize: 12),
+                    ),
+                    if (slotDisplay != null && slotDisplay.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tagBg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: borderColor, width: 1.0),
+                        ),
+                        child: Text(
+                          slotDisplay,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: primaryBlack,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-            if (canDeleteDocs)
-              IconButton(
-                tooltip: 'Eliminar',
-                onPressed: widget.controller.busy
-                    ? null
-                    : () => _deleteDoc(doc),
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          ),
+          IconButton(
+            tooltip: 'Abrir',
+            icon: Icon(Icons.open_in_new_rounded, size: 18, color: primaryBlack),
+            splashRadius: 18,
+            onPressed: () => _openDoc(doc),
+          ),
+          if (canDeleteDocs)
+            IconButton(
+              tooltip: 'Eliminar',
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: Colors.redAccent,
               ),
-          ],
-        ),
+              splashRadius: 18,
+              onPressed: widget.controller.busy
+                  ? null
+                  : () => _deleteDoc(doc),
+            ),
+        ],
       ),
     );
   }

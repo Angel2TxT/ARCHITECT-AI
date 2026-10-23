@@ -217,7 +217,13 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0C0C0E) : const Color(0xFFF7F7F8);
+    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
 
     return PopScope(
       canPop: !_isSearching,
@@ -228,13 +234,15 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: bg,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: bg,
+          foregroundColor: primaryBlack,
           elevation: 0,
+          scrolledUnderElevation: 0,
           leading: _isSearching
               ? IconButton(
-                  icon: Icon(Icons.arrow_back, color: scheme.onSurface),
+                  icon: Icon(Icons.arrow_back, color: primaryBlack),
                   tooltip: 'Cerrar búsqueda',
                   onPressed: _stopSearch,
                 )
@@ -244,14 +252,14 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                   controller: _searchController,
                   autofocus: true,
                   style: TextStyle(
-                    color: scheme.onSurface,
+                    color: primaryBlack,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Buscar proyectos...',
                     hintStyle: TextStyle(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: mutedText,
                       fontSize: 15,
                     ),
                     border: InputBorder.none,
@@ -262,16 +270,20 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                     });
                   },
                 )
-              : const Text(
+              : Text(
                   'Casa hogar',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    color: primaryBlack,
+                  ),
                 ),
           actions: [
             if (_isSearching) ...[
               if (_searchQuery.isNotEmpty)
                 IconButton(
                   tooltip: 'Limpiar',
-                  icon: Icon(Icons.close, color: scheme.onSurface),
+                  icon: Icon(Icons.close, color: primaryBlack),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -282,7 +294,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
             ] else ...[
               IconButton(
                 tooltip: 'Buscar proyectos',
-                icon: Icon(Icons.search, color: scheme.onSurface),
+                icon: Icon(Icons.search, color: primaryBlack),
                 onPressed: _startSearch,
               ),
               IconButton(
@@ -291,7 +303,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                   _sortAscending
                       ? Icons.sort_by_alpha
                       : Icons.sort_by_alpha_outlined,
-                  color: scheme.onSurface,
+                  color: primaryBlack,
                 ),
                 onPressed: _toggleSort,
               ),
@@ -304,7 +316,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                 },
                 icon: Icon(
                   Icons.mail_outline,
-                  color: scheme.onSurface,
+                  color: primaryBlack,
                 ),
               ),
             ],
@@ -312,11 +324,19 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _openCreate,
-          icon: const Icon(Icons.add, color: Colors.white),
-          backgroundColor: Colors.black,
-          label: const Text(
+          elevation: 2,
+          backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
+          foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
+          icon: Icon(
+            Icons.add,
+            color: isDark ? const Color(0xFF111111) : Colors.white,
+          ),
+          label: Text(
             'Nuevo proyecto',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: isDark ? const Color(0xFF111111) : Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         body: ListenableBuilder(
@@ -333,6 +353,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
             }
             if (_controller.state == HomeProjectsState.empty) {
               return RefreshIndicator(
+                color: primaryBlack,
                 onRefresh: () => _controller.load(refresh: true),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -341,14 +362,14 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                     Icon(
                       Icons.home_work_outlined,
                       size: 56,
-                      color: scheme.onSurfaceVariant,
+                      color: mutedText,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Aún no hay proyectos',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: scheme.onSurface,
+                        color: primaryBlack,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -358,7 +379,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                       'Crea tu primer proyecto de vivienda\nunifamiliar en 9 etapas.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: scheme.onSurfaceVariant,
+                        color: secondaryText,
                         height: 1.4,
                       ),
                     ),
@@ -371,6 +392,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
 
             if (projects.isEmpty && _searchQuery.isNotEmpty) {
               return RefreshIndicator(
+                color: primaryBlack,
                 onRefresh: () => _controller.load(refresh: true),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -379,14 +401,14 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                     Icon(
                       Icons.search_off_rounded,
                       size: 56,
-                      color: scheme.onSurfaceVariant,
+                      color: mutedText,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Sin coincidencias',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: scheme.onSurface,
+                        color: primaryBlack,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -398,7 +420,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                         'No encontramos ningún proyecto que coincida con "$_searchQuery".',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: scheme.onSurfaceVariant,
+                          color: secondaryText,
                           height: 1.4,
                         ),
                       ),
@@ -410,8 +432,14 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
                         },
-                        icon: const Icon(Icons.clear),
-                        label: const Text('Limpiar búsqueda'),
+                        icon: Icon(Icons.clear, color: primaryBlack),
+                        label: Text(
+                          'Limpiar búsqueda',
+                          style: TextStyle(
+                            color: primaryBlack,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -420,27 +448,69 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
             }
 
             return RefreshIndicator(
+              color: primaryBlack,
               onRefresh: () => _controller.load(refresh: true),
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                itemCount: projects.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final project = projects[index];
-                  return HomeProjectCard(
-                    project: project,
-                    pinned: _controller.isPinned(project.id),
-                    onTap: () => _openDetail(project.id),
-                    onPin: () => _togglePin(
-                      project,
-                      wasPinned: _controller.isPinned(project.id),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? 'Resultados'
+                                : 'Proyectos activos',
+                            style: TextStyle(
+                              color: primaryBlack,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tagBg,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: borderColor, width: 1),
+                            ),
+                            child: Text(
+                              '${projects.length}',
+                              style: TextStyle(
+                                color: primaryBlack,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  for (final project in projects) ...[
+                    HomeProjectCard(
+                      project: project,
+                      pinned: _controller.isPinned(project.id),
+                      onTap: () => _openDetail(project.id),
+                      onPin: () => _togglePin(
+                        project,
+                        wasPinned: _controller.isPinned(project.id),
+                      ),
+                      onRename: () => _promptRename(project),
+                      onDelete: project.permissions.canDeleteProject
+                          ? () => _confirmDelete(project)
+                          : null,
                     ),
-                    onRename: () => _promptRename(project),
-                    onDelete: project.permissions.canDeleteProject
-                        ? () => _confirmDelete(project)
-                        : null,
-                  );
-                },
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ),
             );
           },
