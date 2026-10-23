@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -41,8 +41,45 @@ router = APIRouter(tags=["analyze"])
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _resolve_weights(weights: str) -> Path:
-    wpath = Path(weights.strip()) if weights.strip() else find_default_weights()
+def _safe_str(val: Any, default: str = "") -> str:
+    if val is None or not isinstance(val, str):
+        if hasattr(val, "default") and val.default is not None:
+            return str(val.default)
+        return default if val is None else str(val)
+    return val
+
+
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    if val is None or not isinstance(val, (int, float)):
+        if hasattr(val, "default") and val.default is not None:
+            try:
+                return float(val.default)
+            except (ValueError, TypeError):
+                return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+    return float(val)
+
+
+def _safe_int(val: Any, default: int = 0) -> int:
+    if val is None or not isinstance(val, int):
+        if hasattr(val, "default") and val.default is not None:
+            try:
+                return int(val.default)
+            except (ValueError, TypeError):
+                return default
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+    return int(val)
+
+
+def _resolve_weights(weights: Any) -> Path:
+    weights_str = _safe_str(weights).strip()
+    wpath = Path(weights_str) if weights_str else find_default_weights()
     if wpath is not None and not wpath.is_absolute():
         wpath = ROOT / wpath
     if wpath is None or not wpath.is_file():
@@ -66,6 +103,13 @@ async def analyze(
     chat_id: str = Form(""),
     jurisdiction: str = Form(""),
 ):
+    message_str = _safe_str(message).strip()
+    chat_id_str = _safe_str(chat_id).strip()
+    jurisdiction_str = _safe_str(jurisdiction).strip()
+    auto_calibrate_str = _safe_str(auto_calibrate, "1").strip()
+    ppm_val = _safe_float(ppm, 0.0)
+    conf_val = _safe_float(conf, 0.0)
+
     content = await file.read()
     filename = file.filename or "plano.png"
     if not is_supported_filename(filename):
@@ -84,22 +128,22 @@ async def analyze(
     )
 
     chat: Chat | None = None
-    if chat_id.strip():
+    if chat_id_str:
         chat = (
             db.query(Chat)
-            .filter(Chat.id == chat_id.strip(), Chat.user_id == user.id)
+            .filter(Chat.id == chat_id_str, Chat.user_id == user.id)
             .first()
         )
     if not chat:
         chat = Chat(
             id=str(uuid.uuid4()),
             user_id=user.id,
-            title=(message.strip() or "Análisis de plano")[:120],
+            title=(message_str or "Análisis de plano")[:120],
         )
         db.add(chat)
         db.flush()
-    elif message.strip() and chat.title == "Nuevo chat":
-        chat.title = message.strip()[:120]
+    elif message_str and chat.title == "Nuevo chat":
+        chat.title = message_str[:120]
 
     analysis = Analysis(
         user_id=user.id,
@@ -107,9 +151,9 @@ async def analyze(
         original_filename=filename,
         source_path="",
         weights_path=str(wpath),
-        pixels_per_meter=ppm if ppm > 0 else 0.0,
-        confidence=conf if conf > 0 else 0.0,
-        user_prompt=message.strip(),
+        pixels_per_meter=ppm_val if ppm_val > 0 else 0.0,
+        confidence=conf_val if conf_val > 0 else 0.0,
+        user_prompt=message_str,
         training_eligible=True,
     )
     db.add(analysis)
@@ -126,7 +170,7 @@ async def analyze(
     analysis.source_path = str(prepared.original_path)
 
     user_msg_content = {
-        "text": message.strip() or "Analiza este plano",
+        "text": message_str or "Analiza este plano",
         "filename": filename,
         "analysis_id": analysis.id,
         "type": "analysis",
@@ -141,19 +185,19 @@ async def analyze(
     )
 
     try:
-        use_auto = auto_calibrate.strip().lower() not in ("0", "false", "no", "off")
+        use_auto = auto_calibrate_str.lower() not in ("0", "false", "no", "off")
         result = analyze_plano_json(
             str(prepared.image_path),
             weights=wpath,
-            pixels_per_meter=ppm,
-            conf=conf,
+            pixels_per_meter=ppm_val,
+            conf=conf_val,
             auto_calibrate=use_auto,
-            user_prompt=message.strip(),
+            user_prompt=message_str,
             dxf_path=prepared.dxf_path,
-            jurisdiction=jurisdiction.strip() or None,
+            jurisdiction=jurisdiction_str or None,
         )
-        analysis.pixels_per_meter = result.get("pixels_per_meter_used", ppm or 100.0)
-        analysis.confidence = result.get("confidence_used", conf or 0.18)
+        analysis.pixels_per_meter = result.get("pixels_per_meter_used", ppm_val or 100.0)
+        analysis.confidence = result.get("confidence_used", conf_val or 0.18)
     except Exception as exc:
         db.rollback()
         raise HTTPException(500, str(exc)) from exc
@@ -162,7 +206,7 @@ async def analyze(
         result["conversion_note"] = prepared.conversion_note
     result["source_filename"] = prepared.original_filename
     result["was_converted"] = prepared.was_converted
-    result["user_message"] = message
+    result["user_message"] = message_str
     annotated_path = save_annotated_jpeg(user.id, analysis.id, result["image_base64"])
 
     analysis.annotated_path = str(annotated_path)
@@ -253,31 +297,38 @@ async def analyze_followup(
     weights: str = Form(""),
 ):
     """Reanaliza el último plano del chat con una nueva pregunta (sin volver a subir archivo)."""
-    if analysis_id <= 0:
+    analysis_id_val = _safe_int(analysis_id, 0)
+    message_str = _safe_str(message).strip()
+    chat_id_str = _safe_str(chat_id).strip()
+    auto_calibrate_str = _safe_str(auto_calibrate, "1").strip()
+    ppm_val = _safe_float(ppm, 0.0)
+    conf_val = _safe_float(conf, 0.0)
+
+    if analysis_id_val <= 0:
         raise HTTPException(400, "Indica un análisis previo (analysis_id).")
 
     analysis = (
         db.query(Analysis)
-        .filter(Analysis.id == analysis_id, Analysis.user_id == user.id)
+        .filter(Analysis.id == analysis_id_val, Analysis.user_id == user.id)
         .first()
     )
     if not analysis:
         raise HTTPException(404, "No encontré ese análisis. Vuelve a adjuntar el plano.")
 
-    prompt = message.strip()
+    prompt = message_str
     from core.correction_intent import parse_correction_message
     from api.routes.feedback import apply_correction_from_text
 
     if prompt and parse_correction_message(prompt).is_correction:
         return apply_correction_from_text(
-            db, user, analysis, prompt, chat_id=chat_id.strip()
+            db, user, analysis, prompt, chat_id=chat_id_str
         )
 
     chat: Chat | None = None
-    if chat_id.strip():
+    if chat_id_str:
         chat = (
             db.query(Chat)
-            .filter(Chat.id == chat_id.strip(), Chat.user_id == user.id)
+            .filter(Chat.id == chat_id_str, Chat.user_id == user.id)
             .first()
         )
     if not chat and analysis.chat_id:
@@ -286,7 +337,7 @@ async def analyze_followup(
         chat = Chat(
             id=str(uuid.uuid4()),
             user_id=user.id,
-            title=(message.strip() or "Seguimiento de plano")[:120],
+            title=(message_str or "Seguimiento de plano")[:120],
         )
         db.add(chat)
         db.flush()
@@ -305,7 +356,7 @@ async def analyze_followup(
         file_size_bytes=image_path.stat().st_size,
     )
 
-    prompt = message.strip() or "Medidas del plano"
+    prompt = message_str or "Medidas del plano"
     db.add(
         Message(
             chat_id=chat.id,
@@ -320,13 +371,13 @@ async def analyze_followup(
     )
 
     try:
-        use_auto = auto_calibrate.strip().lower() not in ("0", "false", "no", "off")
+        use_auto = auto_calibrate_str.lower() not in ("0", "false", "no", "off")
         dxf_candidate = Path(image_path).parent / "source.dxf"
         result = analyze_plano_json(
             str(image_path),
             weights=wpath,
-            pixels_per_meter=ppm or analysis.pixels_per_meter,
-            conf=conf or analysis.confidence,
+            pixels_per_meter=ppm_val or analysis.pixels_per_meter,
+            conf=conf_val or analysis.confidence,
             auto_calibrate=use_auto,
             user_prompt=prompt,
             dxf_path=dxf_candidate if dxf_candidate.is_file() else None,

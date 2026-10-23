@@ -157,6 +157,7 @@ async def mobile_analyze(
     weights: str = Form(""),
     message: str = Form(""),
     chat_id: str = Form(""),
+    jurisdiction: str = Form(""),
 ):
     """Sube un plano desde la app móvil y devuelve el resultado de análisis."""
     return await analyze_endpoint(
@@ -169,4 +170,5 @@ async def mobile_analyze(
         weights=weights,
         message=message,
         chat_id=chat_id,
+        jurisdiction=jurisdiction,
     )
