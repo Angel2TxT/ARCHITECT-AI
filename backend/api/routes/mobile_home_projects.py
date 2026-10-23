@@ -69,6 +69,10 @@ class HomeProjectUpdate(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class HomeProjectRename(BaseModel):
+    name: str = Field(min_length=2, max_length=160, description="Nuevo nombre del proyecto casa hogar")
+
+
 class StageUpdate(BaseModel):
     status: str | None = None
     notes: str | None = None
@@ -251,6 +255,7 @@ def mobile_get_project(
 
 
 @router.patch("/{project_id}")
+@router.put("/{project_id}")
 def mobile_patch_project(
     project_id: str,
     body: HomeProjectUpdate,
@@ -267,6 +272,25 @@ def mobile_patch_project(
         description=body.description,
         status=body.status,
         metadata=body.metadata,
+    )
+    project = get_home_project(db, user.id, project.id)
+    return _ok_project(db, project, user.id)
+
+
+@router.patch("/{project_id}/rename")
+@router.put("/{project_id}/rename")
+def mobile_rename_project(
+    project_id: str,
+    body: HomeProjectRename,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Editar / renombrar el nombre de un proyecto casa hogar desde la app móvil."""
+    project = update_home_project(
+        db,
+        user,
+        project_id,
+        name=body.name,
     )
     project = get_home_project(db, user.id, project.id)
     return _ok_project(db, project, user.id)

@@ -146,6 +146,44 @@ class HomeProjectsController extends ChangeNotifier {
     }
   }
 
+  Future<bool> renameProject(String projectId, String newName) async {
+    final trimmed = newName.trim();
+    if (trimmed.length < 2) {
+      _errorMessage = 'El nombre debe tener al menos 2 caracteres.';
+      _notify();
+      return false;
+    }
+    if (trimmed.length > 160) {
+      _errorMessage = 'El nombre no puede superar 160 caracteres.';
+      _notify();
+      return false;
+    }
+    try {
+      final updated = await _service.renameProject(
+        projectId: projectId,
+        name: trimmed,
+      );
+      if (_disposed) return false;
+      final index = _projects.indexWhere((p) => p.id == projectId);
+      if (index >= 0) {
+        _projects[index] = updated;
+      }
+      _sortProjects();
+      _notify();
+      return true;
+    } on ApiException catch (error) {
+      if (_disposed) return false;
+      _errorMessage = error.message;
+      _notify();
+      return false;
+    } catch (_) {
+      if (_disposed) return false;
+      _errorMessage = 'No se pudo actualizar el nombre del proyecto.';
+      _notify();
+      return false;
+    }
+  }
+
   void _sortProjects() {
     _projects.sort((a, b) {
       return a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
@@ -269,6 +307,46 @@ class HomeProjectDetailController extends ChangeNotifier {
     } catch (_) {
       if (_disposed) return false;
       _actionError = 'No se pudo eliminar el proyecto.';
+      return false;
+    } finally {
+      if (!_disposed) {
+        _busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<bool> renameProject(String newName) async {
+    final trimmed = newName.trim();
+    if (trimmed.length < 2) {
+      _actionError = 'El nombre debe tener al menos 2 caracteres.';
+      _notify();
+      return false;
+    }
+    if (trimmed.length > 160) {
+      _actionError = 'El nombre no puede superar 160 caracteres.';
+      _notify();
+      return false;
+    }
+    if (_disposed || _busy) return false;
+    _busy = true;
+    _actionError = null;
+    _notify();
+    try {
+      final updated = await _service.renameProject(
+        projectId: projectId,
+        name: trimmed,
+      );
+      if (_disposed) return false;
+      _project = updated;
+      return true;
+    } on ApiException catch (error) {
+      if (_disposed) return false;
+      _actionError = error.message;
+      return false;
+    } catch (_) {
+      if (_disposed) return false;
+      _actionError = 'No se pudo actualizar el nombre.';
       return false;
     } finally {
       if (!_disposed) {

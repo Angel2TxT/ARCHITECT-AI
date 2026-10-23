@@ -113,6 +113,21 @@ class HomeProjectService {
     }
   }
 
+  Future<HomeProject> renameProject({
+    required String projectId,
+    required String name,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch<dynamic>(
+        '$_base/$projectId/rename',
+        data: {'name': name.trim()},
+      );
+      return _projectFrom(response.data);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
   Future<void> deleteProject(String projectId) async {
     try {
       await _apiClient.dio.delete<void>('$_base/$projectId');

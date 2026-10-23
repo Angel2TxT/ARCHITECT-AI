@@ -68,6 +68,10 @@ class HomeProjectUpdate(BaseModel):
     clear_coordinates: bool = False
 
 
+class HomeProjectRename(BaseModel):
+    name: str = Field(min_length=2, max_length=160, description="Nuevo nombre del proyecto casa hogar")
+
+
 class StageUpdate(BaseModel):
     status: str | None = None
     notes: str | None = None
@@ -271,6 +275,7 @@ def get_project(
 
 
 @router.patch("/{project_id}")
+@router.put("/{project_id}")
 def patch_project(
     project_id: str,
     body: HomeProjectUpdate,
@@ -290,6 +295,25 @@ def patch_project(
         status=body.status,
         metadata=body.metadata,
         clear_coordinates=body.clear_coordinates,
+    )
+    project = get_home_project(db, user.id, project.id)
+    return _payload(db, project, user.id)
+
+
+@router.patch("/{project_id}/rename")
+@router.put("/{project_id}/rename")
+def rename_home_project(
+    project_id: str,
+    body: HomeProjectRename,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Editar / renombrar el nombre de un proyecto casa hogar."""
+    project = update_home_project(
+        db,
+        user,
+        project_id,
+        name=body.name,
     )
     project = get_home_project(db, user.id, project.id)
     return _payload(db, project, user.id)

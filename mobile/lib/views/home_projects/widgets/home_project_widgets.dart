@@ -72,6 +72,7 @@ class HomeProjectCard extends StatelessWidget {
     required this.onTap,
     this.pinned = false,
     this.onPin,
+    this.onRename,
     this.onDelete,
   });
 
@@ -79,13 +80,14 @@ class HomeProjectCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool pinned;
   final VoidCallback? onPin;
+  final VoidCallback? onRename;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    final hasMenu = onPin != null || onDelete != null;
+    final hasMenu = onPin != null || onRename != null || onDelete != null;
     final borderColor = isDark
         ? const Color(0xFF2E2E34)
         : const Color(0xFFD0D5DD);
@@ -162,6 +164,8 @@ class HomeProjectCard extends StatelessWidget {
                         switch (value) {
                           case 'pin':
                             onPin?.call();
+                          case 'rename':
+                            onRename?.call();
                           case 'delete':
                             onDelete?.call();
                         }
@@ -181,6 +185,21 @@ class HomeProjectCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(pinned ? 'Desfijar' : 'Fijar'),
+                              ],
+                            ),
+                          ),
+                        if (onRename != null)
+                          PopupMenuItem(
+                            value: 'rename',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 20,
+                                  color: scheme.onSurface,
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Editar nombre'),
                               ],
                             ),
                           ),

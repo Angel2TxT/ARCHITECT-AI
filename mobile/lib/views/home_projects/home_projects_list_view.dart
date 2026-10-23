@@ -151,6 +151,63 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
     }
   }
 
+  Future<void> _promptRename(HomeProject project) async {
+    final textController = TextEditingController(text: project.name);
+    final formKey = GlobalKey<FormState>();
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar nombre del proyecto'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: textController,
+            autofocus: true,
+            maxLength: 160,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del proyecto',
+              hintText: 'Ingresa el nuevo nombre',
+            ),
+            validator: (value) {
+              final trimmed = (value ?? '').trim();
+              if (trimmed.length < 2) {
+                return 'Debe tener al menos 2 caracteres';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() == true) {
+                Navigator.pop(context, textController.text.trim());
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (newName == null || newName.isEmpty || newName == project.name || !mounted) return;
+
+    final ok = await _controller.renameProject(project.id, newName);
+    if (!mounted) return;
+    if (ok) {
+      AppNotifications.success(context, 'Nombre actualizado');
+    } else {
+      AppNotifications.error(
+        context,
+        _controller.errorMessage ?? 'No se pudo actualizar el nombre',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -371,6 +428,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                       project,
                       wasPinned: _controller.isPinned(project.id),
                     ),
+                    onRename: () => _promptRename(project),
                     onDelete: project.permissions.canDeleteProject
                         ? () => _confirmDelete(project)
                         : null,
