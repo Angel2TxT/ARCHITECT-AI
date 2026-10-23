@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "movil_architect",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": ["--no-enable-impeller"]
+    },
+    {
+      "name": "movil_architect (profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main.dart",
+      "toolArgs": ["--no-enable-impeller"]
+    },
+    {
+      "name": "movil_architect (software render)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": ["--no-enable-impeller", "--enable-software-rendering"]
+    }
+  ]
+}

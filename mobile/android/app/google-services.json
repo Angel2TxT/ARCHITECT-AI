@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "968207357312",
+    "project_id": "architect-ai-d1fbe",
+    "storage_bucket": "architect-ai-d1fbe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968207357312:android:e01a34fc8ff28de21d5d65",
+        "android_client_info": {
+          "package_name": "com.example.movil_architect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBHhP5B6PRjSvGAI8YPxJCu5pK2lT52J8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
