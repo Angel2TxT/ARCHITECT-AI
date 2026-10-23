@@ -413,14 +413,15 @@ def analyze_plano(
     manual_conf: float | None = None,
     dxf_path: str | Path | None = None,
     jurisdiction: str | None = None,
+    gemini_detections: list[Detection] | None = None,
 ) -> tuple[np.ndarray, list[Detection], list[ValidationIssue], str, AutoCalibration | None]:
     """
     Devuelve: imagen RGB, detecciones, incidencias, status, calibración (si auto).
     """
-    model = _get_model(weights)
-    names = model.names
     base_bgr = _load_bgr(image)
     h, w = base_bgr.shape[:2]
+    model = _get_model(weights)
+    names = model.names
     infer_settings = choose_infer_settings(w, h)
 
     calibration: AutoCalibration | None = None
@@ -476,34 +477,52 @@ def analyze_plano(
             used_ppm = 0.55 * cad_suggested_ppm + 0.45 * used_ppm
             calibration.pixels_per_meter = used_ppm
             calibration.ppm_note = f"{calibration.ppm_note}+CAD"
-    from core.sheet_splitter import extract_isolated_plan
-    isolated_bgr, (offset_x, offset_y), sheet_layout = extract_isolated_plan(base_bgr)
-    plan_h, plan_w = isolated_bgr.shape[:2]
-    infer_settings = choose_infer_settings(plan_w, plan_h)
+    if gemini_detections is not None:
+        detections = list(gemini_detections)
+        infer_settings = InferSettings(
+            imgsz=max(w, h),
+            use_tiles=False,
+            tile_size=0,
+            overlap=0,
+            note="Gemini Vision Multimodal",
+        )
+    else:
+        model = _get_model(weights)
+        names = model.names
+        from core.sheet_splitter import extract_isolated_plan
+        isolated_bgr, (offset_x, offset_y), sheet_layout = extract_isolated_plan(base_bgr)
+        plan_h, plan_w = isolated_bgr.shape[:2]
+        infer_settings = choose_infer_settings(plan_w, plan_h)
 
-    detections, infer_settings = predict_detections(
-        model, isolated_bgr, names, used_conf, settings=infer_settings
+        detections, infer_settings = predict_detections(
+            model, isolated_bgr, names, used_conf, settings=infer_settings
+        )
+        if offset_x > 0 or offset_y > 0:
+            for d in detections:
+                x1, y1, x2, y2 = d.bbox_xyxy
+                d.bbox_xyxy = (x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y)
+                if d.polygon:
+                    d.polygon = [(px + offset_x, py + offset_y) for px, py in d.polygon]
+
+        if not detections and used_conf > 0.03:
+            for retry_conf in (0.10, 0.06, 0.03):
+                if retry_conf >= used_conf:
+                    continue
+                detections, infer_settings = predict_detections(
+                    model, base_bgr, names, retry_conf, settings=infer_settings
+                )
+                used_conf = retry_conf
+                if detections:
+                    if calibration:
+                        calibration.confidence = retry_conf
+                        calibration.conf_note = "reintento por pocas detecciones"
+                    break
+
+    # 2. Filtro geométrico para limpiar cotas, tiras delgadas de medidas y falsos positivos de YOLO
+    from core.geometric_filter import filter_floorplan_detections
+    detections, filter_stats = filter_floorplan_detections(
+        detections, w, h, pixels_per_meter=used_ppm
     )
-    if offset_x > 0 or offset_y > 0:
-        for d in detections:
-            x1, y1, x2, y2 = d.bbox_xyxy
-            d.bbox_xyxy = (x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y)
-            if d.polygon:
-                d.polygon = [(px + offset_x, py + offset_y) for px, py in d.polygon]
-
-    if not detections and used_conf > 0.03:
-        for retry_conf in (0.10, 0.06, 0.03):
-            if retry_conf >= used_conf:
-                continue
-            detections, infer_settings = predict_detections(
-                model, base_bgr, names, retry_conf, settings=infer_settings
-            )
-            used_conf = retry_conf
-            if detections:
-                if calibration:
-                    calibration.confidence = retry_conf
-                    calibration.conf_note = "reintento por pocas detecciones"
-                break
 
     from rules.norms import get_jurisdiction_rules
     rules = get_jurisdiction_rules(jurisdiction, pixels_per_meter=used_ppm)
@@ -575,6 +594,87 @@ def analyze_plano_json(
     from rules.prompt_checks import run_prompt_checks
 
     intent = parse_analysis_intent(user_prompt)
+
+    # Verificación de tipo de documento: evitar analizar tareas escolares o tablas de texto
+    if isinstance(image, (str, Path)):
+        img_p = Path(image)
+        source_pdf = img_p.parent / "source.pdf"
+        if source_pdf.exists():
+            try:
+                from core.document_guard import check_pdf_is_floor_plan
+                pdf_check = check_pdf_is_floor_plan(source_pdf.read_bytes())
+                if not pdf_check.is_floor_plan:
+                    img_bytes = img_p.read_bytes()
+                    b64 = base64.b64encode(img_bytes).decode("utf-8")
+                    return {
+                        "status": "documento_no_valido",
+                        "is_floor_plan": False,
+                        "rejection_reason": pdf_check.rejection_reason,
+                        "text": (
+                            f"⚠️ **Archivo no reconocido como plano arquitectónico**\n\n"
+                            f"{pdf_check.rejection_reason}\n\n"
+                            f"Por favor sube una lámina o plano arquitectónico en planta (distribución de espacios, muros y vanos) para realizar la revisión normativa."
+                        ),
+                        "counts": {"errors": 0, "warnings": 0, "detections": 0},
+                        "detections": [],
+                        "issues": [],
+                        "issues_summary": [],
+                        "detections_summary": [],
+                        "image_base64": b64,
+                        "auto_calibration": None,
+                        "scale_hint": None,
+                        "verdict": {
+                            "tone": "caution",
+                            "headline": "Documento no arquitectónico",
+                            "detail": pdf_check.rejection_reason,
+                            "suggestions": ["Sube un plano arquitectónico en planta."],
+                        },
+                    }
+            except Exception:
+                pass
+
+    gemini_detections = None
+    try:
+        from services.gemini_vision_detector import (
+            is_gemini_vision_available,
+            analyze_floorplan_with_gemini_vision,
+        )
+        if is_gemini_vision_available():
+            base_bgr_test = _load_bgr(image)
+            gv = analyze_floorplan_with_gemini_vision(base_bgr_test)
+            if gv.success:
+                if not gv.is_floor_plan:
+                    success_enc, buffer = cv2.imencode(".jpg", base_bgr_test, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+                    b64 = base64.b64encode(buffer).decode("utf-8") if success_enc else ""
+                    return {
+                        "status": "documento_no_valido",
+                        "is_floor_plan": False,
+                        "rejection_reason": gv.rejection_reason or "El archivo no contiene un plano arquitectónico en planta.",
+                        "text": (
+                            f"⚠️ **Archivo no reconocido como plano arquitectónico**\n\n"
+                            f"{gv.rejection_reason}\n\n"
+                            f"Por favor sube una lámina o plano arquitectónico en planta (distribución de espacios, muros y vanos) para realizar la revisión normativa."
+                        ),
+                        "counts": {"errors": 0, "warnings": 0, "detections": 0},
+                        "detections": [],
+                        "issues": [],
+                        "issues_summary": [],
+                        "detections_summary": [],
+                        "image_base64": b64,
+                        "auto_calibration": None,
+                        "scale_hint": None,
+                        "verdict": {
+                            "tone": "caution",
+                            "headline": "Documento no arquitectónico",
+                            "detail": gv.rejection_reason or "No es un plano arquitectónico.",
+                            "suggestions": ["Sube un plano arquitectónico en planta."],
+                        },
+                    }
+                elif gv.detections:
+                    gemini_detections = gv.detections
+    except Exception:
+        pass
+
     manual_ppm = pixels_per_meter if pixels_per_meter > 0 else None
     manual_conf = conf if conf > 0 else None
     use_auto = auto_calibrate and not (manual_ppm and manual_conf)
@@ -589,6 +689,7 @@ def analyze_plano_json(
         manual_conf=manual_conf,
         dxf_path=dxf_path,
         jurisdiction=jurisdiction,
+        gemini_detections=gemini_detections,
     )
     used_ppm = calibration.pixels_per_meter if calibration else (manual_ppm or 100.0)
     used_conf = calibration.confidence if calibration else (manual_conf or 0.18)

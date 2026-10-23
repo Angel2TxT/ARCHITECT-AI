@@ -2012,8 +2012,23 @@
     });
     sectionRoot?.querySelectorAll("[data-refund-reject]").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-refund-reject");
-        const note = prompt("Motivo del rechazo (opcional):") || "Rechazado";
+        let note = "Rechazado";
+        if (window.PlanoDialog?.prompt) {
+          const res = await window.PlanoDialog.prompt({
+            title: "Rechazar solicitud de reembolso",
+            message: "Motivo del rechazo para el usuario (opcional):",
+            placeholder: "Ej. Se superó el límite de uso del plan...",
+            confirmLabel: "Rechazar reembolso",
+            cancelLabel: "Cancelar",
+            multiline: true,
+          });
+          if (res === null) return;
+          note = (res || "").trim() || "Rechazado";
+        } else {
+          const input = prompt("Motivo del rechazo (opcional):");
+          if (input === null) return;
+          note = input.trim() || "Rechazado";
+        }
         try {
           await apiAdmin(`/api/admin/refunds/${id}/review`, {
             method: "POST",

@@ -353,9 +353,18 @@
     const delForm = body.querySelector("#accountDeleteForm");
     delForm?.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!confirm("¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer.")) {
-        return;
-      }
+      const ok = window.PlanoDialog?.confirm
+        ? await window.PlanoDialog.confirm(
+            "¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer y se borrarán todos tus planos, proyectos e historial.",
+            {
+              title: "Eliminar cuenta",
+              variant: "danger",
+              confirmLabel: "Eliminar definitivamente",
+              cancelLabel: "Cancelar",
+            }
+          )
+        : confirm("¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer.");
+      if (!ok) return;
       const btn = delForm.querySelector("button[type=submit]");
       if (btn) btn.disabled = true;
       try {
@@ -446,7 +455,18 @@
 
     const cancelBtn = slot.querySelector("#btnCancelSub");
     cancelBtn?.addEventListener("click", async () => {
-      if (!confirm("¿Cancelar tu suscripción de pago y volver al plan Gratis?")) return;
+      const ok = window.PlanoDialog?.confirm
+        ? await window.PlanoDialog.confirm(
+            "¿Cancelar tu suscripción de pago y volver al plan Gratis?",
+            {
+              title: "Cancelar suscripción",
+              variant: "danger",
+              confirmLabel: "Sí, cancelar suscripción",
+              cancelLabel: "Conservar plan",
+            }
+          )
+        : confirm("¿Cancelar tu suscripción de pago y volver al plan Gratis?");
+      if (!ok) return;
       cancelBtn.disabled = true;
       try {
         const res = await PlanoAuth.apiFetch("/api/billing/cancel", { method: "POST" });

@@ -452,18 +452,20 @@ function groupDetectionsFromList(detections) {
 }
 
 function findLastAnalysisId(chat) {
-  if (!chat?.messages?.length) return chat?.lastAnalysisId || null;
-  for (let i = chat.messages.length - 1; i >= 0; i--) {
-    const m = chat.messages[i];
-    if (m.analysisId) return m.analysisId;
+  if (!chat) return null;
+  if (chat.lastAnalysisId) return chat.lastAnalysisId;
+  const msgs = chat.messages || [];
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    const aid = m?.analysisId || m?.content?.analysis_id || m?.content?.analysisId;
+    if (aid) return aid;
   }
-  return chat.lastAnalysisId || null;
+  return null;
 }
 
 function wantsPlanMeasures(text) {
   const p = (text || "").toLowerCase();
-  if (!/medida|cota|dimensi[oó]n|ancho|alto|metro|superficie/.test(p)) return false;
-  return /plano|este|ese|mi\s|adjunt|dibujo|l[aá]mina|todas?\s+las?\s+medidas|dame\s+las|listar|cu[aá]nto\s+mide/.test(p);
+  return /medida|cota|dimensi[oó]n|ancho|alto|largo|metro|superficie|área|area|cu[aá]nto\s+mide|tamaño/i.test(p);
 }
 
 function looksLikeCorrection(text) {
@@ -633,7 +635,7 @@ function refreshWelcomeHero({ chatId = null, advance = false, animate = true } =
 }
 
 function assistantModeLabel(mode) {
-  if (mode === "architect" || mode === "rules") return "IA ARCHITECT";
+  if (mode === "architect" || mode === "rules" || mode === "architect_plan") return "IA ARCHITECT";
   if (mode === "llm") return "IA conversacional";
   return "";
 }
@@ -1071,7 +1073,13 @@ async function showChat(chat) {
     const res = await PlanoAuth.apiFetch(`/api/chats/${chat.id}`);
     const data = await res.json();
     chat.title = data.chat.title;
+    if (data.chat.last_analysis_id) {
+      chat.lastAnalysisId = data.chat.last_analysis_id;
+    }
     chat.messages = (data.messages || []).map(mapMessageFromApi);
+    if (!chat.lastAnalysisId) {
+      chat.lastAnalysisId = findLastAnalysisId(chat);
+    }
     chat.updatedAt = new Date(data.chat.updated_at).getTime() || Date.now();
   } catch {
     chat.messages = chat.messages || [];
@@ -1121,7 +1129,9 @@ function buildAssistantAnswerBlock(text) {
     const content = rawLines.map((l) => l.trim()).filter(Boolean).join(" ");
     if (!content) return;
     const p = document.createElement("p");
-    if (!leadDone) {
+    if (content.startsWith("Escala automática:")) {
+      p.className = "msg-answer-tech-note";
+    } else if (!leadDone) {
       p.className = "msg-answer-lead";
       leadDone = true;
     }
@@ -1231,7 +1241,7 @@ async function deleteChat(chatId, listItem, { skipConfirm = false } = {}) {
     return;
   }
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 404) {
     let detail = "No se pudo eliminar el chat";
     try {
       const data = await res.json();
@@ -1248,6 +1258,7 @@ async function deleteChat(chatId, listItem, { skipConfirm = false } = {}) {
 
   const wasCurrent = currentChatId === chatId;
   chats = chats.filter((c) => c.id !== chatId);
+  saveChats();
 
   if (wasCurrent) {
     if (chats.length) {
@@ -1536,111 +1547,237 @@ function formatChatWhen(ts) {
 
 function buildResultsPanel(msg) {
   const panel = document.createElement("div");
-  panel.className = "results-panel results-panel--compact";
+  panel.className = "plan-audit-card";
 
+  const errors = msg.stats?.errors ?? 0;
+  const warnings = msg.stats?.warnings ?? 0;
+  const detections = msg.stats?.detections ?? 0;
+  const issues = msg.issuesSummary || [];
+  const dets = msg.detectionsSummary || [];
+  const auto = msg.autoCalibration || null;
+  const measures = msg.measuresReport?.items || [];
+  const analysisId = msg.analysisId;
+
+  // 1. HEADER: Estado del análisis & Acciones rápidas (PDF, DXF)
+  const header = document.createElement("div");
+  header.className = "audit-header";
+
+  const statusTone = errors > 0 ? "fail" : warnings > 0 ? "warn" : "ok";
+  const statusIcon = errors > 0 ? "error" : warnings > 0 ? "warning" : "verified";
+  const statusLabel = errors > 0
+    ? "Requiere adecuaciones normativas"
+    : warnings > 0
+      ? "Observaciones de diseño"
+      : "Cumplimiento normativo satisfactorio";
+
+  const statusEl = document.createElement("div");
+  statusEl.className = `audit-status audit-status--${statusTone}`;
+  statusEl.innerHTML = `
+    <span class="material-symbols-outlined text-[16px]">${statusIcon}</span>
+    <span>${statusLabel}</span>
+  `;
+  header.appendChild(statusEl);
+
+  if (analysisId) {
+    const actions = document.createElement("div");
+    actions.className = "audit-actions";
+
+    const btnPdf = document.createElement("a");
+    btnPdf.href = `/api/analyses/${analysisId}/dossier.pdf`;
+    btnPdf.target = "_blank";
+    btnPdf.className = "audit-action-btn";
+    btnPdf.innerHTML = `<span class="material-symbols-outlined text-[15px]">picture_as_pdf</span><span>Dictamen PDF</span>`;
+    actions.appendChild(btnPdf);
+
+    const btnDxf = document.createElement("a");
+    btnDxf.href = `/api/analyses/${analysisId}/export.dxf`;
+    btnDxf.download = `plano_${analysisId}.dxf`;
+    btnDxf.className = "audit-action-btn";
+    btnDxf.innerHTML = `<span class="material-symbols-outlined text-[15px]">architecture</span><span>Exportar DXF</span>`;
+    actions.appendChild(btnDxf);
+
+    header.appendChild(actions);
+  }
+  panel.appendChild(header);
+
+  // 2. RIBBON DE MÉTRICAS KPI (3 tarjetas limpias con tipografía tabular)
   if (msg.stats) {
-    const summary = document.createElement("div");
-    summary.className = "results-summary";
-    const tone =
-      msg.stats.errors > 0 ? "fail" : msg.stats.warnings > 0 ? "warn" : "ok";
-    summary.innerHTML = `
-      <div class="results-stat results-stat--${tone}">
-        <strong>${msg.stats.errors}</strong><span>errores</span>
+    const kpis = document.createElement("div");
+    kpis.className = "audit-kpis";
+    kpis.innerHTML = `
+      <div class="audit-kpi audit-kpi--fail">
+        <span class="audit-kpi-val">${errors}</span>
+        <span class="audit-kpi-lbl">Errores</span>
       </div>
-      <div class="results-stat results-stat--warn">
-        <strong>${msg.stats.warnings}</strong><span>avisos</span>
+      <div class="audit-kpi audit-kpi--warn">
+        <span class="audit-kpi-val">${warnings}</span>
+        <span class="audit-kpi-lbl">Avisos</span>
       </div>
-      <div class="results-stat">
-        <strong>${msg.stats.detections}</strong><span>detectados</span>
+      <div class="audit-kpi audit-kpi--info">
+        <span class="audit-kpi-val">${detections}</span>
+        <span class="audit-kpi-lbl">Detectados</span>
       </div>
     `;
-    panel.appendChild(summary);
+    panel.appendChild(kpis);
   }
 
-  if (msg.customFindings?.length) {
-    const cfSec = document.createElement("div");
-    cfSec.className = "results-section";
-    msg.customFindings.slice(0, 3).forEach((cf) => {
-      const row = document.createElement("p");
-      row.className = `custom-finding custom-finding--${cf.severity || "info"}`;
-      const icon = document.createElement("span");
-      icon.className = "material-symbols-outlined custom-finding-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = cf.severity === "ok" ? "check_circle" : "circle";
-      row.appendChild(icon);
-      row.appendChild(document.createTextNode(cf.message || ""));
-      cfSec.appendChild(row);
-    });
-    panel.appendChild(cfSec);
-  }
+  // 3. PESTAÑAS SEGMENTADAS (Control interactivo sin amontonamiento)
+  const tabsNav = document.createElement("div");
+  tabsNav.className = "audit-tabs";
 
-  const issues = msg.issuesSummary || [];
+  const tabDefs = [];
   if (issues.length) {
-    const issSec = document.createElement("div");
-    issSec.className = "results-section";
-    const issTitle = document.createElement("h4");
-    issTitle.className = "results-section-title";
-    issTitle.textContent = "Incidencias clave";
-    issSec.appendChild(issTitle);
+    tabDefs.push({ id: "issues", label: `Incidencias (${issues.length})`, icon: "report_problem" });
+  }
+  if (dets.length) {
+    tabDefs.push({ id: "spaces", label: `Espacios (${dets.length})`, icon: "meeting_room" });
+  }
+  if (auto && (auto.summary || auto.pixels_per_meter)) {
+    tabDefs.push({ id: "calibration", label: "Calibración", icon: "tune" });
+  }
+  if (measures.length) {
+    tabDefs.push({ id: "measures", label: `Medidas (${measures.length})`, icon: "straighten" });
+  }
 
-    const list = document.createElement("div");
-    list.className = "issue-groups";
-    // Errores primero, luego avisos; máximo 5
+  let activeTabId = tabDefs[0]?.id || "issues";
+
+  tabDefs.forEach((t, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `audit-tab-btn ${idx === 0 ? "is-active" : ""}`;
+    btn.dataset.tab = t.id;
+    btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">${t.icon}</span><span>${escapeHtml(t.label)}</span>`;
+    tabsNav.appendChild(btn);
+  });
+  if (tabDefs.length > 1) {
+    panel.appendChild(tabsNav);
+  }
+
+  // 4. CONTENIDO DE LAS PESTAÑAS
+  const panesContainer = document.createElement("div");
+  panesContainer.className = "audit-panes";
+
+  // Panel 1: Incidencias normativas
+  if (issues.length) {
+    const paneIssues = document.createElement("div");
+    paneIssues.className = `audit-tab-pane ${activeTabId === "issues" ? "is-active" : ""}`;
+    paneIssues.dataset.pane = "issues";
+
     const ranked = [...issues].sort((a, b) => {
       const rank = (s) => (s === "error" ? 0 : s === "warning" ? 1 : 2);
       return rank(a.severity) - rank(b.severity);
     });
-    ranked.slice(0, 5).forEach((g) => {
-      const row = document.createElement("div");
-      row.className = `issue-group issue-group--${g.severity}`;
-      const badge =
-        g.severity === "error"
-          ? "Error"
-          : g.severity === "info"
-            ? "Info"
-            : "Aviso";
-      const countLabel = g.count > 1 ? ` ×${g.count}` : "";
-      const msgText = String(g.sample_message || "").slice(0, 120);
-      row.innerHTML = `
-        <div class="issue-group-head">
-          <span class="issue-group-badge">${badge}</span>
-          <span class="issue-group-title">${escapeHtml(g.label || g.code)}${countLabel}</span>
-        </div>
-        ${msgText ? `<p class="issue-group-msg">${escapeHtml(msgText)}${String(g.sample_message || "").length > 120 ? "…" : ""}</p>` : ""}
+
+    const visibleIssues = ranked.slice(0, 4);
+    const hiddenIssues = ranked.slice(4);
+
+    visibleIssues.forEach((g) => {
+      paneIssues.appendChild(createAuditIssueCard(g));
+    });
+
+    if (hiddenIssues.length > 0) {
+      const extraContainer = document.createElement("div");
+      extraContainer.className = "audit-extra-issues hidden";
+      hiddenIssues.forEach((g) => {
+        extraContainer.appendChild(createAuditIssueCard(g));
+      });
+      paneIssues.appendChild(extraContainer);
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "audit-toggle-issues-btn";
+      toggleBtn.innerHTML = `
+        <span class="material-symbols-outlined text-[16px] transition-transform">expand_more</span>
+        <span class="toggle-text">Ver ${hiddenIssues.length} incidencias adicionales</span>
       `;
-      list.appendChild(row);
-    });
-    if (ranked.length > 5) {
-      const more = document.createElement("p");
-      more.className = "results-more";
-      more.textContent = `+${ranked.length - 5} más en el plano marcado`;
-      list.appendChild(more);
+      toggleBtn.addEventListener("click", () => {
+        const isHidden = extraContainer.classList.toggle("hidden");
+        const icon = toggleBtn.querySelector(".material-symbols-outlined");
+        const text = toggleBtn.querySelector(".toggle-text");
+        if (isHidden) {
+          icon.textContent = "expand_more";
+          text.textContent = `Ver ${hiddenIssues.length} incidencias adicionales`;
+        } else {
+          icon.textContent = "expand_less";
+          text.textContent = "Mostrar menos";
+        }
+      });
+      paneIssues.appendChild(toggleBtn);
     }
-    issSec.appendChild(list);
-    panel.appendChild(issSec);
+
+    panesContainer.appendChild(paneIssues);
   }
 
-  if (msg.detectionsSummary?.length) {
-    const chips = document.createElement("div");
-    chips.className = "det-chips";
-    msg.detectionsSummary.forEach((d) => {
-      const chip = document.createElement("span");
-      chip.className = "det-chip";
-      chip.textContent = `${d.label || d.class} ${d.count}`;
-      chips.appendChild(chip);
+  // Panel 2: Espacios detectados (Cuadrícula limpia con iconos arquitectónicos)
+  if (dets.length) {
+    const paneSpaces = document.createElement("div");
+    paneSpaces.className = `audit-tab-pane ${activeTabId === "spaces" ? "is-active" : ""}`;
+    paneSpaces.dataset.pane = "spaces";
+
+    const grid = document.createElement("div");
+    grid.className = "audit-spaces-grid";
+
+    dets.forEach((d) => {
+      const item = document.createElement("div");
+      item.className = "audit-space-item";
+      const icon = getSpaceIcon(d.class || d.label);
+      item.innerHTML = `
+        <span class="material-symbols-outlined text-[18px] audit-space-icon">${icon}</span>
+        <div class="audit-space-info">
+          <span class="audit-space-label">${escapeHtml(d.label || d.class)}</span>
+          <span class="audit-space-count">${d.count || 0}</span>
+        </div>
+      `;
+      grid.appendChild(item);
     });
-    panel.appendChild(chips);
+    paneSpaces.appendChild(grid);
+
+    const incN = (msg.constructionCoverage || []).filter((d) => d.status === "incidencias").length;
+    if (incN > 0) {
+      const note = document.createElement("p");
+      note.className = "audit-spaces-note";
+      note.textContent = `${incN} ámbito${incN === 1 ? "" : "s"} con incidencia en planta (ver marcas numeradas en el plano).`;
+      paneSpaces.appendChild(note);
+    }
+
+    panesContainer.appendChild(paneSpaces);
   }
 
-  if (msg.measuresReport?.items?.length) {
-    const mSec = document.createElement("details");
-    mSec.className = "results-fold";
-    const sum = document.createElement("summary");
-    sum.textContent = `Medidas (${msg.measuresReport.items.length})`;
-    mSec.appendChild(sum);
+  // Panel 3: Calibración y Escala (Detalles técnicos discretos)
+  if (auto && (auto.summary || auto.pixels_per_meter)) {
+    const paneCalib = document.createElement("div");
+    paneCalib.className = `audit-tab-pane ${activeTabId === "calibration" ? "is-active" : ""}`;
+    paneCalib.dataset.pane = "calibration";
+
+    const card = document.createElement("div");
+    card.className = "audit-tech-card";
+    card.innerHTML = `
+      <div class="audit-tech-grid">
+        <div class="audit-tech-item">
+          <span class="audit-tech-lbl">Escala automática</span>
+          <strong class="audit-tech-val">${auto.pixels_per_meter ? `${auto.pixels_per_meter} px/m` : "Estándar"}</strong>
+        </div>
+        <div class="audit-tech-item">
+          <span class="audit-tech-lbl">Confianza del modelo</span>
+          <strong class="audit-tech-val">${auto.confidence ? `${Math.round(auto.confidence * 100)}% (${auto.confidence})` : "Por defecto"}</strong>
+        </div>
+      </div>
+      ${auto.ppm_note ? `<p class="audit-tech-desc">${escapeHtml(auto.ppm_note)}</p>` : ""}
+      ${auto.summary ? `<p class="audit-tech-summary">${escapeHtml(auto.summary)}</p>` : ""}
+    `;
+    paneCalib.appendChild(card);
+    panesContainer.appendChild(paneCalib);
+  }
+
+  // Panel 4: Medidas
+  if (measures.length) {
+    const paneMeasures = document.createElement("div");
+    paneMeasures.className = `audit-tab-pane ${activeTabId === "measures" ? "is-active" : ""}`;
+    paneMeasures.dataset.pane = "measures";
+
     const table = document.createElement("div");
     table.className = "measures-table";
-    msg.measuresReport.items.slice(0, 20).forEach((it) => {
+    measures.slice(0, 20).forEach((it) => {
       const row = document.createElement("div");
       row.className = "measures-row";
       row.innerHTML = `
@@ -1651,45 +1788,50 @@ function buildResultsPanel(msg) {
       `;
       table.appendChild(row);
     });
-    mSec.appendChild(table);
-    panel.appendChild(mSec);
+    paneMeasures.appendChild(table);
+    panesContainer.appendChild(paneMeasures);
   }
 
-  const incN = (msg.constructionCoverage || []).filter(
-    (d) => d.status === "incidencias",
-  ).length;
-  if (incN > 0) {
-    const line = document.createElement("p");
-    line.className = "results-meta-line";
-    line.textContent = `${incN} ámbito${incN === 1 ? "" : "s"} con incidencia en planta (ver marcas en el plano).`;
-    panel.appendChild(line);
-  }
+  // Alternancia de pestañas
+  tabsNav.querySelectorAll(".audit-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.tab;
+      tabsNav.querySelectorAll(".audit-tab-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+      panesContainer.querySelectorAll(".audit-tab-pane").forEach((p) => p.classList.toggle("is-active", p.dataset.pane === target));
+    });
+  });
 
-  // Barra de herramientas de acciones avanzadas: 3D, PDF Oficial y CAD DXF
-  const actionsBar = document.createElement("div");
-  actionsBar.className = "results-actions-bar flex flex-wrap gap-2 mt-3 pt-3 border-t border-border";
-
-  if (msg.analysisId) {
-    const btnPdf = document.createElement("a");
-    btnPdf.href = `/api/analyses/${msg.analysisId}/dossier.pdf`;
-    btnPdf.target = "_blank";
-    btnPdf.className = "btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 rounded-lg border border-border text-primary hover:bg-fill-hover transition font-medium shadow-sm";
-    btnPdf.innerHTML = `<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span><span>Dictamen PDF</span>`;
-    actionsBar.appendChild(btnPdf);
-
-    const btnDxf = document.createElement("a");
-    btnDxf.href = `/api/analyses/${msg.analysisId}/export.dxf`;
-    btnDxf.download = `plano_${msg.analysisId}.dxf`;
-    btnDxf.className = "btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 rounded-lg border border-border text-primary hover:bg-fill-hover transition font-medium shadow-sm";
-    btnDxf.innerHTML = `<span class="material-symbols-outlined text-[16px]">architecture</span><span>Exportar DXF</span>`;
-    actionsBar.appendChild(btnDxf);
-  }
-
-  if (actionsBar.children.length > 0) {
-    panel.appendChild(actionsBar);
-  }
-
+  panel.appendChild(panesContainer);
   return panel;
+}
+
+function createAuditIssueCard(g) {
+  const row = document.createElement("div");
+  row.className = `audit-issue-card audit-issue-card--${g.severity || "warning"}`;
+  const badge = g.severity === "error" ? "Error" : g.severity === "info" ? "Info" : "Aviso";
+  const countLabel = g.count > 1 ? `×${g.count}` : "";
+  const msgText = String(g.sample_message || "").slice(0, 160);
+  row.innerHTML = `
+    <div class="audit-issue-head">
+      <span class="audit-issue-badge audit-issue-badge--${g.severity || "warning"}">${badge}</span>
+      <span class="audit-issue-title">${escapeHtml(g.label || g.code)}</span>
+      ${countLabel ? `<span class="audit-issue-count">${countLabel}</span>` : ""}
+    </div>
+    ${msgText ? `<p class="audit-issue-msg">${escapeHtml(msgText)}${String(g.sample_message || "").length > 160 ? "…" : ""}</p>` : ""}
+  `;
+  return row;
+}
+
+function getSpaceIcon(name) {
+  const n = String(name || "").toLowerCase();
+  if (n.includes("recámara") || n.includes("habitación") || n.includes("dormitorio") || n.includes("room")) return "bed";
+  if (n.includes("baño") || n.includes("bath")) return "bathtub";
+  if (n.includes("cocina") || n.includes("kitchen")) return "countertops";
+  if (n.includes("sala") || n.includes("living")) return "chair";
+  if (n.includes("muro") || n.includes("wall")) return "square_foot";
+  if (n.includes("puerta") || n.includes("door")) return "sensor_door";
+  if (n.includes("ventana") || n.includes("window")) return "window";
+  return "domain";
 }
 
 const imageViewerState = {
@@ -2365,6 +2507,8 @@ async function askConstructionQuestion(text, options = {}) {
         const formData = new FormData();
         formData.append("message", text);
         if (!isGuestMode && currentChatId) formData.append("chat_id", currentChatId);
+        const aid = options.analysisId || findLastAnalysisId(getCurrentChat());
+        if (aid) formData.append("analysis_id", String(aid));
         return isGuestMode
           ? guestFetch(askUrl, { method: "POST", body: formData })
           : PlanoAuth.apiFetch(askUrl, { method: "POST", body: formData });
@@ -2421,6 +2565,7 @@ async function askConstructionQuestion(text, options = {}) {
     const assistantMsg = {
       role: "assistant",
       text: data.text || "Sin respuesta.",
+      analysisId: data.analysis_id || c.lastAnalysisId || null,
       localSources: data.local_sources || [],
       webSources: (data.web_sources || []).map((w) => ({
         title: w.title,
@@ -2438,6 +2583,7 @@ async function askConstructionQuestion(text, options = {}) {
       assistantMode: data.assistant_mode || null,
       llmUsed: !!data.llm_used,
     };
+    if (data.analysis_id) c.lastAnalysisId = data.analysis_id;
     c.messages.push(assistantMsg);
     if (c.title === "Nuevo chat") c.title = text.slice(0, 80);
     c.messageCount = c.messages.length;
@@ -2965,20 +3111,17 @@ async function sendMessage(text) {
         updateSendButton();
         return;
       }
-      if (wantsPlanMeasures(msgText) && lastId) {
-        if (input) {
-          input.value = "";
-          resizeMessageInput();
-        }
-        setToolMode("measures");
-        await analyzeFollowup(msgText, lastId);
-        updateSendButton();
-        return;
-      }
       if (wantsPlanMeasures(msgText)) {
-        showToast("Adjunta el plano o analízalo primero en este chat.");
+        setToolMode("measures");
+        if (!lastId) {
+          showToast("Adjunta el plano o analízalo primero en este chat.");
+        }
       }
-      await askConstructionQuestion(msgText);
+      if (input) {
+        input.value = "";
+        resizeMessageInput();
+      }
+      await askConstructionQuestion(msgText, { analysisId: lastId || undefined });
     }
     updateSendButton();
     return;
@@ -4693,9 +4836,18 @@ function bindAccountSettingsForms(body, user) {
   const delForm = body.querySelector("#accountDeleteForm");
   delForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!confirm("¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer.")) {
-      return;
-    }
+    const ok = window.PlanoDialog?.confirm
+      ? await window.PlanoDialog.confirm(
+          "¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer y se borrarán tus planos, proyectos e historial.",
+          {
+            title: "Eliminar cuenta",
+            variant: "danger",
+            confirmLabel: "Eliminar definitivamente",
+            cancelLabel: "Cancelar",
+          }
+        )
+      : confirm("¿Eliminar tu cuenta de forma permanente? Esta acción no se puede deshacer.");
+    if (!ok) return;
     const btn = delForm.querySelector("button[type=submit]");
     if (btn) btn.disabled = true;
     try {
@@ -4786,7 +4938,18 @@ async function loadAccountBillingActions(body, sub) {
 
   const cancelBtn = slot.querySelector("#btnCancelSub");
   cancelBtn?.addEventListener("click", async () => {
-    if (!confirm("¿Cancelar tu suscripción de pago y volver al plan Gratis?")) return;
+    const ok = window.PlanoDialog?.confirm
+      ? await window.PlanoDialog.confirm(
+          "¿Cancelar tu suscripción de pago y volver al plan Gratis?",
+          {
+            title: "Cancelar suscripción",
+            variant: "danger",
+            confirmLabel: "Sí, cancelar suscripción",
+            cancelLabel: "Conservar plan",
+          }
+        )
+      : confirm("¿Cancelar tu suscripción de pago y volver al plan Gratis?");
+    if (!ok) return;
     cancelBtn.disabled = true;
     try {
       const res = await PlanoAuth.apiFetch("/api/billing/cancel", { method: "POST" });

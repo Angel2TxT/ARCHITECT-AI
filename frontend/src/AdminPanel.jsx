@@ -299,11 +299,16 @@ export default function AdminPanel() {
   }
 
   async function deleteUser(user) {
-    if (
-      !window.confirm(
-        `¿Eliminar a ${user.email}? Se borrarán sus chats, análisis y proyectos.`
-      )
-    ) {
+    const msg = `¿Eliminar a ${user.email}? Se borrarán sus chats, análisis y proyectos.`;
+    const ok = window.PlanoDialog?.confirm
+      ? await window.PlanoDialog.confirm(msg, {
+          title: "Eliminar usuario",
+          variant: "danger",
+          confirmLabel: "Eliminar",
+          cancelLabel: "Cancelar",
+        })
+      : window.confirm(msg);
+    if (!ok) {
       return;
     }
     setBusyId(user.id);

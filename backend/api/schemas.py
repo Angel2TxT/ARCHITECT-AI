@@ -122,6 +122,7 @@ class ChatOut(BaseModel):
     title: str
     updated_at: str
     message_count: int = 0
+    last_analysis_id: int | None = None
 
 
 class MessageOut(BaseModel):

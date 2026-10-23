@@ -96,6 +96,18 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
     Arma el texto principal del análisis.
     Devuelve (texto, steps, llm_used).
     """
+    if data.get("status") == "documento_no_valido" or data.get("is_floor_plan") is False:
+        custom_text = data.get("text") or data.get("rejection_reason")
+        if custom_text:
+            return custom_text, None, False
+        reason = data.get("rejection_reason") or "El documento no corresponde a un plano arquitectónico en planta."
+        text = (
+            f"⚠️ **Archivo no reconocido como plano arquitectónico**\n\n"
+            f"{reason}\n\n"
+            f"Por favor sube una lámina o plano arquitectónico en planta (distribución de espacios, muros y vanos) para realizar la revisión normativa."
+        )
+        return text, None, False
+
     errors = int((data.get("counts") or {}).get("errors") or 0)
     warnings = int((data.get("counts") or {}).get("warnings") or 0)
     det_count = int((data.get("counts") or {}).get("detections") or 0)
@@ -117,15 +129,11 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
     if note:
         parts.append(note)
 
-    auto = data.get("auto_calibration") or {}
-    auto_sum = (auto.get("summary") or "").strip()
-    if auto_sum and not list_measures:
-        parts.append(auto_sum)
+    # No anteponemos auto_sum ("Escala automática...") al texto de conversación;
+    # se envía de forma estructurada en auto_calibration para que la UI lo muestre en su pestaña técnica.
 
     if list_measures and measures_report.get("text"):
         body = measures_report["text"].strip()
-        if auto_sum:
-            body = f"{auto_sum}\n\n{body}"
         draft = "\n\n".join(p for p in ([note, body] if note else [body]) if p)
         text, used = _maybe_llm_polish(draft, data)
         return text, None, used
@@ -163,18 +171,21 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
         )
         parts.append(_detection_line(dets, det_count))
     else:
-        juris = data.get("jurisdiction")
+        juris = data.get("jurisdiction_title") or data.get("jurisdiction")
         juris_bit = f" ({juris})" if juris else ""
         parts.append(
             f"Revisión «{intent_title}»{juris_bit}: "
             f"{errors} error{'es' if errors != 1 else ''} y "
             f"{warnings} aviso{'s' if warnings != 1 else ''}."
         )
-        parts.append(_detection_line(dets, det_count))
 
-    bullets = _issue_bullets(issues, limit=5)
-    if bullets:
-        parts.append("Lo principal:\n" + "\n".join(bullets))
+    # Resumen de observaciones clave para el chat (sin duplicar el detalle exhaustivo de la tarjeta de resultados)
+    top_issues = [
+        f"{g.get('label') or g.get('code')} ({g.get('count', 1)}×)"
+        for g in (issues or [])[:3]
+    ]
+    if top_issues:
+        parts.append("Principales observaciones:\n" + "\n".join(f"- {t}" for t in top_issues))
     elif errors or warnings:
         parts.append(
             "Revisa las marcas numeradas en el plano: ahí están las incidencias detectadas."

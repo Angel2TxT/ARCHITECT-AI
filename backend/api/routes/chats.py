@@ -26,12 +26,15 @@ class MessageCreate(BaseModel):
 router = APIRouter(prefix="/api/chats", tags=["chats"])
 
 
-def _chat_out(chat: Chat, message_count: int = 0) -> ChatOut:
+def _chat_out(
+    chat: Chat, message_count: int = 0, last_analysis_id: int | None = None
+) -> ChatOut:
     return ChatOut(
         id=chat.id,
         title=chat.title,
         updated_at=chat.updated_at.isoformat() if chat.updated_at else "",
         message_count=message_count,
+        last_analysis_id=last_analysis_id,
     )
 
 
@@ -47,6 +50,9 @@ def _message_out(m: Message) -> MessageOut:
         content = {"text": raw}
     else:
         content = {"text": ""}
+
+    if m.analysis_id and not content.get("analysis_id"):
+        content["analysis_id"] = m.analysis_id
 
     return MessageOut(
         id=m.id,
@@ -124,8 +130,23 @@ def get_chat(
             else []
         )
         messages.sort(key=lambda m: m.id)
+        last_aid = None
+        for m in reversed(messages):
+            if m.analysis_id:
+                last_aid = m.analysis_id
+                break
+        if not last_aid:
+            row_aid = (
+                db.query(Analysis.id)
+                .filter(Analysis.chat_id == chat_id)
+                .order_by(Analysis.id.desc())
+                .first()
+            )
+            if row_aid:
+                last_aid = row_aid[0]
+
         return {
-            "chat": _chat_out(chat, len(messages)),
+            "chat": _chat_out(chat, len(messages), last_analysis_id=last_aid),
             "messages": [_message_out(m) for m in messages],
         }
     except HTTPException:
@@ -147,12 +168,12 @@ def delete_chat(
             .first()
         )
         if not chat:
-            raise HTTPException(404, "Chat no encontrado")
+            # Si el chat ya no existe en la BD, confirmamos éxito para limpiar la UI
+            return {"ok": True, "chat_id": chat_id, "already_deleted": True}
 
         # Desvincular análisis (el plano sigue en historial, sin chat fantasma)
         db.query(Analysis).filter(
             Analysis.chat_id == chat_id,
-            Analysis.user_id == user.id,
         ).update({Analysis.chat_id: None}, synchronize_session=False)
 
         db.query(Message).filter(Message.chat_id == chat_id).delete(

@@ -26,12 +26,12 @@ Reglas:
 7. Formato: un párrafo corto de conclusión; luego viñetas con guion (- ) o números (1. ); sin bloques enormes.
 """
 
-# Modelos Gemini con cuota free más usable; 2.0-flash a menudo viene con limit: 0.
+# Modelos Gemini disponibles y activos
 _GEMINI_FALLBACKS = (
-    "gemini-flash-latest",
-    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
     "gemini-3.1-flash-lite",
-    "gemini-2.0-flash-lite",
 )
 
 _last_error: str | None = None
@@ -48,7 +48,7 @@ def llm_configured() -> bool:
     if provider == "ollama":
         return True
     if provider in ("openai", "gemini"):
-        return bool((os.getenv("LLM_API_KEY") or "").strip())
+        return bool((os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY") or "").strip())
     return False
 
 
@@ -68,7 +68,7 @@ def _default_model(provider: str) -> str:
     if provider == "openai":
         return "gpt-4o-mini"
     if provider == "gemini":
-        return "gemini-flash-latest"
+        return "gemini-3.5-flash"
     if provider == "ollama":
         return "llama3.2"
     return ""
@@ -189,7 +189,7 @@ def generate_reasoned_answer(
 
     provider = llm_provider()
     model = (os.getenv("LLM_MODEL") or "").strip() or _default_model(provider)
-    api_key = (os.getenv("LLM_API_KEY") or "").strip()
+    api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY") or "").strip()
     ollama_base = (os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").strip()
     sys_prompt = (system_prompt or SYSTEM_PROMPT).strip()
     instruction = (

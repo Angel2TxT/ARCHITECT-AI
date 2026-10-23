@@ -221,7 +221,16 @@
         try {
           await downloadReceipt(pendingReceipt);
         } catch (err) {
-          alert(err.message || "Error al descargar");
+          if (window.PlanoDialog?.alert) {
+            window.PlanoDialog.alert(err.message || "Error al descargar el comprobante", {
+              title: "Descarga de comprobante",
+              variant: "danger",
+            });
+          } else if (typeof window.showToast === "function") {
+            window.showToast(err.message || "Error al descargar");
+          } else {
+            alert(err.message || "Error al descargar");
+          }
         } finally {
           downloadBtn.disabled = false;
         }

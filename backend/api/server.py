@@ -10,10 +10,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = ROOT.parent
+load_dotenv(ROOT / ".env", override=True)
+load_dotenv(WORKSPACE_ROOT / ".env", override=False)
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(WORKSPACE_ROOT) not in sys.path:
