@@ -9,7 +9,13 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+from pathlib import Path
+
+_in_docker = Path("/.dockerenv").exists()
+_original_db_url = os.environ.get("DATABASE_URL")
 load_dotenv()
+if _in_docker and _original_db_url:
+    os.environ["DATABASE_URL"] = _original_db_url
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
