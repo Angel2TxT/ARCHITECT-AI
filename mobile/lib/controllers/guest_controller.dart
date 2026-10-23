@@ -114,6 +114,16 @@ class GuestController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final ext = name.split('.').last.toLowerCase();
+      const allowed = {'pdf', 'png', 'jpg', 'jpeg', 'webp'};
+      if (!allowed.contains(ext)) {
+        if (generation != _planoLoadGeneration) return;
+        _actionError =
+            'Solo se permiten imágenes (PNG, JPG, WEBP) o documentos PDF.';
+        _pendingPlanoName = null;
+        return;
+      }
+
       if (!await file.exists()) {
         if (generation != _planoLoadGeneration) return;
         _actionError = 'No se pudo acceder al archivo.';

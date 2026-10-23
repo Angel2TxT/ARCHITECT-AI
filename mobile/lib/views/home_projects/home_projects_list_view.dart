@@ -164,12 +164,19 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
             controller: textController,
             autofocus: true,
             maxLength: 160,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: const InputDecoration(
               labelText: 'Nombre del proyecto',
               hintText: 'Ingresa el nuevo nombre',
             ),
             validator: (value) {
               final trimmed = (value ?? '').trim();
+              if (trimmed.isEmpty) {
+                return 'Ingresa el nombre del proyecto';
+              }
+              if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$').hasMatch(trimmed)) {
+                return 'Solo se admiten letras';
+              }
               if (trimmed.length < 2) {
                 return 'Debe tener al menos 2 caracteres';
               }

@@ -100,20 +100,29 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
+          'pdf',
           'png',
           'jpg',
           'jpeg',
           'webp',
-          'pdf',
-          'doc',
-          'docx',
-          'dxf',
-          'dwg',
         ],
       );
       if (!mounted) return;
       if (result != null && result.files.single.path != null) {
         final file = result.files.single;
+        final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
+        const allowed = {'pdf', 'png', 'jpg', 'jpeg', 'webp'};
+        if (!allowed.contains(ext)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Solo se permiten imágenes (PNG, JPG, WEBP) o documentos PDF.',
+              ),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          return;
+        }
         Navigator.pop(
           context,
           AttachmentPickResult(file: File(file.path!), name: file.name),

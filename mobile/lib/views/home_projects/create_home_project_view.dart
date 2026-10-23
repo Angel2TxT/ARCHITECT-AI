@@ -195,6 +195,7 @@ class _CreateHomeProjectViewState extends State<CreateHomeProjectView> {
                             controller: _nameController,
                             textInputAction: TextInputAction.next,
                             textCapitalization: TextCapitalization.sentences,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             style: TextStyle(
                               color: scheme.onSurface,
                               fontSize: 15,
@@ -208,6 +209,12 @@ class _CreateHomeProjectViewState extends State<CreateHomeProjectView> {
                             ),
                             validator: (value) {
                               final text = value?.trim() ?? '';
+                              if (text.isEmpty) {
+                                return 'Ingresa el nombre del proyecto';
+                              }
+                              if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$').hasMatch(text)) {
+                                return 'Solo se admiten letras';
+                              }
                               if (text.length < 2) {
                                 return 'Mínimo 2 caracteres';
                               }
@@ -225,6 +232,7 @@ class _CreateHomeProjectViewState extends State<CreateHomeProjectView> {
                             controller: _clientController,
                             textInputAction: TextInputAction.next,
                             textCapitalization: TextCapitalization.words,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             style: TextStyle(
                               color: scheme.onSurface,
                               fontSize: 15,
@@ -237,7 +245,12 @@ class _CreateHomeProjectViewState extends State<CreateHomeProjectView> {
                               hint: 'Ej. Arq. Sofía Domínguez o Grupo ALFA',
                             ),
                             validator: (value) {
-                              if ((value ?? '').trim().length > 120) {
+                              final text = (value ?? '').trim();
+                              if (text.isNotEmpty &&
+                                  !RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$').hasMatch(text)) {
+                                return 'Solo se admiten letras';
+                              }
+                              if (text.length > 120) {
                                 return 'Máximo 120 caracteres';
                               }
                               return null;
