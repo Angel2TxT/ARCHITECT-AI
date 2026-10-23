@@ -430,8 +430,7 @@ async def create_ai_review_from_document(
             },
         )
 
-    if not is_admin_user(user):
-        record_analysis_usage(db, user.id)
+    record_analysis_usage(db, user)
 
     open_n = _open_findings_count(findings)
     if open_n > 0:

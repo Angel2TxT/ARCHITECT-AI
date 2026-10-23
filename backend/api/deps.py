@@ -16,6 +16,27 @@ from services.subscription_service import is_admin_user
 security = HTTPBearer(auto_error=False)
 
 
+def _attach_impersonator(user: User | None, payload: dict | None, db: Session) -> None:
+    if not user:
+        return
+    imp_id = payload.get("imp") if payload else None
+    if imp_id:
+        try:
+            user.impersonator_id = int(imp_id)
+            user.impersonator = (
+                db.query(User).filter(User.id == user.impersonator_id).first()
+            )
+            user.is_impersonated = bool(user.impersonator)
+        except (ValueError, TypeError):
+            user.impersonator_id = None
+            user.impersonator = None
+            user.is_impersonated = False
+    else:
+        user.impersonator_id = None
+        user.impersonator = None
+        user.is_impersonated = False
+
+
 def get_current_user(
     db: Annotated[Session, Depends(get_db)],
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
@@ -32,6 +53,7 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(payload["sub"])).first()
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no válido")
+    _attach_impersonator(user, payload, db)
     return user
 
 
@@ -44,7 +66,9 @@ def get_optional_user(
     payload = decode_token(creds.credentials)
     if not payload or "sub" not in payload:
         return None
-    return db.query(User).filter(User.id == int(payload["sub"])).first()
+    user = db.query(User).filter(User.id == int(payload["sub"])).first()
+    _attach_impersonator(user, payload, db)
+    return user
 
 
 def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:

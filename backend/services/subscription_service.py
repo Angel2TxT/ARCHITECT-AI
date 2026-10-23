@@ -77,19 +77,76 @@ def count_owned_home_projects(db: Session, user_id: int) -> int:
     )
 
 
+def is_admin_user(user: User | None) -> bool:
+    if not user:
+        return False
+    return user.role == UserRole.admin or str(user.role) == UserRole.admin.value
+
+
+def is_support_user(user: User | None) -> bool:
+    if not user:
+        return False
+    return user.role == UserRole.support or str(user.role) == UserRole.support.value
+
+
+def is_staff_user(user: User | None) -> bool:
+    return is_admin_user(user) or is_support_user(user)
+
+
+def get_effective_operator(user: User | None) -> User | None:
+    """Retorna el operador que ejecuta la acción (impersonador si está en modo soporte, o el propio usuario)."""
+    if not user:
+        return None
+    return getattr(user, "impersonator", None) or user
+
+
+def is_impersonated_session(user: User | None) -> bool:
+    """Verifica si la sesión actual es de suplantación/soporte activa."""
+    if not user:
+        return False
+    return bool(getattr(user, "is_impersonated", False) and getattr(user, "impersonator", None))
+
+
 def get_asks_used(db: Session, user_id: int) -> int:
     """Preguntas al chat contabilizadas en el periodo mensual actual."""
     usage = get_usage(db, user_id)
     return int(usage.asks_count or 0)
 
 
-def record_ask_usage(db: Session, user_id: int) -> None:
-    usage = get_usage(db, user_id)
+def record_ask_usage(db: Session, target: User | int) -> None:
+    """Registra uso de preguntas al chat.
+    
+    Si target es un User en sesión de soporte (impersonado por soporte o admin),
+    los usos NO se descuentan al usuario final sino al operador.
+    """
+    user: User | None = None
+    if isinstance(target, User):
+        user = target
+    else:
+        user = db.query(User).filter(User.id == int(target)).first()
+
+    if not user:
+        usage = get_usage(db, int(target))
+        usage.asks_count = int(usage.asks_count or 0) + 1
+        db.commit()
+        return
+
+    if is_impersonated_session(user):
+        operator = user.impersonator
+        op_usage = get_usage(db, operator.id)
+        op_usage.asks_count = int(op_usage.asks_count or 0) + 1
+        db.commit()
+        return
+
+    usage = get_usage(db, user.id)
     usage.asks_count = int(usage.asks_count or 0) + 1
     db.commit()
 
 
 def is_analyses_unlimited(user: User, plan: Plan | None = None) -> bool:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return True
     if is_admin_user(user):
         return True
     if plan is None:
@@ -98,6 +155,9 @@ def is_analyses_unlimited(user: User, plan: Plan | None = None) -> bool:
 
 
 def assert_can_ask(db: Session, user: User) -> None:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -115,6 +175,9 @@ def assert_can_ask(db: Session, user: User) -> None:
 
 
 def assert_can_use_home_projects(db: Session, user: User) -> None:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -127,6 +190,9 @@ def assert_can_use_home_projects(db: Session, user: User) -> None:
 
 
 def assert_can_create_home_project(db: Session, user: User) -> None:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     assert_can_use_home_projects(db, user)
     if is_admin_user(user):
         return
@@ -143,6 +209,9 @@ def assert_can_create_home_project(db: Session, user: User) -> None:
 
 
 def assert_can_invite_members(db: Session, user: User) -> None:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -157,6 +226,9 @@ def assert_can_invite_members(db: Session, user: User) -> None:
 
 def assert_can_use_mobile_app(db: Session, user: User) -> None:
     """App móvil exclusiva de Pro y Enterprise."""
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -170,6 +242,9 @@ def assert_can_use_mobile_app(db: Session, user: User) -> None:
 
 
 def assert_can_export(db: Session, user: User) -> None:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -200,6 +275,9 @@ def assert_can_store_documentation(
     additional_bytes: int,
 ) -> None:
     """Valida la cuota de almacenamiento de documentación del plan."""
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        return
     if is_admin_user(user):
         return
     sub = ensure_subscription(db, user)
@@ -275,10 +353,6 @@ def get_usage(db: Session, user_id: int, key: str | None = None) -> UsageRecord:
     return row
 
 
-def is_admin_user(user: User) -> bool:
-    return user.role == UserRole.admin or str(user.role) == UserRole.admin.value
-
-
 def is_paid_plan(plan: Plan) -> bool:
     return (plan.price_monthly_cents or 0) > 0
 
@@ -300,6 +374,24 @@ def subscription_payload(db: Session, user: User) -> dict:
     asks_unlimited = caps["asks_unlimited"] or is_admin_user(user)
     asks_remaining = None if asks_unlimited else max(0, asks_limit - asks_used)
 
+    impersonation_info = None
+    if is_impersonated_session(user):
+        op = user.impersonator
+        op_usage = get_usage(db, op.id)
+        impersonation_info = {
+            "active": True,
+            "operator_id": op.id,
+            "operator_email": op.email,
+            "operator_name": op.full_name or "",
+            "operator_role": op.role.value if hasattr(op.role, "value") else str(op.role),
+            "user_quota_protected": True,
+            "operator_usage": {
+                "period_key": op_usage.period_key,
+                "analyses_used": op_usage.analyses_count,
+                "asks_used": op_usage.asks_count,
+            },
+        }
+
     return {
         "plan": {
             "slug": plan.slug,
@@ -313,6 +405,8 @@ def subscription_payload(db: Session, user: User) -> dict:
             "capabilities": caps,
         },
         "is_unlimited": is_unlimited,
+        "is_impersonating": is_impersonated_session(user),
+        "impersonation": impersonation_info,
         "status": sub.status.value,
         "period_start": sub.current_period_start.isoformat(),
         "period_end": sub.current_period_end.isoformat(),
@@ -347,6 +441,11 @@ def assert_can_analyze(
     weights_path: str,
     file_size_bytes: int,
 ) -> Subscription:
+    operator = get_effective_operator(user)
+    if operator and is_staff_user(operator):
+        # Staff (soporte / admin) no se ve bloqueado por límites de plan del usuario
+        return ensure_subscription(db, user)
+
     sub = ensure_subscription(db, user)
     plan = sub.plan
     is_unlimited = is_analyses_unlimited(user, plan)
@@ -387,13 +486,39 @@ def assert_can_analyze(
     return sub
 
 
-def record_analysis_usage(db: Session, user_id: int) -> None:
-    usage = get_usage(db, user_id)
+def record_analysis_usage(db: Session, target: User | int) -> None:
+    """Registra uso de análisis.
+    
+    Si target es un User en sesión de soporte (impersonado por soporte o admin),
+    los usos NO se descuentan al usuario final sino al operador.
+    """
+    user: User | None = None
+    if isinstance(target, User):
+        user = target
+    else:
+        user = db.query(User).filter(User.id == int(target)).first()
+
+    if not user:
+        usage = get_usage(db, int(target))
+        usage.analyses_count += 1
+        db.commit()
+        return
+
+    # Si está impersonado por staff (soporte o admin):
+    if is_impersonated_session(user):
+        operator = user.impersonator
+        op_usage = get_usage(db, operator.id)
+        op_usage.analyses_count += 1
+        db.commit()
+        return
+
+    usage = get_usage(db, user.id)
     usage.analyses_count += 1
     db.commit()
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+
+    if is_admin_user(user):
         return
+
     sub = ensure_subscription(db, user)
     plan = sub.plan
     unlimited = is_analyses_unlimited(user, plan)

@@ -3905,6 +3905,7 @@ function planFeatureLines(plan, { compact = false } = {}) {
 
 function updateUsageUI(sub) {
   if (!sub) return;
+  const isImpersonatingActive = !!PlanoAuth.isImpersonating?.() || !!sub.is_impersonating;
   const box = document.getElementById("usageBar");
   const plan = sub.plan || {};
   const usage = sub.usage || {};
@@ -3915,47 +3916,69 @@ function updateUsageUI(sub) {
   const asksUsed = usage.asks_used ?? 0;
   const asksLimit = usage.asks_limit;
   const asksUnlimited = asksLimit == null || asksLimit >= 9999 || unlimited;
-  const asksReached = !asksUnlimited && !!usage.asks_limit_reached;
+  const asksReached = !asksUnlimited && !isImpersonatingActive && !!usage.asks_limit_reached;
   const planLabel = document.getElementById("planLabel");
   const usageLabel = document.getElementById("usageLabel");
-  if (planLabel) planLabel.textContent = plan.name || plan.slug || "Plan";
+  if (planLabel) {
+    planLabel.textContent = isImpersonatingActive
+      ? `${plan.name || plan.slug || "Plan"} · Modo Soporte`
+      : plan.name || plan.slug || "Plan";
+  }
   if (usageLabel) {
-    usageLabel.textContent = unlimited ? `${used} análisis` : `${used} / ${limit} análisis`;
+    if (isImpersonatingActive) {
+      usageLabel.textContent = `${used} / ${limit} (Cuota del usuario protegida)`;
+    } else {
+      usageLabel.textContent = unlimited ? `${used} análisis` : `${used} / ${limit} análisis`;
+    }
   }
   const asksLabel = document.getElementById("usageAsksLabel");
   if (asksLabel) {
-    asksLabel.textContent = asksUnlimited
-      ? `${asksUsed} preguntas este mes`
-      : `${asksUsed} / ${asksLimit} preguntas`;
-    asksLabel.classList.toggle("usage-asks-label--limit", asksReached);
+    if (isImpersonatingActive) {
+      asksLabel.textContent = `${asksUsed} preg. (cargo a cuenta de soporte/admin)`;
+      asksLabel.classList.remove("usage-asks-label--limit");
+    } else {
+      asksLabel.textContent = asksUnlimited
+        ? `${asksUsed} preguntas este mes`
+        : `${asksUsed} / ${asksLimit} preguntas`;
+      asksLabel.classList.toggle("usage-asks-label--limit", asksReached);
+    }
   }
   const pct = unlimited ? 8 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   const fill = document.getElementById("usageFill");
   if (fill) fill.style.width = `${pct}%`;
-  const limitReached = !unlimited && !!usage.limit_reached;
+  const limitReached = !unlimited && !isImpersonatingActive && !!usage.limit_reached;
   if (box) {
     box.classList.toggle("usage-box--limit", limitReached || asksReached);
-    box.classList.toggle("usage-box--unlimited", unlimited && asksUnlimited);
+    box.classList.toggle("usage-box--unlimited", (unlimited && asksUnlimited) || isImpersonatingActive);
   }
   const plansText = document.getElementById("plansUsageText");
   if (plansText) {
-    const asksLine = asksUnlimited
-      ? `${asksUsed} preguntas`
-      : `${asksUsed} / ${asksLimit} preguntas`;
-    plansText.innerHTML = unlimited
-      ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso alto · ${used} análisis · ${asksLine}</span>`
-      : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis · ${asksLine}</span>`;
+    if (isImpersonatingActive) {
+      plansText.innerHTML = `<strong>Modo Soporte Activo</strong><span>Los análisis y preguntas se cargan a tu cuenta de operador. La cuota del usuario (${used}/${limit}) no se consume.</span>`;
+    } else {
+      const asksLine = asksUnlimited
+        ? `${asksUsed} preguntas`
+        : `${asksUsed} / ${asksLimit} preguntas`;
+      plansText.innerHTML = unlimited
+        ? `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>Uso alto · ${used} análisis · ${asksLine}</span>`
+        : `<strong>${escapeHtml(plan.name || "Plan")}</strong><span>${used} / ${limit} análisis · ${asksLine}</span>`;
+    }
   }
   const badge = document.getElementById("planUsageBadge");
   const badgeText = document.getElementById("planUsageBadgeText");
   if (badge && badgeText) {
     const showBadge = !!PlanoAuth.getToken() && !!PlanoAuth.getUser() && !isGuestMode;
     badge.classList.toggle("hidden", !showBadge);
-    const asksShort = asksUnlimited ? `${asksUsed} preg.` : `${asksUsed}/${asksLimit} preg.`;
-    badgeText.textContent = unlimited
-      ? `${plan.name || "Plan"} · ${used} análisis · ${asksShort}`
-      : `${plan.name || "Plan"} · ${used}/${limit} · ${asksShort}`;
-    badge.classList.toggle("plan-usage-badge--limit", limitReached || asksReached);
+    if (isImpersonatingActive) {
+      badgeText.textContent = `Modo Soporte · Sin gasto de cuota para usuario`;
+      badge.classList.remove("plan-usage-badge--limit");
+    } else {
+      const asksShort = asksUnlimited ? `${asksUsed} preg.` : `${asksUsed}/${asksLimit} preg.`;
+      badgeText.textContent = unlimited
+        ? `${plan.name || "Plan"} · ${used} análisis · ${asksShort}`
+        : `${plan.name || "Plan"} · ${used}/${limit} · ${asksShort}`;
+      badge.classList.toggle("plan-usage-badge--limit", limitReached || asksReached);
+    }
   }
 }
 
@@ -3986,9 +4009,10 @@ function updateImpersonationBanner() {
   const backup = PlanoAuth.getStaffBackup?.() || {};
   const staffName =
     backup.impersonator?.full_name || backup.impersonator?.email || backup.user?.email || "soporte";
+  const staffRole = backup.impersonator?.role === "admin" ? "Admin" : "Soporte";
   const text = document.getElementById("impersonationBannerText");
   if (text) {
-    text.textContent = `Viendo como ${user.full_name || user.email || "usuario"} · sesión de ${staffName}`;
+    text.textContent = `Viendo como ${user.full_name || user.email || "usuario"} · Sesión de ${staffRole} (${staffName}) · Los análisis y preguntas se cargan a tu cuenta de operador, sin gastar usos del usuario.`;
   }
 }
 

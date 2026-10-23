@@ -324,9 +324,10 @@ if (document.getElementById("loginForm")) {
   fetch("/api/auth/google/enabled")
     .then((r) => r.json())
     .then((data) => {
-      if (!data.enabled) return;
-      document.getElementById("googleLoginWrap")?.classList.remove("hidden");
-      document.getElementById("googleRegisterWrap")?.classList.remove("hidden");
+      if (data && data.enabled === false) {
+        document.getElementById("googleLoginWrap")?.classList.add("hidden");
+        document.getElementById("googleRegisterWrap")?.classList.add("hidden");
+      }
     })
     .catch(() => {});
 
@@ -645,6 +646,17 @@ function initAuthTabs() {
     panelsEl.dataset.tab = tab;
     document.getElementById("loginError")?.classList.add("hidden");
     document.getElementById("regError")?.classList.add("hidden");
+
+    const authTitle = document.getElementById("authViewTitle");
+    const authSub = document.getElementById("authViewSubtitle");
+    if (authTitle) {
+      authTitle.textContent = toRegister ? "Crea tu cuenta" : "Accede a tu cuenta";
+    }
+    if (authSub) {
+      authSub.textContent = toRegister
+        ? "Comienza a analizar planos con IA y normativa de referencia"
+        : "Revisa planos con IA y normativa de referencia";
+    }
 
     outgoing.classList.remove("auth-panel--active");
     outgoing.classList.add(toRegister ? "auth-panel--exit-left" : "auth-panel--exit-right");

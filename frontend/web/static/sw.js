@@ -1,16 +1,16 @@
 /* Service worker ARCHITECT — PWA + shell offline para Casa hogar. */
-const CACHE_NAME = "architect-pwa-v10";
+const CACHE_NAME = "architect-pwa-v17";
 const PRECACHE = [
   "/",
   "/legacy-app",
   "/login",
   "/manifest.webmanifest",
   "/static/manifest.webmanifest",
-  "/static/pwa.js?v=3",
+  "/static/pwa.js?v=4",
   "/static/offline-store.js?v=1",
-  "/static/auth.js?v=32",
+  "/static/auth.js?v=34",
   "/static/home-projects.js?v=65",
-  "/static/style.css?v=175",
+  "/static/style.css?v=182",
   "/static/dialogs.js?v=4",
   "/static/fonts/inter.css",
   "/static/fonts/material-symbols.css",
@@ -96,18 +96,15 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/static/") || url.pathname === "/sw.js") {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        const network = fetch(req)
-          .then((res) => {
-            if (res && res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
-            }
-            return res;
-          })
-          .catch(() => cached);
-        return cached || network;
-      })
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
     );
   }
 });

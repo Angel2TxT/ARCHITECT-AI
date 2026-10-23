@@ -158,8 +158,7 @@ async def ask_construction(
     chat.updated_at = datetime.utcnow()
     db.commit()
 
-    if not is_admin_user(user):
-        record_ask_usage(db, user.id)
+    record_ask_usage(db, user)
 
     result["chat_id"] = chat.id
     result["subscription"] = subscription_payload(db, user)

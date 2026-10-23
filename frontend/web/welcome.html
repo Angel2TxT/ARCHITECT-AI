@@ -11,7 +11,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/png" href="/static/brand/architect-icon.png?v=3" />
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
-  <script src="/static/pwa.js?v=1" defer></script>
+  <script src="/static/pwa.js?v=2" defer></script>
   <script>
     /* Si ya hay sesión, ir directo al workspace (no mostrar la landing). */
     (function () {
@@ -104,14 +104,7 @@
         linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
     }
-    .welcome-nav {
-      transition: height 0.35s ease, background-color 0.35s ease, box-shadow 0.35s ease;
-    }
-    .welcome-nav.nav-scrolled {
-      height: 4rem;
-      background: rgba(255, 255, 255, 0.86);
-      box-shadow: 0 16px 42px rgba(30, 41, 59, 0.08);
-    }
+
     .model-section {
       position: relative;
       margin-top: 0;
@@ -416,121 +409,174 @@
       color: #ffffff !important;
     }
 
+    /* —— Floating Island / Pill Navbar (Estilo Supaste / macOS Glass) —— */
     .welcome-nav {
-      height: 64px !important;
-      background: rgba(5, 5, 5, 0.82) !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-      backdrop-filter: blur(18px);
-      transition: height 0.3s ease, background-color 0.3s ease;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      padding: 1.15rem 1.25rem 0 !important;
+      background: transparent !important;
+      border-bottom: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      pointer-events: none !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      z-index: 50 !important;
+      transition: padding 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
     .welcome-nav.nav-scrolled {
-      height: 56px !important;
-      background: rgba(5, 5, 5, 0.94) !important;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28) !important;
+      padding: 0.65rem 1.25rem 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
     }
     .welcome-nav-inner {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: clamp(1rem, 2.5vw, 2.5rem);
-      max-width: 68rem;
-      height: 100%;
-      margin: 0 auto;
-      padding: 0 clamp(1.1rem, 2.5vw, 2.25rem);
+      pointer-events: auto !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      max-width: 53.5rem !important;
+      height: 3.35rem !important;
+      margin: 0 auto !important;
+      padding: 0.35rem 0.55rem 0.35rem 1.15rem !important;
+      border-radius: 9999px !important;
+      background: rgba(10, 10, 12, 0.74) !important;
+      backdrop-filter: blur(24px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow:
+        0 20px 45px -12px rgba(0, 0, 0, 0.75),
+        0 0 0 1px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
+      transition:
+        height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease !important;
+    }
+    .welcome-nav.nav-scrolled .welcome-nav-inner {
+      height: 3.15rem !important;
+      background: rgba(8, 8, 10, 0.88) !important;
+      border-color: rgba(255, 255, 255, 0.16) !important;
+      box-shadow:
+        0 22px 50px -10px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
     }
     .welcome-nav-brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.55rem !important;
       color: #fff !important;
-      font-size: 0.82rem !important;
-      font-weight: 700;
-      letter-spacing: 0.22em !important;
-      text-transform: uppercase;
-      text-decoration: none;
-      white-space: nowrap;
+      font-size: 0.8rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.18em !important;
+      text-transform: uppercase !important;
+      text-decoration: none !important;
+      white-space: nowrap !important;
+      padding-right: 0.5rem !important;
+      transition: opacity 0.2s ease !important;
+    }
+    .welcome-nav-brand:hover {
+      opacity: 0.88;
     }
     .welcome-nav-brand-icon {
-      display: block;
-      height: 1.85rem;
-      width: auto;
-      object-fit: contain;
+      display: block !important;
+      height: 1.65rem !important;
+      width: auto !important;
+      object-fit: contain !important;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
     }
     .welcome-nav-brand-text {
-      letter-spacing: 0.22em;
+      letter-spacing: 0.18em !important;
     }
     .welcome-nav-links {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: clamp(0.85rem, 1.8vw, 1.75rem);
-      min-width: 0;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.25rem !important;
+      min-width: 0 !important;
     }
     .welcome-nav-links a {
-      color: rgba(255, 255, 255, 0.62) !important;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-decoration: none;
-      text-transform: uppercase;
-      transition: color 0.2s ease;
-      white-space: nowrap;
+      color: rgba(255, 255, 255, 0.65) !important;
+      font-size: 0.78rem !important;
+      font-weight: 550 !important;
+      letter-spacing: 0.01em !important;
+      text-decoration: none !important;
+      text-transform: none !important;
+      padding: 0.42rem 0.8rem !important;
+      border-radius: 9999px !important;
+      transition: color 0.18s ease, background-color 0.18s ease !important;
+      white-space: nowrap !important;
     }
-    .welcome-nav-links a:hover,
+    .welcome-nav-links a:hover {
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+    }
     .welcome-nav-links a.is-active {
       color: #fff !important;
-    }
-    .welcome-nav-links a.is-active {
-      position: relative;
+      background: rgba(255, 255, 255, 0.13) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
     }
     .welcome-nav-links a.is-active::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -0.45rem;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.72);
+      display: none !important;
     }
     .welcome-nav-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.65rem;
-      white-space: nowrap;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      gap: 0.4rem !important;
+      white-space: nowrap !important;
     }
     .welcome-nav-login {
       color: rgba(255, 255, 255, 0.72) !important;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-decoration: none;
-      padding: 0.45rem 0.7rem;
-      transition: color 0.2s ease;
+      font-size: 0.78rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.01em !important;
+      text-decoration: none !important;
+      padding: 0.42rem 0.8rem !important;
+      border-radius: 9999px !important;
+      transition: color 0.18s ease, background-color 0.18s ease !important;
     }
     .welcome-nav-login:hover {
       color: #fff !important;
+      background: rgba(255, 255, 255, 0.08) !important;
     }
-    .welcome-nav-cta {
-      color: #fff !important;
-      background: rgba(255, 255, 255, 0.06) !important;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      min-height: 2.35rem;
-      padding: 0 0.95rem;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      font-size: 0.72rem !important;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      text-decoration: none;
-      transition: background 0.2s ease, border-color 0.2s ease;
+    .welcome-nav-cta-wrap {
+      background: none !important;
+      padding: 0 !important;
+      border-radius: 9999px !important;
     }
-    .welcome-nav-cta:hover {
-      background: rgba(255, 255, 255, 0.1) !important;
-      border-color: rgba(255, 255, 255, 0.28);
+    .welcome-nav-cta,
+    .welcome-nav-cta-wrap .welcome-nav-cta {
+      color: #050505 !important;
+      background: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.95) !important;
+      min-height: 2.25rem !important;
+      height: 2.25rem !important;
+      padding: 0 1.15rem !important;
+      border-radius: 9999px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 0.76rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.02em !important;
+      text-transform: none !important;
+      text-decoration: none !important;
+      box-shadow: 0 2px 10px rgba(255, 255, 255, 0.18) !important;
+      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease !important;
+    }
+    .welcome-nav-cta:hover,
+    .welcome-nav-cta-wrap .welcome-nav-cta:hover {
+      background: #f4f4f5 !important;
+      transform: scale(0.97) !important;
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3) !important;
     }
 
     main.pt-20 {
@@ -925,23 +971,7 @@
     }
     @media (min-width: 640px) {
       .nexus-cta-install { width: auto; }
-    }
-    .welcome-nav-cta-wrap {
-      padding: 1px;
-      border-radius: 0.55rem;
-      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12));
-    }
-    .welcome-nav-cta-wrap .welcome-nav-cta {
-      min-height: 2.15rem !important;
-      padding: 0 0.85rem !important;
-      border-radius: 0.45rem !important;
-      border: 0 !important;
-      background: #050505 !important;
-      letter-spacing: 0.08em !important;
-    }
-    .welcome-nav-cta-wrap .welcome-nav-cta:hover {
-      background: #141414 !important;
-    }
+
 
     .legacy-pricing {
       position: relative;
@@ -1278,14 +1308,34 @@
     }
     @media (max-width: 1024px) {
       .welcome-nav-inner {
-        grid-template-columns: auto 1fr;
-        gap: 1rem;
+        max-width: 44rem !important;
+        padding: 0.35rem 0.6rem 0.35rem 1rem !important;
       }
       .welcome-nav-links {
-        display: none;
+        display: none !important;
       }
-      .welcome-nav-actions {
-        justify-self: end;
+    }
+    @media (max-width: 640px) {
+      .welcome-nav {
+        padding: 0.65rem 0.75rem 0 !important;
+      }
+      .welcome-nav-inner {
+        max-width: 100% !important;
+        padding: 0.3rem 0.45rem 0.3rem 0.85rem !important;
+        height: 3.05rem !important;
+      }
+      .welcome-nav-brand-text {
+        font-size: 0.74rem !important;
+      }
+      .welcome-nav-login {
+        display: none !important;
+      }
+      .welcome-nav-cta,
+      .welcome-nav-cta-wrap .welcome-nav-cta {
+        padding: 0 0.9rem !important;
+        min-height: 2.1rem !important;
+        height: 2.1rem !important;
+        font-size: 0.72rem !important;
       }
     }
     @media (max-width: 1100px) {
@@ -1296,7 +1346,7 @@
     }
     @media (max-width: 900px) {
       .welcome-nav-login {
-        display: none;
+        display: none !important;
       }
       .legacy-pricing-grid {
         grid-template-columns: 1fr;
