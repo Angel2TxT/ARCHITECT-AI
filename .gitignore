@@ -22,3 +22,4 @@ secrets/*
 !secrets/README.md
 *-firebase-adminsdk-*.json
 google-services.json
+.env.env
