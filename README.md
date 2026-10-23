@@ -51,11 +51,23 @@ Abre `.env` y `backend\.env` y ajusta tu contraseña de MySQL:
 DATABASE_URL=mysql+pymysql://root:TU_PASSWORD@localhost:3306/architect?charset=utf8mb4
 ```
 
-### 2. Crear la base de datos en MySQL
-Desde tu gestor de base de datos favorito (MySQL Workbench, DBeaver) o desde la consola de MySQL:
+### 2. Importar la base de datos en MySQL
+Tienes dos formas sencillas de cargar la base de datos:
 
+**Forma rápida (Importar el dump SQL completo incluido con proyectos y planes):**
+```powershell
+mysql -u root -p < database\architect.sql
+```
+*(O ábrelo en MySQL Workbench / DBeaver y dale clic en Ejecutar).*
+
+**Forma alternativa (Crear base vacía e inicializar por scripts):**
 ```sql
 CREATE DATABASE architect CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+```powershell
+python backend/scripts/init_db.py
+python backend/scripts/migrate.py
+python backend/scripts/populate_sample_project.py  # Cargar proyecto demo en Casa Hogar
 ```
 
 ### 3. Crear entorno virtual e instalar dependencias
@@ -69,15 +81,6 @@ python -m venv .venv
 # Instalar librerías de Python
 pip install -r requirements.txt
 ```
-
-### 4. Inicializar base de datos y migraciones
-Ejecuta los scripts para crear las tablas, roles, usuario admin y seed de planes:
-
-```powershell
-# Inicializa tablas, planes y usuario admin inicial
-python backend/scripts/init_db.py
-
-# Aplica migraciones incrementales
 python backend/scripts/migrate.py
 
 # (Opcional) Cargar proyecto de simulación completo en Casa Hogar
@@ -202,6 +205,7 @@ ARCHITECT-AI/
 │   ├── web/             # Interfaz web principal / PWA (HTML, JS, CSS, SW)
 │   ├── src/             # Código fuente de React + Vite
 │   └── public/          # Fuentes tipográficas y recursos públicos
+├── database/            # Dump SQL completo de la BD (architect.sql) y guía
 ├── data/                # Almacenamiento local (avatares, documentos raw)
 ├── iniciar.ps1          # Script de arranque rápido en 1 clic para Windows
 ├── docker-compose.yml   # Orquestación de contenedores Docker
