@@ -14,20 +14,32 @@ class AcceptInviteView extends StatefulWidget {
 }
 
 class _AcceptInviteViewState extends State<AcceptInviteView> {
-  final _tokenController = TextEditingController();
+  final _inviteInputController = TextEditingController();
   bool _loading = false;
   String? _error;
 
   @override
   void dispose() {
-    _tokenController.dispose();
+    _inviteInputController.dispose();
     super.dispose();
   }
 
   Future<void> _accept() async {
-    final token = _tokenController.text.trim();
+    final raw = _inviteInputController.text.trim();
+    String token = raw;
+    final uri = Uri.tryParse(raw);
+    if (uri != null && (uri.isScheme('http') || uri.isScheme('https'))) {
+      if (uri.queryParameters.containsKey('token') &&
+          uri.queryParameters['token']!.trim().isNotEmpty) {
+        token = uri.queryParameters['token']!.trim();
+      } else if (uri.pathSegments.isNotEmpty &&
+          uri.pathSegments.last.trim().isNotEmpty) {
+        token = uri.pathSegments.last.trim();
+      }
+    }
+
     if (token.length < 8) {
-      setState(() => _error = 'Ingresa un token válido.');
+      setState(() => _error = 'Ingresa un enlace válido.');
       return;
     }
     setState(() {
@@ -60,6 +72,11 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final btnBg = isDark ? Colors.white : Colors.black;
+    final btnFg = isDark ? Colors.black : Colors.white;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -75,14 +92,31 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Pega el token de invitación que recibiste por correo.',
+              'Pega el enlace de invitación que recibiste por correo.',
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _tokenController,
-              decoration: const InputDecoration(
-                labelText: 'Token de invitación',
-                border: OutlineInputBorder(),
+              controller: _inviteInputController,
+              decoration: InputDecoration(
+                labelText: 'Enlace de invitación',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: scheme.outlineVariant,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white : Colors.black,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             if (_error != null) ...[
@@ -90,15 +124,35 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
               Text(_error!, style: const TextStyle(color: Colors.redAccent)),
             ],
             const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _loading ? null : _accept,
-              child: _loading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Aceptar invitación'),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: _loading ? null : _accept,
+                style: FilledButton.styleFrom(
+                  backgroundColor: btnBg,
+                  foregroundColor: btnFg,
+                  disabledBackgroundColor: btnBg.withValues(alpha: 0.45),
+                  disabledForegroundColor: btnFg.withValues(alpha: 0.6),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: _loading
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: btnFg,
+                        ),
+                      )
+                    : const Text('Aceptar invitación'),
+              ),
             ),
           ],
         ),

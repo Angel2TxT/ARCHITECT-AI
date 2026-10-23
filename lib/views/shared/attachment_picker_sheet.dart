@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 class AttachmentPickResult {
@@ -24,42 +25,110 @@ Future<AttachmentPickResult?> showAttachmentPickerSheet(BuildContext context) {
   );
 }
 
-class AttachmentPickerSheet extends StatelessWidget {
+class AttachmentPickerSheet extends StatefulWidget {
   const AttachmentPickerSheet({super.key});
 
+  @override
+  State<AttachmentPickerSheet> createState() => _AttachmentPickerSheetState();
+}
+
+class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
   static final _picker = ImagePicker();
+  static bool _globalPicking = false;
+  bool _localPicking = false;
 
-  Future<void> _pickPhotos(BuildContext context) async {
-    final image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image == null || !context.mounted) return;
-    Navigator.pop(
-      context,
-      AttachmentPickResult(file: File(image.path), name: image.name),
-    );
-  }
+  bool get _isBusy => _globalPicking || _localPicking;
 
-  Future<void> _pickCamera(BuildContext context) async {
-    final image = await _picker.pickImage(source: ImageSource.camera);
-    if (image == null || !context.mounted) return;
-    Navigator.pop(
-      context,
-      AttachmentPickResult(file: File(image.path), name: image.name),
-    );
-  }
+  Future<void> _pickPhotos() async {
+    if (_isBusy) return;
+    setState(() => _localPicking = true);
+    _globalPicking = true;
 
-  Future<void> _pickFiles(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf', 'dxf', 'dwg'],
-    );
-    if (result == null || result.files.single.path == null || !context.mounted) {
-      return;
+    try {
+      final image = await _picker.pickImage(source: ImageSource.gallery);
+      if (!mounted) return;
+      if (image != null) {
+        Navigator.pop(
+          context,
+          AttachmentPickResult(file: File(image.path), name: image.name),
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('AttachmentPickerSheet: PlatformException ${e.code}: ${e.message}');
+    } catch (e) {
+      debugPrint('AttachmentPickerSheet: error picking photos: $e');
+    } finally {
+      _globalPicking = false;
+      if (mounted) {
+        setState(() => _localPicking = false);
+      }
     }
-    final file = result.files.single;
-    Navigator.pop(
-      context,
-      AttachmentPickResult(file: File(file.path!), name: file.name),
-    );
+  }
+
+  Future<void> _pickCamera() async {
+    if (_isBusy) return;
+    setState(() => _localPicking = true);
+    _globalPicking = true;
+
+    try {
+      final image = await _picker.pickImage(source: ImageSource.camera);
+      if (!mounted) return;
+      if (image != null) {
+        Navigator.pop(
+          context,
+          AttachmentPickResult(file: File(image.path), name: image.name),
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('AttachmentPickerSheet: PlatformException ${e.code}: ${e.message}');
+    } catch (e) {
+      debugPrint('AttachmentPickerSheet: error picking camera: $e');
+    } finally {
+      _globalPicking = false;
+      if (mounted) {
+        setState(() => _localPicking = false);
+      }
+    }
+  }
+
+  Future<void> _pickFiles() async {
+    if (_isBusy) return;
+    setState(() => _localPicking = true);
+    _globalPicking = true;
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'png',
+          'jpg',
+          'jpeg',
+          'webp',
+          'pdf',
+          'doc',
+          'docx',
+          'dxf',
+          'dwg',
+        ],
+      );
+      if (!mounted) return;
+      if (result != null && result.files.single.path != null) {
+        final file = result.files.single;
+        Navigator.pop(
+          context,
+          AttachmentPickResult(file: File(file.path!), name: file.name),
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('AttachmentPickerSheet: PlatformException ${e.code}: ${e.message}');
+    } catch (e) {
+      debugPrint('AttachmentPickerSheet: error picking files: $e');
+    } finally {
+      _globalPicking = false;
+      if (mounted) {
+        setState(() => _localPicking = false);
+      }
+    }
   }
 
   @override
@@ -74,7 +143,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               child: _AttachmentOption(
                 icon: Icons.add_photo_alternate_outlined,
                 label: 'Fotos',
-                onTap: () => _pickPhotos(context),
+                onTap: _isBusy ? null : _pickPhotos,
               ),
             ),
             const SizedBox(width: 12),
@@ -82,7 +151,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               child: _AttachmentOption(
                 icon: Icons.photo_camera_outlined,
                 label: 'Cámara',
-                onTap: () => _pickCamera(context),
+                onTap: _isBusy ? null : _pickCamera,
               ),
             ),
             const SizedBox(width: 12),
@@ -90,7 +159,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               child: _AttachmentOption(
                 icon: Icons.attach_file,
                 label: 'Archivos',
-                onTap: () => _pickFiles(context),
+                onTap: _isBusy ? null : _pickFiles,
               ),
             ),
           ],
@@ -109,7 +178,7 @@ class _AttachmentOption extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

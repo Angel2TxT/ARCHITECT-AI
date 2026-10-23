@@ -223,8 +223,8 @@ class _HomeProjectDetailViewState extends State<HomeProjectDetailView> {
                     ],
                     if (project.description.isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      Text(
-                        project.description,
+                      _ExpandableDescription(
+                        text: project.description,
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
                           height: 1.4,
@@ -455,3 +455,90 @@ Color _apartadoColor(int index) {
   ];
   return colors[index % colors.length];
 }
+
+class _ExpandableDescription extends StatefulWidget {
+  const _ExpandableDescription({
+    required this.text,
+    required this.style,
+  });
+
+  final String text;
+  final TextStyle style;
+
+  static const int _maxLines = 2;
+
+  @override
+  State<_ExpandableDescription> createState() => _ExpandableDescriptionState();
+}
+
+class _ExpandableDescriptionState extends State<_ExpandableDescription> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textSpan = TextSpan(text: widget.text, style: widget.style);
+        final textPainter = TextPainter(
+          text: textSpan,
+          maxLines: _ExpandableDescription._maxLines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+
+        final exceeds = textPainter.didExceedMaxLines || widget.text.length > 70;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topLeft,
+              child: Text(
+                widget.text,
+                maxLines: _expanded ? null : _ExpandableDescription._maxLines,
+                overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                style: widget.style,
+              ),
+            ),
+            if (exceeds) ...[
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () => setState(() => _expanded = !_expanded),
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _expanded ? 'Ver menos' : 'Ver más',
+                        style: TextStyle(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        _expanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: scheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+

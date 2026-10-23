@@ -120,6 +120,7 @@ class HomeProjectDocument {
     required this.fileSize,
     this.sectionId,
     this.stageNumber,
+    this.slotKey,
     this.createdAt,
   });
 
@@ -129,6 +130,7 @@ class HomeProjectDocument {
   final int fileSize;
   final int? sectionId;
   final int? stageNumber;
+  final String? slotKey;
   final DateTime? createdAt;
 
   factory HomeProjectDocument.fromJson(Map<String, dynamic> json) {
@@ -145,6 +147,9 @@ class HomeProjectDocument {
           0,
       sectionId: (json['section_id'] as num?)?.toInt(),
       stageNumber: (json['stage_number'] as num?)?.toInt(),
+      slotKey: json['slot_key'] as String? ??
+          json['delivery_type'] as String? ??
+          json['slot'] as String?,
       createdAt: parseHomeDate(json['created_at']),
     );
   }
@@ -333,6 +338,7 @@ class HomeProjectSection {
     required this.comments,
     this.assignedToUserId,
     this.commentsCount = 0,
+    this.slots = const [],
   });
 
   final int id;
@@ -347,10 +353,12 @@ class HomeProjectSection {
   final List<HomeProjectComment> comments;
   final int? assignedToUserId;
   final int commentsCount;
+  final List<HomeProjectSlot> slots;
 
   factory HomeProjectSection.fromJson(Map<String, dynamic> json) {
     final docs = json['documents'];
     final comments = json['comments'];
+    final slots = json['slots'];
     final parsedComments = comments is List
         ? comments
             .whereType<Map>()
@@ -358,6 +366,13 @@ class HomeProjectSection {
                 HomeProjectComment.fromJson(Map<String, dynamic>.from(e)))
             .toList()
         : const <HomeProjectComment>[];
+    final parsedSlots = slots is List
+        ? slots
+            .whereType<Map>()
+            .map((e) =>
+                HomeProjectSlot.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        : const <HomeProjectSlot>[];
     return HomeProjectSection(
       id: (json['id'] as num?)?.toInt() ?? 0,
       stageNumber: (json['stage_number'] as num?)?.toInt() ?? 0,
@@ -379,6 +394,7 @@ class HomeProjectSection {
       assignedToUserId: (json['assigned_to_user_id'] as num?)?.toInt(),
       commentsCount: (json['comments_count'] as num?)?.toInt() ??
           parsedComments.length,
+      slots: parsedSlots,
     );
   }
 }
@@ -705,23 +721,40 @@ class HomeProjectSlot {
     required this.accept,
     required this.required,
     required this.aiPlanReview,
+    this.filled = false,
   });
 
   final String key;
   final String title;
-  final String accept;
+  final List<String> accept;
   final bool required;
   final bool aiPlanReview;
+  final bool filled;
 
   factory HomeProjectSlot.fromJson(Map<String, dynamic> json) {
+    final rawAccept = json['accept'];
+    List<String> acceptList = [];
+    if (rawAccept is List) {
+      acceptList = rawAccept.map((e) => e.toString()).toList();
+    } else if (rawAccept is String && rawAccept.isNotEmpty) {
+      acceptList = [rawAccept];
+    }
+    final title = json['title'] as String? ?? '';
+    final rawKey = json['key']?.toString() ??
+        json['slot_key']?.toString() ??
+        json['id']?.toString();
+    final key = (rawKey != null && rawKey.trim().isNotEmpty)
+        ? rawKey.trim()
+        : (title.isNotEmpty
+            ? title.toLowerCase().trim().replaceAll(RegExp(r'\s+'), '_')
+            : 'general');
     return HomeProjectSlot(
-      key: json['key']?.toString() ??
-          json['slot_key']?.toString() ??
-          '',
-      title: json['title'] as String? ?? '',
-      accept: json['accept'] as String? ?? '*',
+      key: key,
+      title: title.isNotEmpty ? title : key,
+      accept: acceptList,
       required: json['required'] == true,
       aiPlanReview: json['ai_plan_review'] == true,
+      filled: json['filled'] == true,
     );
   }
 }

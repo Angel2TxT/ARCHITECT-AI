@@ -148,10 +148,7 @@ class HomeProjectsController extends ChangeNotifier {
 
   void _sortProjects() {
     _projects.sort((a, b) {
-      final aPinned = _pinnedIds.contains(a.id);
-      final bPinned = _pinnedIds.contains(b.id);
-      if (aPinned != bPinned) return aPinned ? -1 : 1;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      return a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
     });
   }
 
@@ -318,6 +315,7 @@ class HomeProjectDetailController extends ChangeNotifier {
     required int stageNumber,
     required int sectionId,
     required File file,
+    String? slotKey,
   }) async {
     if (_disposed || _busy || !permissions.canUpload) return false;
     _busy = true;
@@ -329,6 +327,7 @@ class HomeProjectDetailController extends ChangeNotifier {
         stageNumber: stageNumber,
         file: file,
         sectionId: sectionId,
+        slotKey: slotKey,
       );
       if (_disposed) return false;
       await load(refresh: true);

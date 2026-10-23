@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
@@ -20,6 +21,7 @@ class _SupportListViewState extends State<SupportListView> {
   bool _loading = true;
   bool _creating = false;
   bool _showOpenTab = true;
+  bool _pickingAttachment = false;
   String? _error;
   List<SupportTicket> _tickets = [];
   final _subject = TextEditingController();
@@ -73,23 +75,35 @@ class _SupportListViewState extends State<SupportListView> {
   }
 
   Future<void> _pickAttachment() async {
-    final picker = ImagePicker();
-    final shot = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 2000,
-      imageQuality: 85,
-    );
-    if (shot == null) return;
-    final file = File(shot.path);
-    final size = await file.length();
-    if (size > 10 * 1024 * 1024) {
-      if (!mounted) return;
-      AppNotifications.error(context, 'La captura no puede superar 10 MB.');
-      return;
+    if (_pickingAttachment) return;
+    _pickingAttachment = true;
+    try {
+      final picker = ImagePicker();
+      final shot = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2000,
+        imageQuality: 85,
+      );
+      if (shot == null) return;
+      final file = File(shot.path);
+      final size = await file.length();
+      if (size > 10 * 1024 * 1024) {
+        if (!mounted) return;
+        AppNotifications.error(context, 'La captura no puede superar 10 MB.');
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _attachmentName = shot.name;
+        });
+      }
+    } on PlatformException catch (e) {
+      debugPrint('SupportListView: PlatformException ${e.code}: ${e.message}');
+    } catch (e) {
+      debugPrint('SupportListView: error picking attachment: $e');
+    } finally {
+      _pickingAttachment = false;
     }
-    setState(() {
-      _attachmentName = shot.name;
-    });
   }
 
   void _clearAttachment() {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
@@ -27,6 +28,7 @@ class ProfileController extends ChangeNotifier {
   bool _savingName = false;
   bool _savingPassword = false;
   bool _updatingAvatar = false;
+  bool _pickingAvatar = false;
   bool _deletingAccount = false;
   String? _error;
   String? _success;
@@ -96,25 +98,37 @@ class ProfileController extends ChangeNotifier {
   }
 
   Future<bool> pickAndUploadAvatar() async {
-    final picker = ImagePicker();
-    final shot = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1200,
-      imageQuality: 85,
-    );
-    if (shot == null) return false;
-    final file = File(shot.path);
-    final size = await file.length();
-    if (size > 3 * 1024 * 1024) {
-      _error = 'El avatar no puede superar 3 MB.';
-      notifyListeners();
+    if (_pickingAvatar) return false;
+    _pickingAvatar = true;
+    try {
+      final picker = ImagePicker();
+      final shot = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        imageQuality: 85,
+      );
+      if (shot == null) return false;
+      final file = File(shot.path);
+      final size = await file.length();
+      if (size > 3 * 1024 * 1024) {
+        _error = 'El avatar no puede superar 3 MB.';
+        notifyListeners();
+        return false;
+      }
+      return await _run(
+        action: () => _authService.uploadAvatar(file),
+        success: 'Avatar actualizado.',
+        setLoading: (value) => _updatingAvatar = value,
+      );
+    } on PlatformException catch (e) {
+      debugPrint('ProfileController: PlatformException ${e.code}: ${e.message}');
       return false;
+    } catch (e) {
+      debugPrint('ProfileController: error picking avatar: $e');
+      return false;
+    } finally {
+      _pickingAvatar = false;
     }
-    return _run(
-      action: () => _authService.uploadAvatar(file),
-      success: 'Avatar actualizado.',
-      setLoading: (value) => _updatingAvatar = value,
-    );
   }
 
   Future<bool> removeAvatar() {

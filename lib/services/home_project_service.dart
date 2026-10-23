@@ -154,8 +154,13 @@ class HomeProjectService {
     required int stageNumber,
     required File file,
     int? sectionId,
+    String? slotKey,
   }) async {
     try {
+      final safeKey = (slotKey != null && slotKey.trim().isNotEmpty)
+          ? slotKey.trim()
+          : 'general';
+
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
           file.path,
@@ -164,6 +169,8 @@ class HomeProjectService {
               : 'archivo',
         ),
         'section_id': ?sectionId,
+        'slot_key': safeKey,
+        'delivery_type': safeKey,
       });
 
       final response = await _apiClient.dio.post<dynamic>(

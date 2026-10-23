@@ -428,6 +428,22 @@ class StageDetailView extends StatelessWidget {
                                         fontSize: 12,
                                       ),
                                     ),
+                                    if (section.slots.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.task_alt,
+                                        size: 16,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${section.slots.where((s) => s.filled || section.documents.any((d) => d.slotKey == s.key)).length}/${section.slots.length} entregas',
+                                        style: TextStyle(
+                                          color: scheme.onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                     if (section.commentsCount > 0) ...[
                                       const SizedBox(width: 8),
                                       Icon(

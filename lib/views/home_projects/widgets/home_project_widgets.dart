@@ -84,58 +84,79 @@ class HomeProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final progress = (project.progressPercent / 100).clamp(0.0, 1.0);
+    final isDark = scheme.brightness == Brightness.dark;
     final hasMenu = onPin != null || onDelete != null;
+    final borderColor = isDark
+        ? const Color(0xFF2E2E34)
+        : const Color(0xFFD0D5DD);
 
-    return Material(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: borderColor,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  if (pinned) ...[
+                    Icon(
+                      Icons.push_pin,
+                      size: 16,
+                      color: scheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Expanded(
-                    child: Row(
-                      children: [
-                        if (pinned) ...[
-                          Icon(
-                            Icons.push_pin,
-                            size: 16,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Expanded(
-                          child: Text(
-                            project.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: scheme.onSurface,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      project.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   HomeStatusChip(status: project.status),
-                  if (hasMenu)
+                  if (hasMenu) ...[
+                    const SizedBox(width: 2),
                     PopupMenuButton<String>(
                       tooltip: 'Opciones',
                       padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       offset: const Offset(0, 36),
                       icon: Icon(
                         Icons.more_vert,
                         color: scheme.onSurfaceVariant,
+                        size: 20,
                       ),
                       onSelected: (value) {
                         switch (value) {
@@ -183,73 +204,60 @@ class HomeProjectCard extends StatelessWidget {
                           ),
                       ],
                     ),
+                  ],
                 ],
               ),
-              if (project.clientName.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  project.clientName,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ],
-              if (project.location.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.place_outlined,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        project.location,
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.place_outlined,
+                    size: 15,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      project.location.isNotEmpty
+                          ? project.location
+                          : 'Sin ubicación',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Etapa ${project.currentStage}/9',
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
                   ),
-                  const Spacer(),
-                  Text(
-                    '${project.progressPercent.round()}%',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest
+                          .withValues(alpha: isDark ? 0.6 : 0.8),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Etapa ${project.currentStage}/9',
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 7,
-                  backgroundColor: scheme.surfaceContainerHighest,
-                  color: const Color(0xFF1B8A5A),
-                ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
