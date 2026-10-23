@@ -22,4 +22,3 @@ secrets/*
 !secrets/README.md
 *-firebase-adminsdk-*.json
 google-services.json
-mobile/movil-Architect/
