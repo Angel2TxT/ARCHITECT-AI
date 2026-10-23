@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=3" />
   <link href="/static/fonts/inter.css" rel="stylesheet" />
   <link href="/static/fonts/material-symbols.css" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=182" />
+  <link rel="stylesheet" href="/static/style.css?v=183" />
   <script src="/static/pwa.js?v=4" defer></script>
   <style id="loader-critical">
     body.app-loading { overflow: hidden; }
@@ -74,18 +74,27 @@
     <div class="auth-bg-pattern"></div>
   </div>
 
-  <header class="auth-topbar">
-    <div class="auth-topbar-inner">
-      <a href="/" class="auth-topbar-brand">
-        <img src="/static/brand/architect-icon.png?v=3" alt="" class="brand-mark-img" width="32" height="32" />
-        <span class="auth-topbar-brand-text">ARCHITECT</span>
+  <nav class="welcome-nav fixed top-0 w-full z-50">
+    <div class="welcome-nav-inner">
+      <a class="welcome-nav-brand" href="/">
+        <img src="/static/brand/architect-icon.png?v=3" alt="" class="welcome-nav-brand-icon" width="30" height="30" />
+        <span class="welcome-nav-brand-text">ARCHITECT</span>
       </a>
-      <nav class="auth-topbar-nav" aria-label="Volver al sitio">
-        <a href="/" class="auth-topbar-link">Inicio</a>
-        <a href="/#pricing" class="auth-topbar-link auth-topbar-link--hide-mobile">Planes</a>
-      </nav>
+      <div class="welcome-nav-links">
+        <a href="/#product">Inicio</a>
+        <a href="/#model-3d">Cómo funciona</a>
+        <a href="/#features">Funciones</a>
+        <a href="/#home-projects">Casa hogar</a>
+        <a href="/#pricing">Planes</a>
+      </div>
+      <div class="welcome-nav-actions">
+        <a class="welcome-nav-login is-active" href="/login" id="navLoginBtn">Ingresar</a>
+        <div class="welcome-nav-cta-wrap">
+          <a class="welcome-nav-cta" href="/login#register" id="navRegisterBtn">Crear cuenta</a>
+        </div>
+      </div>
     </div>
-  </header>
+  </nav>
 
   <div class="auth-layout auth-layout--login-only">
     <div class="auth-form-column">
@@ -339,6 +348,6 @@
   </footer>
 
   <script src="/static/billing.js?v=1"></script>
-  <script src="/static/auth.js?v=34"></script>
+  <script src="/static/auth.js?v=35"></script>
 </body>
 </html>

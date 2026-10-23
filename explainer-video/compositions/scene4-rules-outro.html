@@ -1,0 +1,166 @@
+<template id="scene4-rules-outro-template">
+  <div
+    data-composition-id="scene4-rules-outro"
+    data-width="1920"
+    data-height="1080"
+    data-duration="4.0"
+  >
+    <div class="rules-canvas">
+      <div class="grid-bg"></div>
+
+      <div class="rules-content">
+        <p class="phase-kicker" data-layout-ignore>FASE 03 Y 04 · MOTOR DE REGLAS LOCALES</p>
+        <h2 class="rules-title">Inspección de normativa y expediente listo</h2>
+
+        <div class="findings-grid">
+          <div class="finding-box f1">
+            <span class="finding-tag tag-alert" data-layout-ignore>[01] ALERTA TUXTLA_RC</span>
+            <h3 class="finding-h">Puerta de acceso bajo mínimo</h3>
+            <p class="finding-p" data-layout-ignore>Ancho estimado 0.72 m (mínimo 0.90 m requerido).</p>
+          </div>
+
+          <div class="finding-box f2">
+            <span class="finding-tag tag-ok" data-layout-ignore>[02] CONFORME CEV</span>
+            <h3 class="finding-h">Iluminación y ventilación</h3>
+            <p class="finding-p" data-layout-ignore>Superficie de vanos norte cumple porcentaje normativo.</p>
+          </div>
+
+          <div class="finding-box f3">
+            <span class="finding-tag tag-info" data-layout-ignore>[03] EXPEDIENTE CASA HOGAR</span>
+            <h3 class="finding-h">Historial y chat técnico</h3>
+            <p class="finding-p" data-layout-ignore>Expediente completo y consultas en 9 etapas de obra.</p>
+          </div>
+        </div>
+
+        <div class="outro-cta-row">
+          <div class="cta-pill">Empieza con 5 análisis gratis al mes</div>
+          <span class="brand-url" data-layout-ignore>architect.app</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      [data-composition-id="scene4-rules-outro"] .rules-canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #060608;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      [data-composition-id="scene4-rules-outro"] .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      [data-composition-id="scene4-rules-outro"] .rules-content {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 1500px;
+        text-align: center;
+      }
+      [data-composition-id="scene4-rules-outro"] .phase-kicker {
+        color: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        margin-bottom: 16px;
+      }
+      [data-composition-id="scene4-rules-outro"] .rules-title {
+        color: #ffffff;
+        font-size: 56px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        margin-bottom: 48px;
+        line-height: 1.15;
+      }
+      [data-composition-id="scene4-rules-outro"] .findings-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        width: 100%;
+        margin-bottom: 56px;
+      }
+      [data-composition-id="scene4-rules-outro"] .finding-box {
+        background: #0a0a0f;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 36px 32px;
+        text-align: left;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      [data-composition-id="scene4-rules-outro"] .finding-tag {
+        display: inline-block;
+        font-family: 'Inter', monospace;
+        font-size: 16px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+      }
+      [data-composition-id="scene4-rules-outro"] .finding-h {
+        color: #ffffff;
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin-bottom: 12px;
+      }
+      [data-composition-id="scene4-rules-outro"] .finding-p {
+        color: #a1a1aa;
+        font-size: 20px;
+        line-height: 1.5;
+      }
+      [data-composition-id="scene4-rules-outro"] .outro-cta-row {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      [data-composition-id="scene4-rules-outro"] .cta-pill {
+        background: #ffffff;
+        color: #060608;
+        font-size: 24px;
+        font-weight: 600;
+        padding: 16px 40px;
+        border-radius: 999px;
+        box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+      }
+      [data-composition-id="scene4-rules-outro"] .brand-url {
+        color: #ffffff;
+        font-family: 'Inter', monospace;
+        font-size: 24px;
+        letter-spacing: 0.05em;
+      }
+    </style>
+
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const kicker = document.querySelector('[data-composition-id="scene4-rules-outro"] .phase-kicker');
+        const title = document.querySelector('[data-composition-id="scene4-rules-outro"] .rules-title');
+        const boxes = document.querySelectorAll('[data-composition-id="scene4-rules-outro"] .finding-box');
+        const cta = document.querySelector('[data-composition-id="scene4-rules-outro"] .outro-cta-row');
+
+        tl.fromTo(kicker, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.1);
+        tl.fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.2);
+        tl.fromTo(boxes, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.25, ease: "power3.out" }, 0.4);
+        tl.fromTo(cta, { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }, 1.3);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene4-rules-outro"] = tl;
+      })();
+    </script>
+  </div>
+</template>

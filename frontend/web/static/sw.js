@@ -1,5 +1,5 @@
 /* Service worker ARCHITECT — PWA + shell offline para Casa hogar. */
-const CACHE_NAME = "architect-pwa-v17";
+const CACHE_NAME = "architect-pwa-v23";
 const PRECACHE = [
   "/",
   "/legacy-app",
@@ -8,9 +8,9 @@ const PRECACHE = [
   "/static/manifest.webmanifest",
   "/static/pwa.js?v=4",
   "/static/offline-store.js?v=1",
-  "/static/auth.js?v=34",
+  "/static/auth.js?v=35",
   "/static/home-projects.js?v=65",
-  "/static/style.css?v=182",
+  "/static/style.css?v=183",
   "/static/dialogs.js?v=4",
   "/static/fonts/inter.css",
   "/static/fonts/material-symbols.css",

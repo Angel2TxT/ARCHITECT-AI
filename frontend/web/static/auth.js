@@ -658,6 +658,8 @@ function initAuthTabs() {
         : "Revisa planos con IA y normativa de referencia";
     }
 
+    const navLogin = document.getElementById("navLoginBtn");
+    if (navLogin) navLogin.classList.toggle("is-active", tab === "login");
     outgoing.classList.remove("auth-panel--active");
     outgoing.classList.add(toRegister ? "auth-panel--exit-left" : "auth-panel--exit-right");
 
@@ -687,13 +689,49 @@ function initAuthTabs() {
     if (!active.hidden) setPanelsHeight(panelHeight(active));
   });
 
-  document.querySelectorAll(".auth-tab").forEach((btn) => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-  });
+    const navLogin = document.getElementById("navLoginBtn");
+    if (navLogin) navLogin.classList.add("is-active");
 
-  if (window.location.hash === "#register") switchTab("register");
-  if (new URLSearchParams(window.location.search).get("tab") === "register") switchTab("register");
-}
+    document.querySelectorAll(".auth-tab").forEach((btn) => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    const navRegister = document.getElementById("navRegisterBtn");
+    if (navLogin) {
+      navLogin.addEventListener("click", (e) => {
+        e.preventDefault();
+        try { history.replaceState(null, "", "/login"); } catch (_) {}
+        switchTab("login");
+      });
+    }
+    if (navRegister) {
+      navRegister.addEventListener("click", (e) => {
+        e.preventDefault();
+        try { history.replaceState(null, "", "/login#register"); } catch (_) {}
+        switchTab("register");
+      });
+    }
+    window.addEventListener("hashchange", () => {
+      if (window.location.hash === "#register") switchTab("register");
+      else if (window.location.hash === "#login" || !window.location.hash) switchTab("login");
+    });
+
+    const welcomeNav = document.querySelector(".welcome-nav");
+    if (welcomeNav) {
+      let scrollRaf = 0;
+      const onScroll = () => {
+        scrollRaf = 0;
+        welcomeNav.classList.toggle("nav-scrolled", window.scrollY > 16);
+      };
+      window.addEventListener("scroll", () => {
+        if (!scrollRaf) scrollRaf = requestAnimationFrame(onScroll);
+      }, { passive: true });
+      onScroll();
+    }
+
+    if (window.location.hash === "#register") switchTab("register");
+    if (new URLSearchParams(window.location.search).get("tab") === "register") switchTab("register");
+  }
 
 function isLoggedIn() {
   return !!getToken();

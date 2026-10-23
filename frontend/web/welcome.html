@@ -204,171 +204,199 @@
       border: 0;
       overflow: visible;
     }
+    /* Studio CAD Inspector Preview */
     .product-preview {
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.75fr);
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.85fr);
       gap: 0;
-      min-height: 420px;
-      border-radius: 1rem;
+      min-height: 440px;
+      border-radius: 0.85rem;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: #0a0a0a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #070709;
+      box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
     }
     .product-preview-stage {
       position: relative;
-      min-height: 420px;
+      min-height: 440px;
       background:
-        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
-        #0a0a0a;
-      background-size: 28px 28px, 28px 28px, auto;
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 70%),
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+        #070709;
+      background-size: 100% 100%, 24px 24px, 24px 24px, auto;
       overflow: hidden;
     }
     .product-preview-plan {
       position: absolute;
-      inset: 8% 10% 12% 10%;
-      width: auto;
-      height: auto;
-      max-width: none;
+      inset: 6% 8% 8% 8%;
+      width: 84%;
+      height: 86%;
     }
     .product-preview-plan .wall {
       fill: none;
-      stroke: rgba(255, 255, 255, 0.78);
-      stroke-width: 3.2;
+      stroke: rgba(255, 255, 255, 0.85);
+      stroke-width: 2.5;
       stroke-linejoin: round;
       stroke-linecap: round;
     }
     .product-preview-plan .partition {
       fill: none;
-      stroke: rgba(255, 255, 255, 0.38);
-      stroke-width: 1.8;
+      stroke: rgba(255, 255, 255, 0.4);
+      stroke-width: 1.5;
+      stroke-linejoin: round;
     }
     .product-preview-plan .opening {
       fill: none;
-      stroke: #86efac;
-      stroke-width: 2.4;
+      stroke: rgba(255, 255, 255, 0.95);
+      stroke-width: 2;
     }
-    .product-preview-plan .opening.is-alert {
-      stroke: #fca5a5;
+    .product-preview-plan .cota-line {
+      stroke: rgba(255, 255, 255, 0.22);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
+    }
+    .product-preview-plan .cota-tick {
+      stroke: rgba(255, 255, 255, 0.45);
+      stroke-width: 1.2;
+    }
+    .product-preview-plan .cota-text {
+      fill: rgba(255, 255, 255, 0.45);
+      font-size: 9px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-anchor: middle;
+    }
+    .product-preview-plan .door-arc {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.35);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
     }
     .product-preview-plan .room-label {
-      fill: rgba(255, 255, 255, 0.38);
-      font-size: 11px;
-      letter-spacing: 0.12em;
+      fill: rgba(255, 255, 255, 0.4);
+      font-size: 10px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      font-family: Inter, system-ui, sans-serif;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 500;
     }
     .product-preview-scan {
       position: absolute;
       left: 0;
       right: 0;
-      height: 2px;
-      top: 12%;
-      background: linear-gradient(90deg, transparent, rgba(134, 239, 172, 0.85), transparent);
-      box-shadow: 0 0 24px rgba(134, 239, 172, 0.35);
-      animation: product-scan 4.2s ease-in-out infinite;
+      height: 1px;
+      top: 15%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+      animation: product-scan 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       pointer-events: none;
     }
     @keyframes product-scan {
-      0%, 100% { top: 10%; opacity: 0.35; }
-      50% { top: 78%; opacity: 1; }
+      0%, 100% { top: 8%; opacity: 0.2; }
+      50% { top: 88%; opacity: 0.85; }
     }
     .product-preview-marker {
       position: absolute;
-      width: 1.55rem;
-      height: 1.55rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #ffffff;
+      background: rgba(10, 10, 12, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .product-preview-marker::before {
+      content: "";
+      width: 5px;
+      height: 5px;
       border-radius: 999px;
-      display: grid;
-      place-items: center;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #050505;
-      background: #86efac;
-      box-shadow: 0 0 0 6px rgba(134, 239, 172, 0.15);
-      animation: product-marker-pulse 2.4s ease-in-out infinite;
-    }
-    .product-preview-marker.is-alert {
-      background: #fca5a5;
-      box-shadow: 0 0 0 6px rgba(252, 165, 165, 0.16);
-      animation-delay: 0.4s;
-    }
-    @keyframes product-marker-pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
+      background: #ffffff;
+      box-shadow: 0 0 6px #ffffff;
     }
     .product-preview-side {
       display: flex;
       flex-direction: column;
       gap: 0.85rem;
-      padding: 1.15rem 1.1rem;
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.03);
+      padding: 1.5rem 1.4rem;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      background: #09090c;
     }
     .product-preview-side-kicker {
       margin: 0;
-      font-size: 0.68rem;
-      font-weight: 700;
+      font-size: 0.65rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 600;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.45);
+      color: rgba(255, 255, 255, 0.4);
     }
     .product-preview-side h3 {
-      margin: 0.2rem 0 0;
+      margin: 0.3rem 0 0;
       font-size: 1.05rem;
-      font-weight: 650;
+      font-weight: 500;
       letter-spacing: -0.02em;
-      color: #fff;
+      color: #ffffff;
     }
     .product-preview-finding {
       display: flex;
-      gap: 0.65rem;
+      gap: 0.75rem;
       align-items: flex-start;
-      padding: 0.7rem 0.75rem;
-      border-radius: 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(0, 0, 0, 0.28);
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .product-preview-finding:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
     }
     .product-preview-finding-num {
       flex: 0 0 auto;
-      width: 1.35rem;
-      height: 1.35rem;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.7rem;
-      font-weight: 700;
-      color: #050505;
-      background: #86efac;
-      margin-top: 0.05rem;
-    }
-    .product-preview-finding-num.is-alert {
-      background: #fca5a5;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 0.1rem;
     }
     .product-preview-finding strong {
       display: block;
-      font-size: 0.82rem;
-      color: #fff;
-      font-weight: 650;
+      font-size: 0.8rem;
+      color: #ffffff;
+      font-weight: 500;
+      letter-spacing: -0.01em;
     }
     .product-preview-finding p {
       margin: 0.2rem 0 0;
-      font-size: 0.74rem;
-      line-height: 1.4;
-      color: rgba(148, 163, 184, 0.95) !important;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.5) !important;
     }
     .product-preview-meta {
       margin-top: auto;
       display: flex;
       flex-wrap: wrap;
       gap: 0.4rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
     .product-preview-meta span {
-      font-size: 0.68rem;
-      padding: 0.28rem 0.55rem;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: rgba(255, 255, 255, 0.65);
-      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.65rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 0.22rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.02);
     }
     @media (max-width: 860px) {
       .product-preview {
@@ -376,12 +404,65 @@
         min-height: 0;
       }
       .product-preview-stage {
-        min-height: 300px;
+        min-height: 320px;
       }
       .product-preview-side {
         border-left: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
       }
+    }
+    /* Studio Cards */
+    .studio-card {
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.85rem;
+      padding: 1.75rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+    .studio-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      background-color: #0c0c0e;
+    }
+    .studio-icon-box {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      margin-bottom: 1.25rem;
+    }
+    .studio-icon-box .material-symbols-outlined {
+      font-size: 1.25rem;
+    }
+    .studio-card-title {
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.6rem;
+    }
+    .studio-card-desc {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #a1a1aa;
+    }
+    .studio-tag {
+      font-size: 0.65rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #a1a1aa;
+      background: rgba(255, 255, 255, 0.02);
     }
     .ai-plan-canvas {
       display: none;
@@ -1505,12 +1586,12 @@
               <span class="material-symbols-outlined" style="font-size:1.1rem">download</span>
               Instalar app
             </button>
-            <a class="nexus-cta-ghost" href="#model-3d">Ver cómo funciona</a>
+            <a class="nexus-cta-ghost" href="#video-demo">Ver demostración</a>
           </div>
         </div>
       </div>
 
-      <a href="#model-3d" class="nexus-scroll-cue" aria-label="Ver cómo funciona">
+      <a href="#video-demo" class="nexus-scroll-cue" aria-label="Ver demostración">
         <span>Explorar</span>
         <span class="material-symbols-outlined">expand_more</span>
       </a>
@@ -1518,66 +1599,140 @@
 
     <div class="welcome-section-divider" aria-hidden="true"></div>
 
+    <section class="video-showcase-section py-20 px-margin-mobile md:px-margin-desktop" id="video-demo">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-10 scroll-reveal">
+          <p class="font-mono text-xs uppercase tracking-widest text-zinc-400 mb-2.5">Demostración en video</p>
+          <h2 class="text-3xl md:text-4xl font-normal text-white tracking-tight mb-3">Cómo funciona ARCHITECT</h2>
+          <p class="text-zinc-400 max-w-xl mx-auto text-sm leading-relaxed">De la carga del plano a la detección de cotas y validación de habitabilidad.</p>
+        </div>
+
+        <div class="video-player-card scroll-reveal relative rounded-2xl overflow-hidden border border-white/[0.12] bg-[#070709] shadow-2xl">
+          <div class="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-[#0c0c10]">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-white/20"></span>
+              <span class="w-3 h-3 rounded-full bg-white/20"></span>
+              <span class="w-3 h-3 rounded-full bg-white/20"></span>
+              <span class="font-mono text-xs text-zinc-400 ml-3">ARCHITECT</span>
+            </div>
+          </div>
+
+          <div class="relative w-full aspect-video bg-black">
+            <video 
+              id="architectExplainerVideo"
+              src="/static/videos/architect-demo.mp4" 
+              poster="/static/videos/architect-demo-poster.png"
+              class="w-full h-full object-cover" 
+              controls 
+              autoplay 
+              loop 
+              muted 
+              playsinline
+            >
+              Tu navegador no soporta video HTML5.
+            </video>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="welcome-section-divider" aria-hidden="true"></div>
+
     <section class="model-section" id="model-3d">
       <div class="model-shell">
-        <div class="mb-8 scroll-reveal">
-          <p class="model-eyebrow">Flujo de análisis</p>
-          <h2 class="model-title">Del archivo subido al plano marcado con observaciones.</h2>
-          <p class="model-copy">Sube imagen o PDF, corre detección YOLO sobre la planta y pasa los resultados por un motor de reglas configurable. Obtienes medidas estimadas, incidencias numeradas sobre el dibujo y un chat para preguntar o profundizar en cada revisión. No sustituye la firma de un responsable de obra.</p>
+        <div class="mb-10 scroll-reveal">
+          <p class="font-mono text-xs uppercase tracking-widest text-zinc-400 mb-2">Flujo de análisis</p>
+          <h2 class="text-3xl md:text-4xl font-normal text-white tracking-tight mb-3">Del archivo subido al plano marcado con observaciones.</h2>
+          <p class="text-zinc-400 max-w-2xl text-sm leading-relaxed">Sube imagen o PDF, corre detección sobre la planta y pasa los resultados por un motor de reglas configurable. Obtienes medidas estimadas, vanos calculados e incidencias numeradas en dibujo técnico.</p>
         </div>
         <div class="w-full mx-auto scroll-reveal" id="hero-image">
           <div class="product-preview" aria-label="Vista previa del análisis de plano en planta">
             <div class="product-preview-stage">
               <div class="product-preview-scan" aria-hidden="true"></div>
-              <svg class="product-preview-plan" viewBox="0 0 640 420" role="img" aria-label="Planta arquitectónica de ejemplo con observaciones">
-                <rect class="wall" x="48" y="46" width="544" height="328" rx="2" />
-                <path class="partition" d="M280 46 V374" />
-                <path class="partition" d="M48 210 H280" />
-                <path class="partition" d="M280 250 H592" />
-                <path class="opening is-alert" d="M168 46 H214" />
-                <path class="opening" d="M340 46 H410" />
-                <path class="opening" d="M480 46 H545" />
-                <path class="opening is-alert" d="M48 270 V318" />
-                <path class="opening" d="M360 250 H420" />
-                <text class="room-label" x="150" y="140">Sala</text>
-                <text class="room-label" x="150" y="300">Cocina</text>
-                <text class="room-label" x="400" y="160">Recámara</text>
-                <text class="room-label" x="400" y="320">Baño</text>
+              <svg class="product-preview-plan" viewBox="0 0 640 420" role="img" aria-label="Planta arquitectónica CAD con cotas y observaciones">
+                <!-- Cotas / Dimension lines -->
+                <line class="cota-line" x1="40" y1="22" x2="600" y2="22" />
+                <line class="cota-tick" x1="36" y1="18" x2="44" y2="26" />
+                <line class="cota-tick" x1="266" y1="18" x2="274" y2="26" />
+                <line class="cota-tick" x1="596" y1="18" x2="604" y2="26" />
+                <text class="cota-text" x="155" y="16">6.40 m</text>
+                <text class="cota-text" x="435" y="16">7.80 m</text>
+
+                <line class="cota-line" x1="22" y1="40" x2="22" y2="380" />
+                <line class="cota-tick" x1="18" y1="36" x2="26" y2="44" />
+                <line class="cota-tick" x1="18" y1="206" x2="26" y2="214" />
+                <line class="cota-tick" x1="18" y1="376" x2="26" y2="384" />
+                <text class="cota-text" x="14" y="130" transform="rotate(-90 14 130)">4.80 m</text>
+                <text class="cota-text" x="14" y="295" transform="rotate(-90 14 295)">3.90 m</text>
+
+                <!-- Architectural perimeter & interior walls -->
+                <rect class="wall" x="40" y="40" width="560" height="340" />
+                <path class="partition" d="M270 40 V380" />
+                <path class="partition" d="M40 210 H270" />
+                <path class="partition" d="M270 230 H600" />
+
+                <!-- Doors, openings & swing arcs -->
+                <!-- Door 1 (Principal) -->
+                <path class="opening" d="M140 40 H195" />
+                <path class="door-arc" d="M140 40 A55 55 0 0 1 195 95" />
+
+                <!-- Windows -->
+                <path class="opening" d="M350 40 H450" />
+                <line class="cota-line" x1="350" y1="37" x2="450" y2="37" />
+                <line class="cota-line" x1="350" y1="43" x2="450" y2="43" />
+
+                <path class="opening" d="M600 110 V170" />
+                <line class="cota-line" x1="597" y1="110" x2="597" y2="170" />
+                <line class="cota-line" x1="603" y1="110" x2="603" y2="170" />
+
+                <!-- Door interior -->
+                <path class="opening" d="M270 120 V175" />
+                <path class="door-arc" d="M270 120 A55 55 0 0 0 215 175" />
+
+                <!-- Access lateral -->
+                <path class="opening" d="M40 280 V335" />
+                <path class="door-arc" d="M40 280 A55 55 0 0 1 95 335" />
+
+                <!-- Room labels -->
+                <text class="room-label" x="155" y="130">SALA · 28.5 m²</text>
+                <text class="room-label" x="155" y="300">COCINA · 18.2 m²</text>
+                <text class="room-label" x="435" y="140">RECÁMARA · 24.0 m²</text>
+                <text class="room-label" x="435" y="310">BAÑO PPAL · 7.5 m²</text>
               </svg>
-              <span class="product-preview-marker is-alert" style="left: 27%; top: 8%;">1</span>
-              <span class="product-preview-marker" style="left: 58%; top: 8%;">2</span>
-              <span class="product-preview-marker is-alert" style="left: 5%; top: 62%;">3</span>
+              <span class="product-preview-marker" style="left: 20%; top: 6%;">01 · ACCESO 0.72m</span>
+              <span class="product-preview-marker" style="left: 55%; top: 6%;">02 · VANOS 1.80m²</span>
+              <span class="product-preview-marker" style="left: 4%; top: 68%;">03 · LATERAL</span>
             </div>
             <aside class="product-preview-side">
               <div>
-                <p class="product-preview-side-kicker">Resultado del análisis</p>
-                <h3>Observaciones en planta</h3>
+                <p class="product-preview-side-kicker">MOTOR REGLAS · TUXTLA_RC</p>
+                <h3>Inspección en planta</h3>
               </div>
               <article class="product-preview-finding">
-                <span class="product-preview-finding-num is-alert">1</span>
+                <span class="product-preview-finding-num">[01]</span>
                 <div>
-                  <strong>Puerta bajo mínimo</strong>
-                  <p>Ancho estimado menor al mínimo de acceso (reglas Tuxtla).</p>
+                  <strong>Puerta de acceso principal</strong>
+                  <p>Ancho libre estimado 0.72 m (inferior a 0.90 m requerido por norma).</p>
                 </div>
               </article>
               <article class="product-preview-finding">
-                <span class="product-preview-finding-num">2</span>
+                <span class="product-preview-finding-num">[02]</span>
                 <div>
-                  <strong>Ventanas detectadas</strong>
-                  <p>Huecos marcados en fachada norte para revisión de iluminación.</p>
+                  <strong>Vanos en fachada norte</strong>
+                  <p>Área de iluminación 1.80 m² adecuada para ventilación natural.</p>
                 </div>
               </article>
               <article class="product-preview-finding">
-                <span class="product-preview-finding-num is-alert">3</span>
+                <span class="product-preview-finding-num">[03]</span>
                 <div>
-                  <strong>Acceso lateral</strong>
-                  <p>Apertura con medida fuera de rango en muro perimetral.</p>
+                  <strong>Acceso lateral de servicio</strong>
+                  <p>Apertura verificada sin interferencia con muro de carga perimetral.</p>
                 </div>
               </article>
               <div class="product-preview-meta">
-                <span>YOLO + reglas</span>
-                <span>Imagen / PDF</span>
-                <span>tuxtla_rc</span>
+                <span>YOLOv8 DETECT</span>
+                <span>PDF / RASTER</span>
+                <span>TUXTLA_RC</span>
               </div>
             </aside>
           </div>
@@ -1585,107 +1740,115 @@
       </div>
     </section>
 
-    <div class="welcome-section-divider" aria-hidden="true"></div>
-
-    <section class="py-12 bg-surface-container-lowest">
+    <section class="py-14 border-y border-white/[0.08] bg-[#070709]">
       <div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter text-center">
-          <div class="p-5 scroll-reveal">
-            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="2" data-suffix="">2</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Formatos de análisis</p>
-            <p class="mt-4 text-secondary/70">PNG/JPG y PDF para la revisión con IA. DXF/DWG se pueden subir en la documentación de Casa hogar.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 md:divide-x md:divide-white/[0.08] text-center gap-8 md:gap-0">
+          <div class="px-6 scroll-reveal">
+            <div class="stat-number font-mono text-4xl md:text-5xl font-light text-white tracking-tight mb-2" data-value="2" data-suffix="">2</div>
+            <p class="font-mono text-xs uppercase tracking-widest text-zinc-400">Formatos de análisis</p>
+            <p class="mt-3 text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">PNG/JPG y PDF para la revisión con IA. DXF/DWG en documentación técnica de Casa Hogar.</p>
           </div>
-          <div class="p-5 scroll-reveal" style="transition-delay: 100ms">
-            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="1" data-suffix="">1</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Chat de construcción</p>
-            <p class="mt-4 text-secondary/70">Pregunta normativa y criterios técnicos sin subir plano, con manuales indexados en el sistema.</p>
+          <div class="px-6 scroll-reveal" style="transition-delay: 100ms">
+            <div class="stat-number font-mono text-4xl md:text-5xl font-light text-white tracking-tight mb-2" data-value="1" data-suffix="">1</div>
+            <p class="font-mono text-xs uppercase tracking-widest text-zinc-400">Chat técnico normativo</p>
+            <p class="mt-3 text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">Consulta reglamentos y criterios constructivos locales sin necesidad de subir un plano.</p>
           </div>
-          <div class="p-5 scroll-reveal" style="transition-delay: 200ms">
-            <div class="stat-number text-[30px] font-display-lg text-primary mb-1" data-value="9" data-suffix="">9</div>
-            <p class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Etapas casa hogar</p>
-            <p class="mt-4 text-secondary/70">Gestiona vivienda unifamiliar de programación a entrega, con documentos, equipo y actividad por proyecto.</p>
+          <div class="px-6 scroll-reveal" style="transition-delay: 200ms">
+            <div class="stat-number font-mono text-4xl md:text-5xl font-light text-white tracking-tight mb-2" data-value="9" data-suffix="">9</div>
+            <p class="font-mono text-xs uppercase tracking-widest text-zinc-400">Etapas casa hogar</p>
+            <p class="mt-3 text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">Expediente completo para vivienda unifamiliar desde programación hasta entrega de obra.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="welcome-section-divider" aria-hidden="true"></div>
-
-    <section id="features" class="py-14 px-margin-mobile md:px-margin-desktop">
+    <section id="features" class="py-20 px-margin-mobile md:px-margin-desktop">
       <div class="max-w-container-max mx-auto">
-        <div class="text-center mb-8 scroll-reveal">
-          <h2 class="font-display-lg text-display-lg mb-3 tracking-normal">Qué puedes hacer en ARCHITECT</h2>
-          <p class="font-body-lg text-body-lg text-secondary max-w-xl mx-auto">Herramientas que ya están en el workspace: análisis de planos, reglas locales, proyectos de vivienda y seguimiento por chat.</p>
+        <div class="text-center mb-12 scroll-reveal">
+          <p class="font-mono text-xs uppercase tracking-widest text-zinc-400 mb-2.5">Capacidades del sistema</p>
+          <h2 class="text-3xl md:text-4xl font-normal text-white tracking-tight mb-3">Qué puedes hacer en ARCHITECT</h2>
+          <p class="text-zinc-400 max-w-xl mx-auto text-sm leading-relaxed">Herramientas especializadas para despacho y obra: análisis de planos 2D, reglas locales, proyectos de vivienda y chat técnico.</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-8 group scroll-reveal">
-            <div class="glass p-5 rounded-xl h-full flex flex-col justify-between overflow-hidden relative">
-              <div class="relative z-10">
-                <span class="material-symbols-outlined feature-icon">upload_file</span>
-                <h3 class="font-headline-md text-headline-md mb-3">Análisis de planos en el workspace</h3>
-                <p class="font-body-md text-body-md text-secondary max-w-md">Sube un archivo, obtén detecciones de puertas, ventanas y muros, un reporte de medidas y un plano anotado con incidencias numeradas. Cada análisis queda en tu historial y puedes seguir la conversación con preguntas de seguimiento.</p>
-              </div>
-              <div class="feature-mini-tags mt-5">
-                <span>Puertas</span>
-                <span>Ventanas</span>
-                <span>Observaciones</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="structural" class="md:col-span-4 scroll-reveal" style="transition-delay: 150ms">
-            <div class="glass p-5 rounded-xl h-full border border-primary/5">
-              <span class="material-symbols-outlined feature-icon">gavel</span>
-              <h3 class="font-headline-md text-headline-md mb-3">Reglas y normativa en planta</h3>
-              <p class="font-body-md text-body-md text-secondary">El motor valida habitabilidad, anchos de puertas y ventanas, circulación interior y parámetros urbanos estimables en planta, con referencias a tuxtla_rc y CEV. Puedes ajustar umbrales y pesos del modelo en Ajustes.</p>
-              <div class="mt-5 pt-5 border-t border-outline-variant/20">
-                <ul class="space-y-4">
-                  <li class="flex items-center gap-3 text-label-sm font-label-sm">
-                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    PUERTAS Y VANOS
-                  </li>
-                  <li class="flex items-center gap-3 text-label-sm font-label-sm">
-                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    HABITABILIDAD Y CIRCULACIÓN
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div id="home-projects" class="md:col-span-4 scroll-reveal" style="transition-delay: 200ms">
-            <div class="glass nexus-feature-card p-5 rounded-xl h-full">
-              <span class="material-symbols-outlined feature-icon">home_work</span>
-              <h3 class="font-headline-md text-headline-md mb-3">Proyectos casa hogar</h3>
-              <p class="font-body-md text-body-md opacity-80">Expediente de 9 etapas para vivienda unifamiliar: entregables, revisión del equipo e historial. La IA es apoyo dentro del proyecto: dudas por etapa y revisión de planta 2D con alcance explícito (no sustituye la firma del responsable).</p>
-            </div>
-          </div>
-
-          <div id="chat-feature" class="md:col-span-8 scroll-reveal" style="transition-delay: 250ms">
-            <div class="glass p-5 rounded-xl h-full flex flex-col justify-between">
+            <div class="studio-card">
               <div>
-                <span class="material-symbols-outlined feature-icon">forum</span>
-                <h3 class="font-headline-md text-headline-md mb-3">Chat, correcciones y cuentas de equipo</h3>
-                <p class="font-body-md text-body-md text-secondary max-w-2xl">Haz preguntas de construcción sin adjuntar plano, guarda chats por proyecto, marca correcciones sobre detecciones para mejorar el modelo y administra usuarios con planes de uso mensual. Login con correo o Google.</p>
+                <div class="studio-icon-box">
+                  <span class="material-symbols-outlined">upload_file</span>
+                </div>
+                <h3 class="studio-card-title">Análisis de planos en el workspace</h3>
+                <p class="studio-card-desc max-w-lg">Sube un archivo, obtén detecciones de puertas, ventanas y muros, un reporte de medidas y un plano anotado con incidencias numeradas. Cada análisis queda en tu historial para revisiones continuas.</p>
               </div>
-              <div class="mt-5 pt-5 border-t border-outline-variant/20 flex flex-wrap items-center justify-between gap-4">
-                <ul class="flex flex-wrap gap-x-6 gap-y-3">
-                  <li class="flex items-center gap-2 text-label-sm font-label-sm">
-                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    CHAT TÉCNICO
+              <div class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/[0.06]">
+                <span class="studio-tag">Puertas</span>
+                <span class="studio-tag">Ventanas</span>
+                <span class="studio-tag">Muros</span>
+                <span class="studio-tag">Cotas estimadas</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="structural" class="md:col-span-4 scroll-reveal" style="transition-delay: 100ms">
+            <div class="studio-card">
+              <div>
+                <div class="studio-icon-box">
+                  <span class="material-symbols-outlined">gavel</span>
+                </div>
+                <h3 class="studio-card-title">Reglas y normativa en planta</h3>
+                <p class="studio-card-desc">El motor valida habitabilidad, anchos de vanos, circulación interior y parámetros urbanos estimables en planta con referencias a tuxtla_rc y CEV.</p>
+              </div>
+              <div class="mt-6 pt-5 border-t border-white/[0.06]">
+                <ul class="space-y-2 text-xs font-mono text-zinc-400">
+                  <li class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white/60"></span>
+                    PUERTAS Y CIRCULACIÓN
                   </li>
-                  <li class="flex items-center gap-2 text-label-sm font-label-sm">
-                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    CORRECCIONES
+                  <li class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white/60"></span>
+                    ILUMINACIÓN Y VENTILACIÓN
                   </li>
-                  <li class="flex items-center gap-2 text-label-sm font-label-sm">
-                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
-                    CUENTAS DE EQUIPO
+                  <li class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white/60"></span>
+                    PARÁMETROS LOCALES TUXTLA
                   </li>
                 </ul>
-                <a class="font-label-sm text-label-sm uppercase tracking-widest text-primary flex items-center gap-2 group no-underline" href="/legacy-app">
-                  Ir al workspace
-                  <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="home-projects" class="md:col-span-4 scroll-reveal" style="transition-delay: 150ms">
+            <div class="studio-card">
+              <div>
+                <div class="studio-icon-box">
+                  <span class="material-symbols-outlined">home_work</span>
+                </div>
+                <h3 class="studio-card-title">Proyectos casa hogar</h3>
+                <p class="studio-card-desc">Expediente de 9 etapas para vivienda unifamiliar: entregables, revisión del equipo e historial colaborativo con control de documentación técnica.</p>
+              </div>
+              <div class="mt-6 pt-5 border-t border-white/[0.06]">
+                <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">9 ETAPAS · CONTROL DE EXPEDIENTE</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="chat-feature" class="md:col-span-8 scroll-reveal" style="transition-delay: 200ms">
+            <div class="studio-card">
+              <div>
+                <div class="studio-icon-box">
+                  <span class="material-symbols-outlined">forum</span>
+                </div>
+                <h3 class="studio-card-title">Chat técnico y cuentas de equipo</h3>
+                <p class="studio-card-desc max-w-xl">Consulta reglamentos sin adjuntar plano, guarda chats por proyecto, marca correcciones para afinar detecciones y administra accesos con límites claros por usuario.</p>
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-4 mt-6 pt-5 border-t border-white/[0.06]">
+                <div class="flex flex-wrap gap-2">
+                  <span class="studio-tag">Chat técnico</span>
+                  <span class="studio-tag">Feedback asistido</span>
+                  <span class="studio-tag">Gestión de equipo</span>
+                </div>
+                <a class="text-xs font-mono uppercase tracking-widest text-white hover:text-zinc-300 flex items-center gap-1.5 no-underline transition-colors" href="/legacy-app">
+                  Abrir workspace
+                  <span class="material-symbols-outlined text-sm">arrow_forward</span>
                 </a>
               </div>
             </div>
@@ -1778,15 +1941,16 @@
       </div>
     </section>
 
-    <section class="py-14 text-center relative overflow-hidden">
-      <div class="absolute inset-0 technical-grid opacity-20 pointer-events-none"></div>
+    <section class="py-24 md:py-28 text-center relative overflow-hidden border-t border-white/[0.08] bg-[#070709]">
       <div class="max-w-3xl mx-auto px-margin-mobile relative z-10 scroll-reveal">
-        <h2 class="font-display-lg text-display-lg mb-5 tracking-normal">Empieza con 5 análisis gratis al mes.</h2>
-        <p class="font-body-lg text-body-lg text-secondary mb-8">Crea tu cuenta, sube un plano en el workspace o abre un proyecto casa hogar. Si necesitas más revisiones o el modelo entrenado, cambia de plan desde tu cuenta.</p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a class="bg-primary text-on-primary font-body-md text-body-md px-6 py-2.5 rounded-full font-bold text-[14px] hover:opacity-90 transition-all shadow-xl no-underline" href="/login#register">Crear cuenta gratis</a>
-          <a class="px-6 py-2.5 rounded-full font-bold text-[14px] hover:bg-surface-container transition-all border border-outline no-underline text-primary" href="/legacy-app">Abrir workspace</a>
+        <p class="font-mono text-xs uppercase tracking-widest text-zinc-400 mb-3">Empieza hoy</p>
+        <h2 class="text-3xl md:text-5xl font-normal text-white tracking-tight mb-4">Empieza con 5 análisis gratis al mes.</h2>
+        <p class="text-zinc-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed mb-8">Crea tu cuenta, sube un plano en el workspace o abre un proyecto casa hogar. Sin cobros ocultos ni tarjeta requerida.</p>
+        <div class="flex flex-col sm:flex-row gap-3.5 justify-center items-center">
+          <a class="inline-flex items-center justify-center bg-white text-black font-medium text-sm px-7 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-sm no-underline" href="/login#register">Crear cuenta gratis</a>
+          <a class="inline-flex items-center justify-center border border-white/20 text-white font-medium text-sm px-7 py-3 rounded-full hover:bg-white/5 transition-colors no-underline" href="/legacy-app">Abrir workspace</a>
         </div>
+        <p class="font-mono text-xs text-zinc-500 mt-10 tracking-widest uppercase">SIN TARJETA DE CRÉDITO · MOTOR YOLO + REGLAS TUXTLA_RC · MODELO ASISTENCIAL</p>
       </div>
     </section>
   </main>

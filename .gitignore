@@ -23,3 +23,5 @@ secrets/*
 *-firebase-adminsdk-*.json
 google-services.json
 .env.env
+.hyperframes/
+**/.hyperframes/
