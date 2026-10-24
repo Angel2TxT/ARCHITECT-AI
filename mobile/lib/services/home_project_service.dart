@@ -311,9 +311,16 @@ class HomeProjectService {
         },
       );
       final map = _map(response.data);
-      return map['status']?.toString() ??
-          map['message']?.toString() ??
-          'Invitación enviada';
+      if (map['status'] == 'invite_created' && map['token'] != null) {
+        return 'Código de invitación generado: ${map['token']}';
+      }
+      if (map['status'] == 'member_added') {
+        return 'Miembro añadido al proyecto';
+      }
+      if (map['status'] == 'member_updated') {
+        return 'Rol del miembro actualizado';
+      }
+      return map['message']?.toString() ?? 'Invitación enviada';
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
