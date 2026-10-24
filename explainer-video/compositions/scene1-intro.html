@@ -1,0 +1,150 @@
+<template id="scene1-intro-template">
+  <div
+    data-composition-id="scene1-intro"
+    data-width="1920"
+    data-height="1080"
+    data-duration="3.5"
+  >
+    <div class="intro-canvas">
+      <div class="grid-bg"></div>
+
+      <div class="intro-content">
+        <div class="logo-box">
+          <div class="select-stroke-box"></div>
+          <h1 class="logo-text">ARCHITECT</h1>
+        </div>
+
+        <p class="intro-eyebrow">FLUJO DE ANÁLISIS EN PLANTA</p>
+        <h2 class="intro-title">Cómo funciona la revisión asistida</h2>
+        <p class="intro-subtitle">De la subida del plano a la detección de cotas y validación normativa en segundos.</p>
+
+        <div class="step-indicator">
+          <span class="active-dot"></span>
+          <span class="step-label">FASE 01 · INGESTIÓN Y MODELO</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      [data-composition-id="scene1-intro"] .intro-canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #060608;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      [data-composition-id="scene1-intro"] .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      [data-composition-id="scene1-intro"] .intro-content {
+        position: relative;
+        z-index: 10;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 1400px;
+      }
+      [data-composition-id="scene1-intro"] .logo-box {
+        position: relative;
+        padding: 24px 64px;
+        margin-bottom: 40px;
+      }
+      [data-composition-id="scene1-intro"] .select-stroke-box {
+        position: absolute;
+        inset: 0;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+      }
+      [data-composition-id="scene1-intro"] .logo-text {
+        color: #ffffff;
+        font-size: 84px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        margin: 0;
+        line-height: 1;
+      }
+      [data-composition-id="scene1-intro"] .intro-eyebrow {
+        color: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        margin-bottom: 24px;
+      }
+      [data-composition-id="scene1-intro"] .intro-title {
+        color: #ffffff;
+        font-size: 64px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        margin-bottom: 24px;
+        line-height: 1.15;
+      }
+      [data-composition-id="scene1-intro"] .intro-subtitle {
+        color: #a1a1aa;
+        font-size: 32px;
+        font-weight: 400;
+        max-width: 960px;
+        line-height: 1.5;
+        margin-bottom: 48px;
+      }
+      [data-composition-id="scene1-intro"] .step-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 28px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+      }
+      [data-composition-id="scene1-intro"] .active-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 0 12px #ffffff;
+      }
+      [data-composition-id="scene1-intro"] .step-label {
+        color: #ffffff;
+        font-family: 'Inter', monospace;
+        font-size: 20px;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+      }
+    </style>
+
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const logoBox = document.querySelector('[data-composition-id="scene1-intro"] .logo-box');
+        const strokeBox = document.querySelector('[data-composition-id="scene1-intro"] .select-stroke-box');
+        const eyebrow = document.querySelector('[data-composition-id="scene1-intro"] .intro-eyebrow');
+        const title = document.querySelector('[data-composition-id="scene1-intro"] .intro-title');
+        const subtitle = document.querySelector('[data-composition-id="scene1-intro"] .intro-subtitle');
+        const badge = document.querySelector('[data-composition-id="scene1-intro"] .step-indicator');
+
+        tl.fromTo(strokeBox, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.2);
+        tl.fromTo(logoBox, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.2);
+        tl.fromTo(eyebrow, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.6);
+        tl.fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.8);
+        tl.fromTo(subtitle, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 1.0);
+        tl.fromTo(badge, { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }, 1.3);
+
+        // Outro transition
+        tl.to('[data-composition-id="scene1-intro"] .intro-content', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 3.1);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene1-intro"] = tl;
+      })();
+    </script>
+  </div>
+</template>

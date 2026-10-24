@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -153,10 +153,11 @@ def google_enabled():
 
 
 @router.get("/google")
-def google_login_start():
+def google_login_start(request: Request):
     if not google_oauth_configured():
         raise HTTPException(503, "Google OAuth no configurado en el servidor")
-    state = create_oauth_state()
+    origin = str(request.base_url).rstrip("/")
+    state = create_oauth_state(return_url=origin)
     return RedirectResponse(build_google_authorize_url(state), status_code=302)
 
 
@@ -168,6 +169,15 @@ async def google_login_callback(
     error: str = "",
 ):
     base = app_frontend_base()
+    state_data: dict = {}
+    if state:
+        try:
+            state_data = verify_oauth_state(state)
+            if state_data.get("return_url"):
+                base = state_data["return_url"]
+        except Exception:
+            pass
+
     if error:
         return RedirectResponse(
             f"{base}/login?oauth_error={quote(error)}",
@@ -179,7 +189,8 @@ async def google_login_callback(
             status_code=302,
         )
     try:
-        verify_oauth_state(state)
+        if not state_data:
+            state_data = verify_oauth_state(state)
         profile_raw = await exchange_google_code(code)
         profile = normalize_google_profile(profile_raw)
         user = find_or_create_google_user(db, profile)

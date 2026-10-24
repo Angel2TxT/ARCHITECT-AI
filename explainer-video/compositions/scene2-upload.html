@@ -1,0 +1,182 @@
+<template id="scene2-upload-template">
+  <div
+    data-composition-id="scene2-upload"
+    data-width="1920"
+    data-height="1080"
+    data-duration="4.0"
+  >
+    <div class="upload-canvas">
+      <div class="grid-bg"></div>
+
+      <div class="stage-header">
+        <p class="phase-badge" data-layout-ignore>PASO 01</p>
+        <h2 class="phase-title">Carga de archivo y análisis preliminar</h2>
+        <p class="phase-sub">Soporta planos arquitectónicos en PDF vectorial, ráster de alta resolución o formatos CAD.</p>
+      </div>
+
+      <div class="upload-modal">
+        <div class="modal-top">
+          <div class="file-icon-box">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#ffffff" stroke-width="1.8">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="file-info">
+            <h3 class="file-name">plano_ejecutivo_vivienda_unifamiliar.pdf</h3>
+            <p class="file-meta" data-layout-ignore>ESCALA 1:50 · FORMATO A1 · RESOLUCIÓN 300 DPI · 8.4 MB</p>
+          </div>
+        </div>
+
+        <div class="process-bar-container">
+          <div class="process-bar"></div>
+        </div>
+
+        <div class="meta-row">
+          <span class="meta-item">✓ Extracción vectorial</span>
+          <span class="meta-item">✓ Corrección de perspectiva</span>
+          <span class="meta-item">✓ Calibración de escala</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      [data-composition-id="scene2-upload"] .upload-canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #060608;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      [data-composition-id="scene2-upload"] .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      [data-composition-id="scene2-upload"] .stage-header {
+        position: relative;
+        z-index: 10;
+        text-align: center;
+        margin-bottom: 60px;
+      }
+      [data-composition-id="scene2-upload"] .phase-badge {
+        color: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        margin-bottom: 16px;
+      }
+      [data-composition-id="scene2-upload"] .phase-title {
+        color: #ffffff;
+        font-size: 52px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        margin-bottom: 16px;
+      }
+      [data-composition-id="scene2-upload"] .phase-sub {
+        color: #a1a1aa;
+        font-size: 26px;
+        font-weight: 400;
+        max-width: 840px;
+        margin: 0 auto;
+      }
+      [data-composition-id="scene2-upload"] .upload-modal {
+        position: relative;
+        z-index: 10;
+        width: 1080px;
+        background: #0c0c10;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 48px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      }
+      [data-composition-id="scene2-upload"] .modal-top {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        margin-bottom: 36px;
+      }
+      [data-composition-id="scene2-upload"] .file-icon-box {
+        width: 88px;
+        height: 88px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: grid;
+        place-items: center;
+      }
+      [data-composition-id="scene2-upload"] .file-name {
+        color: #ffffff;
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        letter-spacing: -0.01em;
+      }
+      [data-composition-id="scene2-upload"] .file-meta {
+        color: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 18px;
+        letter-spacing: 0.08em;
+      }
+      [data-composition-id="scene2-upload"] .process-bar-container {
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 32px;
+      }
+      [data-composition-id="scene2-upload"] .process-bar {
+        width: 0%;
+        height: 100%;
+        background: #ffffff;
+        box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+      }
+      [data-composition-id="scene2-upload"] .meta-row {
+        display: flex;
+        gap: 28px;
+      }
+      [data-composition-id="scene2-upload"] .meta-item {
+        color: #ffffff;
+        font-family: 'Inter', monospace;
+        font-size: 20px;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+    </style>
+
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const header = document.querySelector('[data-composition-id="scene2-upload"] .stage-header');
+        const modal = document.querySelector('[data-composition-id="scene2-upload"] .upload-modal');
+        const bar = document.querySelector('[data-composition-id="scene2-upload"] .process-bar');
+        const items = document.querySelectorAll('[data-composition-id="scene2-upload"] .meta-item');
+
+        tl.fromTo(header, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.1);
+        tl.fromTo(modal, { scale: 0.92, opacity: 0, y: 40 }, { scale: 1, opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.3);
+        tl.to(bar, { width: "100%", duration: 2.2, ease: "power2.inOut" }, 0.6);
+        tl.fromTo(items, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.2, ease: "power2.out" }, 1.4);
+
+        // Outro transition
+        tl.to('[data-composition-id="scene2-upload"] .upload-canvas', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 3.6);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene2-upload"] = tl;
+      })();
+    </script>
+  </div>
+</template>

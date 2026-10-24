@@ -226,8 +226,7 @@ async def analyze(
     db.add(assistant_msg)
 
     chat.updated_at = datetime.utcnow()
-    if not is_admin_user(user):
-        record_analysis_usage(db, user.id)
+    record_analysis_usage(db, user)
 
     db.commit()
 
@@ -407,8 +406,7 @@ async def analyze_followup(
         )
     )
     chat.updated_at = datetime.utcnow()
-    if not is_admin_user(user):
-        record_analysis_usage(db, user.id)
+    record_analysis_usage(db, user)
     db.commit()
 
     result["chat_id"] = chat.id

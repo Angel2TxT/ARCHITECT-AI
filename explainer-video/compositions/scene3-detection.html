@@ -1,0 +1,265 @@
+<template id="scene3-detection-template">
+  <div
+    data-composition-id="scene3-detection"
+    data-width="1920"
+    data-height="1080"
+    data-duration="4.5"
+  >
+    <div class="detect-canvas">
+      <div class="grid-bg"></div>
+
+      <div class="detect-layout">
+        <div class="detect-stage">
+          <div class="laser-beam"></div>
+          
+          <svg class="cad-svg" viewBox="0 0 800 520" data-layout-ignore>
+            <!-- Cotas -->
+            <line class="cota-line top-cota" x1="50" y1="30" x2="750" y2="30" />
+            <line class="cota-tick" x1="45" y1="25" x2="55" y2="35" />
+            <line class="cota-tick" x1="340" y1="25" x2="350" y2="35" />
+            <line class="cota-tick" x1="745" y1="25" x2="755" y2="35" />
+            <text class="cota-text cota-val1" x="195" y="22">6.40 m</text>
+            <text class="cota-text cota-val2" x="545" y="22">8.20 m</text>
+
+            <line class="cota-line left-cota" x1="25" y1="50" x2="25" y2="470" />
+            <line class="cota-tick" x1="20" y1="45" x2="30" y2="55" />
+            <line class="cota-tick" x1="20" y1="260" x2="30" y2="270" />
+            <line class="cota-tick" x1="20" y1="465" x2="30" y2="475" />
+            <text class="cota-text cota-val3" x="18" y="160" transform="rotate(-90 18 160)">5.20 m</text>
+            <text class="cota-text cota-val4" x="18" y="370" transform="rotate(-90 18 370)">4.10 m</text>
+
+            <!-- Walls -->
+            <rect class="wall-rect" x="50" y="50" width="700" height="420" />
+            <path class="part-line p1" d="M350 50 V470" />
+            <path class="part-line p2" d="M50 260 H350" />
+            <path class="part-line p3" d="M350 280 H750" />
+
+            <!-- Doors & Arcs -->
+            <path class="door d1" d="M160 50 H230" />
+            <path class="arc a1" d="M160 50 A70 70 0 0 1 230 120" />
+
+            <path class="door d2" d="M350 140 V210" />
+            <path class="arc a2" d="M350 140 A70 70 0 0 0 280 210" />
+
+            <!-- Windows -->
+            <path class="win w1" d="M460 50 H580" />
+            <path class="win w2" d="M750 130 V220" />
+
+            <!-- Room Labels -->
+            <text class="room r1" x="200" y="170">SALA · 33.2 m²</text>
+            <text class="room r2" x="200" y="370">COCINA · 24.5 m²</text>
+            <text class="room r3" x="550" y="170">RECÁMARA · 32.8 m²</text>
+            <text class="room r4" x="550" y="380">BAÑO PPAL · 11.4 m²</text>
+          </svg>
+
+          <!-- Floating Inspection Badges -->
+          <div class="cad-badge badge1" style="left: 20%; top: 7%;" data-layout-ignore>01 · PUERTA 0.72m</div>
+          <div class="cad-badge badge2" style="left: 58%; top: 7%;" data-layout-ignore>02 · VANOS 2.40m²</div>
+        </div>
+
+        <div class="detect-sidebar">
+          <p class="side-kicker" data-layout-ignore>FASE 02 · MODELO YOLOv8</p>
+          <h2 class="side-title">Extracción de geometría</h2>
+          <div class="metric-card mc1">
+            <span class="metric-num">12</span>
+            <div>
+              <strong class="metric-title">Vanos y accesos</strong>
+              <p class="metric-sub" data-layout-ignore>Detección de carpinterías y circulaciones</p>
+            </div>
+          </div>
+          <div class="metric-card mc2">
+            <span class="metric-num">04</span>
+            <div>
+              <strong class="metric-title">Espacios habitables</strong>
+              <p class="metric-sub" data-layout-ignore>Superficie calculada automáticamente</p>
+            </div>
+          </div>
+          <div class="metric-card mc3">
+            <span class="metric-num">100%</span>
+            <div>
+              <strong class="metric-title">Muros identificados</strong>
+              <p class="metric-sub" data-layout-ignore>Cierre perimetral y particiones interiores</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      [data-composition-id="scene3-detection"] .detect-canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #060608;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      [data-composition-id="scene3-detection"] .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      [data-composition-id="scene3-detection"] .detect-layout {
+        position: relative;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: 1080px 560px;
+        gap: 60px;
+        align-items: center;
+      }
+      [data-composition-id="scene3-detection"] .detect-stage {
+        position: relative;
+        height: 700px;
+        background: #09090d;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        overflow: hidden;
+        padding: 40px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      }
+      [data-composition-id="scene3-detection"] .laser-beam {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        top: 0;
+        background: linear-gradient(90deg, transparent, #ffffff, transparent);
+        box-shadow: 0 0 24px rgba(255, 255, 255, 0.9);
+        z-index: 20;
+      }
+      [data-composition-id="scene3-detection"] .cad-svg {
+        width: 100%;
+        height: 100%;
+      }
+      [data-composition-id="scene3-detection"] .cota-line {
+        stroke: rgba(255, 255, 255, 0.25);
+        stroke-dasharray: 4 4;
+        stroke-width: 1.5;
+      }
+      [data-composition-id="scene3-detection"] .cota-tick {
+        stroke: rgba(255, 255, 255, 0.6);
+        stroke-width: 2;
+      }
+      [data-composition-id="scene3-detection"] .cota-text {
+        fill: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 16px;
+        text-anchor: middle;
+      }
+      [data-composition-id="scene3-detection"] .wall-rect {
+        fill: none;
+        stroke: #ffffff;
+        stroke-width: 4;
+      }
+      [data-composition-id="scene3-detection"] .part-line {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.6);
+        stroke-width: 2.5;
+      }
+      [data-composition-id="scene3-detection"] .door {
+        stroke: #ffffff;
+        stroke-width: 3.5;
+      }
+      [data-composition-id="scene3-detection"] .arc {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.4);
+        stroke-dasharray: 4 4;
+        stroke-width: 2;
+      }
+      [data-composition-id="scene3-detection"] .win {
+        stroke: #ffffff;
+        stroke-width: 3.5;
+      }
+      [data-composition-id="scene3-detection"] .room {
+        fill: rgba(255, 255, 255, 0.6);
+        font-family: 'Inter', monospace;
+        font-size: 18px;
+        letter-spacing: 0.1em;
+      }
+      [data-composition-id="scene3-detection"] .cad-badge {
+        position: absolute;
+        background: rgba(10, 10, 14, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #ffffff;
+        font-family: 'Inter', monospace;
+        font-size: 16px;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      }
+      [data-composition-id="scene3-detection"] .detect-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      [data-composition-id="scene3-detection"] .side-kicker {
+        color: #a1a1aa;
+        font-family: 'Inter', monospace;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+      }
+      [data-composition-id="scene3-detection"] .side-title {
+        color: #ffffff;
+        font-size: 48px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        margin-bottom: 8px;
+      }
+      [data-composition-id="scene3-detection"] .metric-card {
+        background: #09090d;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 24px 28px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      [data-composition-id="scene3-detection"] .metric-num {
+        color: #ffffff;
+        font-family: 'Inter', monospace;
+        font-size: 44px;
+        font-weight: 700;
+        min-width: 90px;
+      }
+      [data-composition-id="scene3-detection"] .metric-title {
+        color: #ffffff;
+        font-size: 24px;
+        display: block;
+        margin-bottom: 6px;
+      }
+      [data-composition-id="scene3-detection"] .metric-sub {
+        color: #a1a1aa;
+        font-size: 18px;
+      }
+    </style>
+
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const stage = document.querySelector('[data-composition-id="scene3-detection"] .detect-stage');
+        const laser = document.querySelector('[data-composition-id="scene3-detection"] .laser-beam');
+        const cards = document.querySelectorAll('[data-composition-id="scene3-detection"] .metric-card');
+        const badges = document.querySelectorAll('[data-composition-id="scene3-detection"] .cad-badge');
+
+        tl.fromTo(stage, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.1);
+        tl.fromTo(laser, { y: 0 }, { y: 690, duration: 2.8, ease: "power1.inOut" }, 0.4);
+        tl.fromTo(badges, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.4, ease: "back.out(2)" }, 1.2);
+        tl.fromTo(cards, { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.3, ease: "power2.out" }, 0.6);
+
+        // Outro transition
+        tl.to('[data-composition-id="scene3-detection"] .detect-layout', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 4.1);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene3-detection"] = tl;
+      })();
+    </script>
+  </div>
+</template>

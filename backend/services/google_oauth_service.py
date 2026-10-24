@@ -39,23 +39,26 @@ def app_frontend_base() -> str:
     return os.getenv("APP_BASE_URL", "http://127.0.0.1:8080").rstrip("/")
 
 
-def create_oauth_state() -> str:
+def create_oauth_state(return_url: str | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=OAUTH_STATE_EXPIRE_MINUTES)
     payload = {
         "purpose": "google_oauth",
         "nonce": secrets.token_urlsafe(16),
         "exp": expire,
     }
+    if return_url:
+        payload["return_url"] = return_url
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_oauth_state(state: str) -> None:
+def verify_oauth_state(state: str) -> dict:
     try:
         data = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError as exc:
         raise HTTPException(400, "Estado OAuth inválido o expirado") from exc
     if data.get("purpose") != "google_oauth":
         raise HTTPException(400, "Estado OAuth inválido")
+    return data
 
 
 def build_google_authorize_url(state: str) -> str:
