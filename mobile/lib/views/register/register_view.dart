@@ -159,6 +159,8 @@ class _RegisterViewState extends State<RegisterView> {
                       child: const Text('¿Ya tienes cuenta? Inicia sesión'),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  const LoginLegalFooter(),
                 ],
               ),
             ),

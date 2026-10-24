@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
+import 'package:movil_architect/views/legal/legal_views.dart';
 
 class LoginAppMark extends StatelessWidget {
   const LoginAppMark({super.key});
@@ -271,7 +272,13 @@ class LoginLegalFooter extends StatelessWidget {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TermsOfServiceView(),
+                  ),
+                );
+              },
               child: Text(
                 'Términos de Servicio',
                 style: TextStyle(
@@ -288,7 +295,13 @@ class LoginLegalFooter extends StatelessWidget {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PrivacyPolicyView(),
+                  ),
+                );
+              },
               child: Text(
                 'Política de Privacidad',
                 style: TextStyle(

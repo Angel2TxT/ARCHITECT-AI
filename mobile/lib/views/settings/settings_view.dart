@@ -8,6 +8,7 @@ import 'package:movil_architect/models/auth_models.dart';
 import 'package:movil_architect/views/billing/billing_view.dart';
 import 'package:movil_architect/views/billing/usage_limits_view.dart';
 import 'package:movil_architect/views/dashboard/widgets/dashboard_drawer.dart';
+import 'package:movil_architect/views/legal/legal_views.dart';
 import 'package:movil_architect/views/login/login_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
 import 'package:movil_architect/views/profile/profile_view.dart';
@@ -353,6 +354,34 @@ class _SettingsViewState extends State<SettingsView> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
+                ),
+                const SizedBox(height: 28),
+                const _SectionTitle('Legal'),
+                const SizedBox(height: 10),
+                _SettingsTile(
+                  icon: Icons.description_outlined,
+                  title: 'Términos y condiciones',
+                  subtitle: 'Alcance, responsabilidades y limitaciones',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const TermsOfServiceView(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                _SettingsTile(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Política de privacidad',
+                  subtitle: 'Tratamiento de datos, IA y derechos ARCO',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PrivacyPolicyView(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
                 const _SectionTitle('Servidor'),
