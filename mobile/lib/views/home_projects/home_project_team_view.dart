@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/home_project_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
@@ -199,6 +200,12 @@ class HomeProjectTeamView extends StatelessWidget {
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-Z0-9@._+-]'),
+                  ),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Correo',
                   border: OutlineInputBorder(),

@@ -20,6 +20,7 @@ class ProfileController extends ChangeNotifier {
   final AuthService _authService;
   final MobileApiService _mobileApiService;
   final nameController = TextEditingController();
+  final emailController = TextEditingController();
   final currentPasswordController = TextEditingController();
   final newPasswordController = TextEditingController();
   final confirmDeleteController = TextEditingController();
@@ -50,6 +51,7 @@ class ProfileController extends ChangeNotifier {
       final me = await _mobileApiService.me();
       _authService.updateSession(user: me.user, subscription: me.subscription);
       nameController.text = me.user.fullName;
+      emailController.text = me.user.email;
     } on ApiException catch (error) {
       _error = error.message;
     } finally {
@@ -62,6 +64,12 @@ class ProfileController extends ChangeNotifier {
     final name = nameController.text.trim();
     if (name.isEmpty || name.length > 120) {
       _error = 'El nombre debe tener entre 1 y 120 caracteres.';
+      notifyListeners();
+      return false;
+    }
+    final nameRegex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$');
+    if (!nameRegex.hasMatch(name)) {
+      _error = 'El nombre solo puede contener letras y espacios.';
       notifyListeners();
       return false;
     }
@@ -147,10 +155,24 @@ class ProfileController extends ChangeNotifier {
       _error = null;
       notifyListeners();
       if (user.hasPassword) {
+        if (confirmDeleteController.text.isEmpty) {
+          _error = 'Ingresa tu contraseña para confirmar.';
+          return false;
+        }
         await _authService.deleteAccount(password: confirmDeleteController.text);
       } else {
+        final email = confirmDeleteController.text.trim();
+        if (email.isEmpty) {
+          _error = 'Ingresa tu correo para confirmar.';
+          return false;
+        }
+        final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+        if (!emailRegex.hasMatch(email)) {
+          _error = 'Ingresa un correo electrónico válido.';
+          return false;
+        }
         await _authService.deleteAccount(
-          confirmEmail: confirmDeleteController.text.trim(),
+          confirmEmail: email,
         );
       }
       return true;
@@ -188,6 +210,7 @@ class ProfileController extends ChangeNotifier {
   @override
   void dispose() {
     nameController.dispose();
+    emailController.dispose();
     currentPasswordController.dispose();
     newPasswordController.dispose();
     confirmDeleteController.dispose();

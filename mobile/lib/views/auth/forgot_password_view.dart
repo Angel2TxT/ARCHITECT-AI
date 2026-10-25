@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
@@ -69,6 +70,11 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               controller: _email,
               hint: 'CORREO ELECTRÓNICO',
               keyboardType: TextInputType.emailAddress,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(
+                  RegExp(r'[a-zA-Z0-9@._+-]'),
+                ),
+              ],
               autocorrect: false,
             ),
             const SizedBox(height: 20),

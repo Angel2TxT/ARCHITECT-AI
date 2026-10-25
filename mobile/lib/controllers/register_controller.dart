@@ -45,10 +45,15 @@ class RegisterController extends ChangeNotifier {
   }
 
   String? _validateForm() {
+    final fullName = fullNameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
     final confirm = confirmPasswordController.text;
 
+    if (fullName.isNotEmpty &&
+        !RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$').hasMatch(fullName)) {
+      return 'El nombre solo puede contener letras y espacios.';
+    }
     if (email.isEmpty) {
       return 'Ingresa tu correo electrónico.';
     }
