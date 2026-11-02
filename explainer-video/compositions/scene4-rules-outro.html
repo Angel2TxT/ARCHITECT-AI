@@ -3,44 +3,168 @@
     data-composition-id="scene4-rules-outro"
     data-width="1920"
     data-height="1080"
-    data-duration="4.0"
+    data-duration="4.2"
   >
-    <div class="rules-canvas">
+    <div class="result-canvas">
       <div class="grid-bg"></div>
 
-      <div class="rules-content">
-        <p class="phase-kicker" data-layout-ignore>FASE 03 Y 04 · MOTOR DE REGLAS LOCALES</p>
-        <h2 class="rules-title">Inspección de normativa y expediente listo</h2>
+      <!-- Top Results Meta Bar -->
+      <div class="results-header">
+        <div class="header-left">
+          <span class="verdict-pill-fail">
+            <span class="fail-dot"></span>
+            DICTAMEN: NO CUMPLE NORMATIVA (2 ERRORES, 1 AVISO)
+          </span>
+          <span class="norm-reference" data-layout-ignore>JURISDICCIÓN: RCDF / CHIAPAS (RC-2024)</span>
+        </div>
+        <div class="header-right" data-layout-ignore>
+          <span class="meta-tag">14 Detecciones</span>
+          <span class="meta-tag">Escala 100 px/m</span>
+          <span class="meta-tag">Confianza 94%</span>
+        </div>
+      </div>
 
-        <div class="findings-grid">
-          <div class="finding-box f1">
-            <span class="finding-tag tag-alert" data-layout-ignore>[01] ALERTA TUXTLA_RC</span>
-            <h3 class="finding-h">Puerta de acceso bajo mínimo</h3>
-            <p class="finding-p" data-layout-ignore>Ancho estimado 0.72 m (mínimo 0.90 m requerido).</p>
+      <!-- Main Showcase Container -->
+      <div class="showcase-container">
+        <!-- Left: Annotated Plan with Red Marked Infraction Boxes -->
+        <div class="annotated-plan-card">
+          <svg class="cad-svg-result" viewBox="0 0 960 540">
+            <!-- Exterior Walls -->
+            <path class="wall ext" d="M120 80 H840 V460 H120 Z" />
+
+            <!-- Partitions -->
+            <path class="wall int1" d="M480 80 V460" />
+            <path class="wall int2" d="M120 270 H480" />
+            <path class="wall int3            " d="M480 310 H840" />
+
+            <!-- Doors -->
+            <g class="door-elem">
+              <!-- Error 01 Door -->
+              <path class="door d-err" d="M120 160 H195" />
+              <path class="arc a-err" d="M120 160 A75 75 0 0 1 195 235" />
+              <!-- Marked Error Red Rect -->
+              <rect class="error-box eb1-rect" x="110" y="150" width="95" height="95" rx="4" />
+            </g>
+
+            <g class="door-elem">
+              <path class="door" d="M480 180 V250" />
+              <path class="arc" d="M480 180 A70 70 0 0 0 410 250" />
+            </g>
+
+            <g class="door-elem">
+              <path class="door" d="M480 360 V420" />
+              <path class="arc" d="M480 360 A60 60 0 0 0 420 420" />
+            </g>
+
+            <!-- Windows -->
+            <path class="win" d="M540 80 H680" />
+            <!-- Warning 03 Window Rect -->
+            <rect class="warn-box wb1-rect" x="535" y="70" width="150" height="20" rx="3" />
+
+            <path class="win" d="M840 160 V260" />
+
+            <!-- Error 02: Bathroom with NO window (Red overlay on bathroom space) -->
+            <rect class="error-room-box eb2-rect" x="480" y="310" width="360" height="150" rx="4" />
+
+            <!-- Room Labels -->
+            <text class="room-label" x="240" y="180">SALA ESTANCIA</text>
+            <text class="room-label" x="240" y="370">COCINA COMEDOR</text>
+            <text class="room-label" x="620" y="200">RECÁMARA 1</text>
+            <text class="room-label bath-label" x="620" y="390">BAÑO PPAL (SIN VENTILACIÓN)</text>
+          </svg>
+
+          <!-- Floating Error Callout Badges -->
+          <div class="callout-tag tag-01">
+            <span class="tag-num">01</span>
+            <div class="tag-desc">
+              <strong>PUERTA PPAL: 0.72m</strong>
+              <small data-layout-ignore>Mínimo normativo: 0.90m (Art. 82)</small>
+            </div>
           </div>
 
-          <div class="finding-box f2">
-            <span class="finding-tag tag-ok" data-layout-ignore>[02] CONFORME CEV</span>
-            <h3 class="finding-h">Iluminación y ventilación</h3>
-            <p class="finding-p" data-layout-ignore>Superficie de vanos norte cumple porcentaje normativo.</p>
+          <div class="callout-tag tag-02">
+            <span class="tag-num">02</span>
+            <div class="tag-desc">
+              <strong>BAÑO SIN VENTILACIÓN</strong>
+              <small data-layout-ignore>Requiere vano 0.24m² o ducto mecánico</small>
+            </div>
           </div>
 
-          <div class="finding-box f3">
-            <span class="finding-tag tag-info" data-layout-ignore>[03] EXPEDIENTE CASA HOGAR</span>
-            <h3 class="finding-h">Historial y chat técnico</h3>
-            <p class="finding-p" data-layout-ignore>Expediente completo y consultas en 9 etapas de obra.</p>
+          <div class="callout-tag tag-03">
+            <span class="tag-num warn">03</span>
+            <div class="tag-desc">
+              <strong>VENTANA RECÁMARA 7.8%</strong>
+              <small data-layout-ignore>Requerido: 10% superficie (Aviso)</small>
+            </div>
           </div>
         </div>
 
-        <div class="outro-cta-row">
-          <div class="cta-pill">Empieza con 5 análisis gratis al mes</div>
-          <span class="brand-url" data-layout-ignore>architect.app</span>
+        <!-- Right: Assistant Remediation Panel -->
+        <div class="remediation-panel">
+          <div class="panel-header">
+            <div class="ai-spark-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#00f2fe" stroke-width="2.2">
+                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="panel-title">Dictamen del Asistente</h3>
+              <p class="panel-subtitle" data-layout-ignore>Acciones correctivas inmediatas</p>
+            </div>
+          </div>
+
+          <div class="action-items-list">
+            <div class="action-card critical">
+              <span class="action-badge-err">ERROR 01</span>
+              <div>
+                <strong class="action-heading">Ampliar vano de acceso principal</strong>
+                <p class="action-body" data-layout-ignore>El ancho detectado es de 72 cm. Ampliar a 90 cm libres para cumplir ruta accesible.</p>
+              </div>
+            </div>
+
+            <div class="action-card critical">
+              <span class="action-badge-err">ERROR 02</span>
+              <div>
+                <strong class="action-heading">Incorporar extracción o vano en baño</strong>
+                <p class="action-body" data-layout-ignore>El sanitario no cuenta con ventana al exterior. Instalar ducto vertical de tiro natural.</p>
+              </div>
+            </div>
+
+            <div class="action-card compliant" data-layout-ignore>
+              <span class="action-badge-ok">CONFORME</span>
+              <div>
+                <strong class="action-heading">Altura libre y pasillos conformes</strong>
+                <p class="action-body">Circulaciones interiores de 0.95m cumplen margen reglamentario.</p>
+              </div>
+            </div>
+          </div>
+
+          <button class="download-pdf-btn" type="button">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Descargar Peritaje PDF Oficial</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Outro Branding Overlay (Last second) -->
+      <div class="outro-overlay" data-layout-allow-overlap>
+        <div class="brand-center">
+          <img src="../assets/architect-logo.png" alt="ARCHITECT" class="outro-logo-img" />
+          <h2 class="outro-headline">Auditoría normativa instantánea para tus planos</h2>
+          <p class="outro-tagline" data-layout-ignore>Soporta PDF, imágenes de alta resolución y planos AutoCAD DXF/DWG.</p>
+          <div class="outro-badge">
+            <span>COMIENZA AHORA GRATIS EN ARCHITECT</span>
+          </div>
         </div>
       </div>
     </div>
 
     <style>
-      [data-composition-id="scene4-rules-outro"] .rules-canvas {
+      [data-composition-id="scene4-rules-outro"] .result-canvas {
         position: relative;
         width: 1920px;
         height: 1080px;
@@ -48,115 +172,400 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        padding: 36px 60px;
         overflow: hidden;
+        color: #f4f4f5;
       }
       [data-composition-id="scene4-rules-outro"] .grid-bg {
         position: absolute;
         inset: 0;
         background-image: 
-          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
         background-size: 60px 60px;
       }
-      [data-composition-id="scene4-rules-outro"] .rules-content {
+
+      /* Results Header Bar */
+      [data-composition-id="scene4-rules-outro"] .results-header {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 1600px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+      [data-composition-id="scene4-rules-outro"] .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      [data-composition-id="scene4-rules-outro"] .verdict-pill-fail {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        border-radius: 999px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        color: #f87171;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+      }
+      [data-composition-id="scene4-rules-outro"] .fail-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ef4444;
+        box-shadow: 0 0 10px #ef4444;
+      }
+      [data-composition-id="scene4-rules-outro"] .norm-reference {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: #a1a1aa;
+      }
+      [data-composition-id="scene4-rules-outro"] .header-right {
+        display: flex;
+        gap: 10px;
+      }
+      [data-composition-id="scene4-rules-outro"] .meta-tag {
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #d4d4d8;
+      }
+
+      /* Showcase Container */
+      [data-composition-id="scene4-rules-outro"] .showcase-container {
         position: relative;
         z-index: 10;
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        max-width: 1500px;
-        text-align: center;
-      }
-      [data-composition-id="scene4-rules-outro"] .phase-kicker {
-        color: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: 0.18em;
-        margin-bottom: 16px;
-      }
-      [data-composition-id="scene4-rules-outro"] .rules-title {
-        color: #ffffff;
-        font-size: 56px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-        margin-bottom: 48px;
-        line-height: 1.15;
-      }
-      [data-composition-id="scene4-rules-outro"] .findings-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
         gap: 32px;
         width: 100%;
-        margin-bottom: 56px;
+        max-width: 1600px;
+        height: 680px;
       }
-      [data-composition-id="scene4-rules-outro"] .finding-box {
-        background: #0a0a0f;
+
+      /* Annotated Plan Card */
+      [data-composition-id="scene4-rules-outro"] .annotated-plan-card {
+        position: relative;
+        flex: 1;
+        height: 100%;
+        background: #090a10;
         border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 18px;
-        padding: 36px 32px;
-        text-align: left;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-      }
-      [data-composition-id="scene4-rules-outro"] .finding-tag {
-        display: inline-block;
-        font-family: 'Inter', monospace;
-        font-size: 16px;
-        font-weight: 600;
-        padding: 6px 14px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        background: rgba(255, 255, 255, 0.05);
-        color: #ffffff;
-      }
-      [data-composition-id="scene4-rules-outro"] .finding-h {
-        color: #ffffff;
-        font-size: 28px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        margin-bottom: 12px;
-      }
-      [data-composition-id="scene4-rules-outro"] .finding-p {
-        color: #a1a1aa;
-        font-size: 20px;
-        line-height: 1.5;
-      }
-      [data-composition-id="scene4-rules-outro"] .outro-cta-row {
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
         display: flex;
         align-items: center;
-        gap: 32px;
+        justify-content: center;
+        overflow: hidden;
       }
-      [data-composition-id="scene4-rules-outro"] .cta-pill {
-        background: #ffffff;
-        color: #060608;
-        font-size: 24px;
+
+      [data-composition-id="scene4-rules-outro"] .cad-svg-result {
+        width: 95%;
+        height: 95%;
+      }
+      [data-composition-id="scene4-rules-outro"] .wall {
+        fill: none;
+        stroke: #f4f4f5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      [data-composition-id="scene4-rules-outro"] .wall.ext { stroke-width: 7; }
+      [data-composition-id="scene4-rules-outro"] .wall.int1,
+      [data-composition-id="scene4-rules-outro"] .wall.int2,
+      [data-composition-id="scene4-rules-outro"] .wall.int3 { stroke-width: 4; stroke: #d4d4d8; }
+      [data-composition-id="scene4-rules-outro"] .door { fill: none; stroke: #38bdf8; stroke-width: 3; }
+      [data-composition-id="scene4-rules-outro"] .door.d-err { stroke: #ef4444; stroke-width: 4; }
+      [data-composition-id="scene4-rules-outro"] .arc { fill: none; stroke: #38bdf8; stroke-width: 1.5; stroke-dasharray: 4 4; }
+      [data-composition-id="scene4-rules-outro"] .arc.a-err { stroke: #ef4444; stroke-width: 2; }
+      [data-composition-id="scene4-rules-outro"] .win { fill: none; stroke: #00f2fe; stroke-width: 4; }
+
+      /* Red/Amber Error Outlines on Plan */
+      [data-composition-id="scene4-rules-outro"] .error-box {
+        fill: rgba(239, 68, 68, 0.18);
+        stroke: #ef4444;
+        stroke-width: 2.5;
+        opacity: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .warn-box {
+        fill: rgba(245, 158, 11, 0.18);
+        stroke: #f59e0b;
+        stroke-width: 2;
+        opacity: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .error-room-box {
+        fill: rgba(239, 68, 68, 0.12);
+        stroke: #ef4444;
+        stroke-width: 2;
+        stroke-dasharray: 6 6;
+        opacity: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .room-label {
+        fill: #a1a1aa;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 15px;
         font-weight: 600;
-        padding: 16px 40px;
-        border-radius: 999px;
-        box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        text-anchor: middle;
       }
-      [data-composition-id="scene4-rules-outro"] .brand-url {
+      [data-composition-id="scene4-rules-outro"] .bath-label {
+        fill: #f87171;
+        font-weight: 700;
+      }
+
+      /* Floating Callout Badges */
+      [data-composition-id="scene4-rules-outro"] .callout-tag {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: rgba(20, 20, 28, 0.94);
+        backdrop-filter: blur(16px);
+        border: 1px solid #ef4444;
+        border-radius: 12px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(239, 68, 68, 0.3);
+        opacity: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .tag-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #ef4444;
         color: #ffffff;
-        font-family: 'Inter', monospace;
-        font-size: 24px;
-        letter-spacing: 0.05em;
+        font-weight: 800;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      [data-composition-id="scene4-rules-outro"] .tag-num.warn {
+        background: #f59e0b;
+      }
+      [data-composition-id="scene4-rules-outro"] .callout-tag.tag-03 {
+        border-color: #f59e0b;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(245, 158, 11, 0.3);
+      }
+      [data-composition-id="scene4-rules-outro"] .tag-desc strong {
+        display: block;
+        font-size: 13px;
+        color: #ffffff;
+      }
+      [data-composition-id="scene4-rules-outro"] .tag-desc small {
+        font-size: 11px;
+        color: #a1a1aa;
+      }
+
+      [data-composition-id="scene4-rules-outro"] .tag-01 { top: 22%; left: 14%; }
+      [data-composition-id="scene4-rules-outro"] .tag-02 { bottom: 18%; left: 45%; }
+      [data-composition-id="scene4-rules-outro"] .tag-03 { top: 12%; left: 48%; }
+
+      /* Right: Assistant Remediation Panel */
+      [data-composition-id="scene4-rules-outro"] .remediation-panel {
+        width: 480px;
+        background: rgba(16, 16, 24, 0.88);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 28px 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      }
+      [data-composition-id="scene4-rules-outro"] .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      [data-composition-id="scene4-rules-outro"] .ai-spark-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(0, 242, 254, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      [data-composition-id="scene4-rules-outro"] .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+      [data-composition-id="scene4-rules-outro"] .panel-subtitle {
+        font-size: 12px;
+        color: #71717a;
+      }
+
+      [data-composition-id="scene4-rules-outro"] .action-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin: 18px 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .action-card {
+        padding: 16px 18px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      [data-composition-id="scene4-rules-outro"] .action-card.critical {
+        background: rgba(239, 68, 68, 0.06);
+        border-color: rgba(239, 68, 68, 0.25);
+      }
+      [data-composition-id="scene4-rules-outro"] .action-badge-err {
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #ef4444;
+        color: #ffffff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .action-badge-ok {
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #10b981;
+        color: #ffffff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      [data-composition-id="scene4-rules-outro"] .action-heading {
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffffff;
+        display: block;
+        margin-bottom: 4px;
+      }
+      [data-composition-id="scene4-rules-outro"] .action-body {
+        font-size: 12px;
+        color: #a1a1aa;
+        line-height: 1.4;
+      }
+
+      [data-composition-id="scene4-rules-outro"] .download-pdf-btn {
+        width: 100%;
+        padding: 14px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #00f2fe, #38bdf8);
+        border: none;
+        color: #060608;
+        font-size: 15px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+        cursor: pointer;
+      }
+
+      /* Outro Closing Screen (Last ~1.2s) */
+      [data-composition-id="scene4-rules-outro"] .outro-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(6, 6, 8, 0.95);
+        backdrop-filter: blur(30px);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+      }
+      [data-composition-id="scene4-rules-outro"] .brand-center {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 900px;
+      }
+      [data-composition-id="scene4-rules-outro"] .outro-logo-img {
+        height: 64px;
+        margin-bottom: 24px;
+      }
+      [data-composition-id="scene4-rules-outro"] .outro-headline {
+        font-size: 42px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+        margin-bottom: 14px;
+      }
+      [data-composition-id="scene4-rules-outro"] .outro-tagline {
+        font-size: 20px;
+        color: #a1a1aa;
+        margin-bottom: 32px;
+      }
+      [data-composition-id="scene4-rules-outro"] .outro-badge {
+        display: inline-flex;
+        padding: 14px 32px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #00f2fe, #38bdf8);
+        color: #060608;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        box-shadow: 0 0 30px rgba(0, 242, 254, 0.5);
       }
     </style>
 
     <script>
       (function () {
         const tl = gsap.timeline({ paused: true });
-        const kicker = document.querySelector('[data-composition-id="scene4-rules-outro"] .phase-kicker');
-        const title = document.querySelector('[data-composition-id="scene4-rules-outro"] .rules-title');
-        const boxes = document.querySelectorAll('[data-composition-id="scene4-rules-outro"] .finding-box');
-        const cta = document.querySelector('[data-composition-id="scene4-rules-outro"] .outro-cta-row');
+        const errorBoxes = document.querySelectorAll('[data-composition-id="scene4-rules-outro"] .error-box, [data-composition-id="scene4-rules-outro"] .warn-box, [data-composition-id="scene4-rules-outro"] .error-room-box');
+        const calloutTags = document.querySelectorAll('[data-composition-id="scene4-rules-outro"] .callout-tag');
+        const panel = document.querySelector('[data-composition-id="scene4-rules-outro"] .remediation-panel');
+        const outroOverlay = document.querySelector('[data-composition-id="scene4-rules-outro"] .outro-overlay');
 
-        tl.fromTo(kicker, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.1);
-        tl.fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.2);
-        tl.fromTo(boxes, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.25, ease: "power3.out" }, 0.4);
-        tl.fromTo(cta, { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }, 1.3);
+        // 0.0s: Immediate scene reveal
+        tl.fromTo('[data-composition-id="scene4-rules-outro"] .result-canvas', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0);
+
+        // 0.3s - 1.2s: Error marks pop up with dramatic precision
+        tl.to(errorBoxes[0], { opacity: 1, duration: 0.3 }, 0.4);
+        tl.fromTo(calloutTags[0], { scale: 0.85, opacity: 0 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.8)" }, 0.45);
+
+        tl.to(errorBoxes[2], { opacity: 1, duration: 0.3 }, 0.85);
+        tl.fromTo(calloutTags[1], { scale: 0.85, opacity: 0 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.8)", immediateRender: false }, 0.9);
+
+        tl.to(errorBoxes[1], { opacity: 1, duration: 0.3 }, 1.3);
+        tl.fromTo(calloutTags[2], { scale: 0.85, opacity: 0 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.8)", immediateRender: false }, 1.35);
+
+        // 1.8s: Right remediation panel reveals smoothly
+        tl.fromTo(panel, 
+          { x: 40, opacity: 0 }, 
+          { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 
+          1.7
+        );
+
+        // 3.0s: Hide underlying showcase elements before outro
+        tl.to(['[data-composition-id="scene4-rules-outro"] .showcase-container', '[data-composition-id="scene4-rules-outro"] .results-header'], { 
+          opacity: 0, 
+          duration: 0.3 
+        }, 3.0);
+
+        // 3.1s: Smooth transition to the closing outro punch
+        tl.to(outroOverlay, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 3.1);
+        tl.fromTo('[data-composition-id="scene4-rules-outro"] .brand-center', 
+          { y: 20, scale: 0.95 }, 
+          { y: 0, scale: 1, duration: 0.6, ease: "power3.out" }, 
+          3.2
+        );
 
         window.__timelines = window.__timelines || {};
         window.__timelines["scene4-rules-outro"] = tl;

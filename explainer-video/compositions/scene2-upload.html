@@ -5,174 +5,498 @@
     data-height="1080"
     data-duration="4.0"
   >
-    <div class="upload-canvas">
-      <div class="grid-bg"></div>
+    <div class="studio-screen">
+      <!-- Ambient Glows -->
+      <div class="ambient-glow glow-center"></div>
 
-      <div class="stage-header">
-        <p class="phase-badge" data-layout-ignore>PASO 01</p>
-        <h2 class="phase-title">Carga de archivo y análisis preliminar</h2>
-        <p class="phase-sub">Soporta planos arquitectónicos en PDF vectorial, ráster de alta resolución o formatos CAD.</p>
-      </div>
-
-      <div class="upload-modal">
-        <div class="modal-top">
-          <div class="file-icon-box">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#ffffff" stroke-width="1.8">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-          </div>
-          <div class="file-info">
-            <h3 class="file-name">plano_ejecutivo_vivienda_unifamiliar.pdf</h3>
-            <p class="file-meta" data-layout-ignore>ESCALA 1:50 · FORMATO A1 · RESOLUCIÓN 300 DPI · 8.4 MB</p>
+      <!-- Left Sidebar (Consistent with Scene 1) -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img src="../assets/architect-icon.png" alt="ARCHITECT" class="brand-icon" />
+          <div class="brand-info">
+            <span class="brand-title">ARCHITECT</span>
+            <span class="brand-tag" data-layout-ignore>MOTOR NORMATIVO IA</span>
           </div>
         </div>
+        <div class="usage-card" data-layout-ignore>
+          <div class="usage-head"><span>Plan Pro</span><span class="usage-count">12 / 50 análisis</span></div>
+          <div class="usage-track"><div class="usage-progress" style="width: 24%"></div></div>
+        </div>
+        <nav class="nav-menu">
+          <div class="nav-item active"><span class="nav-label">Revisión IA</span></div>
+          <div class="nav-item" data-layout-ignore><span class="nav-label">Casa hogar</span></div>
+          <div class="nav-item" data-layout-ignore><span class="nav-label">Ajustes</span></div>
+        </nav>
+      </aside>
 
-        <div class="process-bar-container">
-          <div class="process-bar"></div>
+      <!-- Center Workspace -->
+      <main class="main-area">
+        <!-- Floating Drop Overlay / File Ingestion Card -->
+        <div class="file-drop-container">
+          <div class="drop-beacon"></div>
+          <div class="file-card-preview">
+            <div class="file-badge">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#ef4444" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <text x="7" y="18" fill="#ef4444" font-family="'JetBrains Mono', monospace" font-size="7" font-weight="bold">PDF</text>
+              </svg>
+            </div>
+            <div class="file-details">
+              <span class="file-name-title">plano_ejecutivo_vivienda.pdf</span>
+              <span class="file-meta-sub" data-layout-ignore>ESCALA 1:50 · PLANTA ARQUITECTÓNICA · 2.4 MB · VECTORIAL</span>
+            </div>
+            <span class="ready-check" data-layout-ignore>LISTO</span>
+          </div>
         </div>
 
-        <div class="meta-row">
-          <span class="meta-item">✓ Extracción vectorial</span>
-          <span class="meta-item">✓ Corrección de perspectiva</span>
-          <span class="meta-item">✓ Calibración de escala</span>
+        <!-- Chat Transition Stream -->
+        <div class="chat-flow-zone">
+          <div class="user-message-bubble">
+            <div class="msg-avatar">TÚ</div>
+            <div class="msg-content">
+              <p class="msg-prompt">Revisa este plano: verifica accesos, ventilación en baños y áreas mínimas.</p>
+              <div class="msg-attachment-pill">
+                <span class="pill-dot"></span>
+                <span class="pill-name">plano_ejecutivo_vivienda.pdf</span>
+                <span class="pill-size" data-layout-ignore>(2.4 MB)</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <!-- Composer Dock with Attached Chip -->
+        <div class="composer-dock">
+          <!-- The floating attachment chip (matches real UI) -->
+          <div class="attachment-chip-bar">
+            <div class="attach-chip">
+              <div class="chip-file-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+              </div>
+              <div class="chip-meta">
+                <span class="chip-name">plano_ejecutivo_vivienda.pdf</span>
+                <span class="chip-type" data-layout-ignore>PDF arquitectónico</span>
+              </div>
+              <span class="chip-check" data-layout-ignore>✓</span>
+            </div>
+          </div>
+
+          <div class="composer-pill active-mode">
+            <button class="attach-btn attached" type="button" aria-label="Adjuntar">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#00f2fe" stroke-width="2.5">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+
+            <div class="input-wrapper">
+              <span class="typed-text">Revisa este plano: verifica accesos, ventilación en baños y áreas mínimas.</span>
+            </div>
+
+            <button class="send-btn ready" type="button" aria-label="Enviar plano">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#060608" stroke-width="3">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Virtual Cursor -->
+        <div class="virtual-cursor">
+          <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+            <path d="M4 2 L24 13 L14 15 L10 24 Z" fill="#00f2fe" stroke="#000000" stroke-width="2" />
+          </svg>
+        </div>
+      </main>
     </div>
 
     <style>
-      [data-composition-id="scene2-upload"] .upload-canvas {
+      [data-composition-id="scene2-upload"] .studio-screen {
         position: relative;
         width: 1920px;
         height: 1080px;
         background: #060608;
         display: flex;
+        overflow: hidden;
+        color: #f4f4f5;
+      }
+      [data-composition-id="scene2-upload"] .ambient-glow {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 50%;
+        filter: blur(140px);
+        opacity: 0.18;
+      }
+      [data-composition-id="scene2-upload"] .glow-center {
+        top: 25%;
+        left: 35%;
+        width: 800px;
+        height: 500px;
+        background: radial-gradient(circle, #00f2fe 0%, #3b82f6 60%, transparent 100%);
+      }
+
+      /* Sidebar */
+      [data-composition-id="scene2-upload"] .sidebar {
+        width: 360px;
+        height: 100%;
+        background: rgba(14, 14, 18, 0.7);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 32px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        z-index: 20;
+      }
+      [data-composition-id="scene2-upload"] .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      [data-composition-id="scene2-upload"] .brand-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+      [data-composition-id="scene2-upload"] .brand-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #ffffff;
+        display: block;
+      }
+      [data-composition-id="scene2-upload"] .brand-tag {
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.08em;
+        color: #00f2fe;
+      }
+      [data-composition-id="scene2-upload"] .usage-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      [data-composition-id="scene2-upload"] .usage-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      [data-composition-id="scene2-upload"] .usage-count {
+        color: #a1a1aa;
+        font-size: 12px;
+      }
+      [data-composition-id="scene2-upload"] .usage-track {
+        height: 5px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+      }
+      [data-composition-id="scene2-upload"] .usage-progress {
+        height: 100%;
+        background: #00f2fe;
+      }
+      [data-composition-id="scene2-upload"] .nav-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      [data-composition-id="scene2-upload"] .nav-item {
+        padding: 12px 14px;
+        border-radius: 10px;
+        color: #a1a1aa;
+        font-size: 15px;
+      }
+      [data-composition-id="scene2-upload"] .nav-item.active {
+        background: rgba(0, 242, 254, 0.12);
+        color: #00f2fe;
+        border: 1px solid rgba(0, 242, 254, 0.25);
+        font-weight: 600;
+      }
+
+      /* Main Area */
+      [data-composition-id="scene2-upload"] .main-area {
+        flex: 1;
+        height: 100%;
+        position: relative;
+        display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        justify-content: space-between;
+        padding: 40px 48px;
+        z-index: 10;
       }
-      [data-composition-id="scene2-upload"] .grid-bg {
+
+      /* File Drop Card Animation */
+      [data-composition-id="scene2-upload"] .file-drop-container {
         position: absolute;
-        inset: 0;
-        background-image: 
-          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-        background-size: 60px 60px;
+        top: 22%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 40;
       }
-      [data-composition-id="scene2-upload"] .stage-header {
-        position: relative;
-        z-index: 10;
-        text-align: center;
-        margin-bottom: 60px;
-      }
-      [data-composition-id="scene2-upload"] .phase-badge {
-        color: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: 0.18em;
-        margin-bottom: 16px;
-      }
-      [data-composition-id="scene2-upload"] .phase-title {
-        color: #ffffff;
-        font-size: 52px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-        margin-bottom: 16px;
-      }
-      [data-composition-id="scene2-upload"] .phase-sub {
-        color: #a1a1aa;
-        font-size: 26px;
-        font-weight: 400;
-        max-width: 840px;
-        margin: 0 auto;
-      }
-      [data-composition-id="scene2-upload"] .upload-modal {
-        position: relative;
-        z-index: 10;
-        width: 1080px;
-        background: #0c0c10;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+      [data-composition-id="scene2-upload"] .file-card-preview {
+        background: rgba(20, 20, 28, 0.92);
+        backdrop-filter: blur(20px);
+        border: 2px dashed rgba(0, 242, 254, 0.6);
         border-radius: 20px;
-        padding: 48px;
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
-      }
-      [data-composition-id="scene2-upload"] .modal-top {
+        padding: 24px 36px;
         display: flex;
         align-items: center;
-        gap: 32px;
-        margin-bottom: 36px;
+        gap: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.25);
       }
-      [data-composition-id="scene2-upload"] .file-icon-box {
-        width: 88px;
-        height: 88px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        display: grid;
-        place-items: center;
-      }
-      [data-composition-id="scene2-upload"] .file-name {
-        color: #ffffff;
-        font-size: 32px;
-        font-weight: 600;
-        margin-bottom: 10px;
-        letter-spacing: -0.01em;
-      }
-      [data-composition-id="scene2-upload"] .file-meta {
-        color: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 18px;
-        letter-spacing: 0.08em;
-      }
-      [data-composition-id="scene2-upload"] .process-bar-container {
-        width: 100%;
-        height: 8px;
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 999px;
-        overflow: hidden;
-        margin-bottom: 32px;
-      }
-      [data-composition-id="scene2-upload"] .process-bar {
-        width: 0%;
-        height: 100%;
-        background: #ffffff;
-        box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
-      }
-      [data-composition-id="scene2-upload"] .meta-row {
+      [data-composition-id="scene2-upload"] .file-badge {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.3);
         display: flex;
-        gap: 28px;
+        align-items: center;
+        justify-content: center;
       }
-      [data-composition-id="scene2-upload"] .meta-item {
+      [data-composition-id="scene2-upload"] .file-name-title {
+        font-size: 22px;
+        font-weight: 700;
         color: #ffffff;
-        font-family: 'Inter', monospace;
-        font-size: 20px;
-        padding: 10px 20px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
+        display: block;
+        margin-bottom: 6px;
+      }
+      [data-composition-id="scene2-upload"] .file-meta-sub {
+        font-size: 13px;
+        font-family: 'JetBrains Mono', monospace;
+        color: #00f2fe;
+        letter-spacing: 0.05em;
+      }
+      [data-composition-id="scene2-upload"] .ready-check {
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #10b981;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      /* Chat Flow Area */
+      [data-composition-id="scene2-upload"] .chat-flow-zone {
+        width: 100%;
+        max-width: 860px;
+        margin-top: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+      [data-composition-id="scene2-upload"] .user-message-bubble {
+        display: flex;
+        gap: 16px;
+        max-width: 720px;
+        opacity: 0;
+      }
+      [data-composition-id="scene2-upload"] .msg-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #3b82f6;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      [data-composition-id="scene2-upload"] .msg-content {
+        background: rgba(30, 30, 40, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px 18px 4px 18px;
+        padding: 16px 20px;
+      }
+      [data-composition-id="scene2-upload"] .msg-prompt {
+        font-size: 17px;
+        line-height: 1.45;
+        color: #ffffff;
+        margin-bottom: 12px;
+      }
+      [data-composition-id="scene2-upload"] .msg-attachment-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        font-size: 13px;
+        color: #e4e4e7;
+      }
+      [data-composition-id="scene2-upload"] .pill-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ef4444;
+      }
+      [data-composition-id="scene2-upload"] .pill-size {
+        color: #a1a1aa;
+      }
+
+      /* Composer Dock */
+      [data-composition-id="scene2-upload"] .composer-dock {
+        width: 100%;
+        max-width: 860px;
+        position: relative;
+      }
+      [data-composition-id="scene2-upload"] .attachment-chip-bar {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+      [data-composition-id="scene2-upload"] .attach-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 16px 6px 10px;
+        background: rgba(20, 20, 28, 0.9);
+        border: 1px solid rgba(0, 242, 254, 0.4);
+        border-radius: 999px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+      [data-composition-id="scene2-upload"] .chip-file-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(239, 68, 68, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      [data-composition-id="scene2-upload"] .chip-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #ffffff;
+      }
+      [data-composition-id="scene2-upload"] .chip-type {
+        font-size: 11px;
+        color: #a1a1aa;
+        margin-left: 6px;
+      }
+      [data-composition-id="scene2-upload"] .chip-check {
+        font-size: 14px;
+        color: #10b981;
+        font-weight: 700;
+        margin-left: 6px;
+      }
+
+      [data-composition-id="scene2-upload"] .composer-pill {
+        background: rgba(18, 18, 24, 0.9);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(0, 242, 254, 0.35);
+        border-radius: 999px;
+        padding: 10px 12px 10px 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+      }
+      [data-composition-id="scene2-upload"] .attach-btn {
+        background: rgba(0, 242, 254, 0.1);
+        border: 1px solid rgba(0, 242, 254, 0.3);
+        color: #00f2fe;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      [data-composition-id="scene2-upload"] .input-wrapper {
+        flex: 1;
+        font-size: 17px;
+        color: #ffffff;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      [data-composition-id="scene2-upload"] .send-btn.ready {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #00f2fe, #38bdf8);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 24px rgba(0, 242, 254, 0.6);
+        cursor: pointer;
+      }
+
+      /* Virtual Cursor */
+      [data-composition-id="scene2-upload"] .virtual-cursor {
+        position: absolute;
+        top: 600px;
+        left: 800px;
+        z-index: 100;
+        pointer-events: none;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
       }
     </style>
 
     <script>
       (function () {
         const tl = gsap.timeline({ paused: true });
-        const header = document.querySelector('[data-composition-id="scene2-upload"] .stage-header');
-        const modal = document.querySelector('[data-composition-id="scene2-upload"] .upload-modal');
-        const bar = document.querySelector('[data-composition-id="scene2-upload"] .process-bar');
-        const items = document.querySelectorAll('[data-composition-id="scene2-upload"] .meta-item');
+        const cursor = document.querySelector('[data-composition-id="scene2-upload"] .virtual-cursor');
+        const fileDropContainer = document.querySelector('[data-composition-id="scene2-upload"] .file-drop-container');
+        const attachChipBar = document.querySelector('[data-composition-id="scene2-upload"] .attachment-chip-bar');
+        const sendBtn = document.querySelector('[data-composition-id="scene2-upload"] .send-btn');
+        const userMsg = document.querySelector('[data-composition-id="scene2-upload"] .user-message-bubble');
+        const composerPill = document.querySelector('[data-composition-id="scene2-upload"] .composer-pill');
 
-        tl.fromTo(header, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.1);
-        tl.fromTo(modal, { scale: 0.92, opacity: 0, y: 40 }, { scale: 1, opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.3);
-        tl.to(bar, { width: "100%", duration: 2.2, ease: "power2.inOut" }, 0.6);
-        tl.fromTo(items, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.2, ease: "power2.out" }, 1.4);
+        // 0.0s: State entry
+        tl.fromTo('[data-composition-id="scene2-upload"] .studio-screen', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0);
 
-        // Outro transition
-        tl.to('[data-composition-id="scene2-upload"] .upload-canvas', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 3.6);
+        // 0.2s: File card glides into the drop zone
+        tl.fromTo(fileDropContainer, 
+          { y: -40, opacity: 0, scale: 0.9 }, 
+          { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.4)" }, 
+          0.2
+        );
+
+        // 1.0s: Cursor moves to file card
+        tl.to(cursor, { x: 50, y: -200, duration: 0.6, ease: "power2.out" }, 0.6);
+
+        // 1.5s: File card converts into the composer attach chip
+        tl.to(fileDropContainer, { y: 250, scale: 0.5, opacity: 0, duration: 0.5, ease: "power3.in" }, 1.4);
+        tl.fromTo(attachChipBar, 
+          { scale: 0.8, opacity: 0, y: 15 }, 
+          { scale: 1, opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.6)" }, 
+          1.8
+        );
+
+        // 2.0s: Send button pulses with glowing ready state
+        tl.fromTo(sendBtn, 
+          { scale: 1 }, 
+          { scale: 1.15, duration: 0.3, yoyo: true, repeat: 1, ease: "power1.inOut" }, 
+          2.0
+        );
+
+        // 2.3s: Cursor moves to send button and clicks
+        tl.to(cursor, { x: 380, y: 390, duration: 0.6, ease: "power2.inOut" }, 2.1);
+        tl.to(sendBtn, { scale: 0.9, duration: 0.15 }, 2.7);
+        tl.to(sendBtn, { scale: 1.0, duration: 0.15 }, 2.85);
+
+        // 2.9s: Message sent! Input clears, message bubble launches into chat
+        tl.to(attachChipBar, { opacity: 0, y: -20, duration: 0.3 }, 2.9);
+        tl.to('[data-composition-id="scene2-upload"] .typed-text', { opacity: 0, duration: 0.2 }, 2.9);
+        tl.fromTo(userMsg, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 3.0);
+
+        // 3.6s: Outro transition
+        tl.to('[data-composition-id="scene2-upload"] .studio-screen', { opacity: 0, duration: 0.4, ease: "power2.in" }, 3.6);
 
         window.__timelines = window.__timelines || {};
         window.__timelines["scene2-upload"] = tl;

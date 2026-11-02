@@ -3,144 +3,515 @@
     data-composition-id="scene1-intro"
     data-width="1920"
     data-height="1080"
-    data-duration="3.5"
+    data-duration="3.8"
   >
-    <div class="intro-canvas">
-      <div class="grid-bg"></div>
+    <div class="studio-screen">
+      <!-- Ambient Glows -->
+      <div class="ambient-glow glow-top"></div>
+      <div class="ambient-glow glow-bottom"></div>
 
-      <div class="intro-content">
-        <div class="logo-box">
-          <div class="select-stroke-box"></div>
-          <h1 class="logo-text">ARCHITECT</h1>
+      <!-- Left Sidebar (Real ARCHITECT App) -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img src="../assets/architect-icon.png" alt="ARCHITECT" class="brand-icon" />
+          <div class="brand-info">
+            <span class="brand-title">ARCHITECT</span>
+            <span class="brand-tag" data-layout-ignore>MOTOR NORMATIVO IA</span>
+          </div>
         </div>
 
-        <p class="intro-eyebrow">FLUJO DE ANÁLISIS EN PLANTA</p>
-        <h2 class="intro-title">Cómo funciona la revisión asistida</h2>
-        <p class="intro-subtitle">De la subida del plano a la detección de cotas y validación normativa en segundos.</p>
-
-        <div class="step-indicator">
-          <span class="active-dot"></span>
-          <span class="step-label">FASE 01 · INGESTIÓN Y MODELO</span>
+        <div class="usage-card" data-layout-ignore>
+          <div class="usage-head">
+            <span>Plan Pro</span>
+            <span class="usage-count">12 / 50 análisis</span>
+          </div>
+          <div class="usage-track">
+            <div class="usage-progress" style="width: 24%"></div>
+          </div>
         </div>
-      </div>
+
+        <nav class="nav-menu">
+          <div class="nav-item active">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+            </svg>
+            <span class="nav-label">Revisión IA</span>
+          </div>
+          <div class="nav-item" data-layout-ignore>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span class="nav-label">Casa hogar</span>
+          </div>
+          <div class="nav-item" data-layout-ignore>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span class="nav-label">Ajustes</span>
+          </div>
+        </nav>
+
+        <div class="sidebar-chats" data-layout-ignore>
+          <div class="chats-header">
+            <span>CHATS RECIENTES</span>
+          </div>
+          <div class="chat-entry active">
+            <span class="chat-dot"></span>
+            <span class="chat-title">Residencia Las Palmas · Revisión</span>
+          </div>
+          <div class="chat-entry">
+            <span class="chat-dot"></span>
+            <span class="chat-title">Depto 402 Reforma · Vanos</span>
+          </div>
+          <div class="chat-entry">
+            <span class="chat-dot"></span>
+            <span class="chat-title">Oficinas Corporativas Sur</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Main Workspace -->
+      <main class="main-area">
+        <!-- Top App Bar -->
+        <header class="top-bar">
+          <div class="model-badge" data-layout-ignore>
+            <span class="badge-pulse"></span>
+            <span>MODELO: ARCHITECT NEURAL (YOLOv8 ResPlan) · NORMA: RCDF / CHIAPAS</span>
+          </div>
+        </header>
+
+        <!-- Center Welcome Hero -->
+        <div class="welcome-container">
+          <p class="hero-eyebrow">ASISTENTE ARQUITECTÓNICO INTELIGENTE</p>
+          <h1 class="hero-headline">¿Qué plano revisamos hoy?</h1>
+          <p class="hero-subtext">Ingresa tus observaciones y adjunta el plano para auditoría instantánea de normativa y cotas.</p>
+
+          <div class="suggestion-chips">
+            <div class="chip">
+              <span class="chip-icon">📐</span>
+              <span class="chip-text">Auditoría de accesos y vanos</span>
+            </div>
+            <div class="chip">
+              <span class="chip-icon">💨</span>
+              <span class="chip-text">Ventilación en sanitarios</span>
+            </div>
+            <div class="chip">
+              <span class="chip-icon">🏛️</span>
+              <span class="chip-text">Revisión integral RCDF</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Composer Dock (The Core Input) -->
+        <div class="composer-dock">
+          <div class="composer-pill">
+            <button class="attach-btn" type="button" aria-label="Adjuntar archivo">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+
+            <div class="input-wrapper">
+              <span class="typed-text"></span>
+              <span class="caret"></span>
+              <span class="placeholder-text">Pregunta a ARCHITECT…</span>
+            </div>
+
+            <button class="send-btn" type="button" aria-label="Enviar">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Animated Virtual Mouse Cursor -->
+        <div class="virtual-cursor">
+          <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+            <path d="M4 2 L24 13 L14 15 L10 24 Z" fill="#00f2fe" stroke="#000000" stroke-width="2" />
+          </svg>
+        </div>
+      </main>
     </div>
 
     <style>
-      [data-composition-id="scene1-intro"] .intro-canvas {
+      [data-composition-id="scene1-intro"] .studio-screen {
         position: relative;
         width: 1920px;
         height: 1080px;
         background: #060608;
         display: flex;
+        overflow: hidden;
+        color: #f4f4f5;
+      }
+
+      /* Glow Effects */
+      [data-composition-id="scene1-intro"] .ambient-glow {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 50%;
+        filter: blur(120px);
+        opacity: 0.15;
+      }
+      [data-composition-id="scene1-intro"] .glow-top {
+        top: -100px;
+        left: 40%;
+        width: 600px;
+        height: 300px;
+        background: #00f2fe;
+      }
+      [data-composition-id="scene1-intro"] .glow-bottom {
+        bottom: -50px;
+        right: 30%;
+        width: 700px;
+        height: 250px;
+        background: #3b82f6;
+      }
+
+      /* Sidebar */
+      [data-composition-id="scene1-intro"] .sidebar {
+        width: 360px;
+        height: 100%;
+        background: rgba(14, 14, 18, 0.7);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 32px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        z-index: 20;
+      }
+      [data-composition-id="scene1-intro"] .sidebar-brand {
+        display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 14px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      [data-composition-id="scene1-intro"] .brand-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+      [data-composition-id="scene1-intro"] .brand-title {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        display: block;
+      }
+      [data-composition-id="scene1-intro"] .brand-tag {
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.08em;
+        color: #00f2fe;
+      }
+
+      [data-composition-id="scene1-intro"] .usage-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      [data-composition-id="scene1-intro"] .usage-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #e4e4e7;
+      }
+      [data-composition-id="scene1-intro"] .usage-count {
+        color: #a1a1aa;
+        font-size: 12px;
+      }
+      [data-composition-id="scene1-intro"] .usage-track {
+        height: 5px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
         overflow: hidden;
       }
-      [data-composition-id="scene1-intro"] .grid-bg {
-        position: absolute;
-        inset: 0;
-        background-image: 
-          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-        background-size: 60px 60px;
+      [data-composition-id="scene1-intro"] .usage-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #00f2fe, #38bdf8);
+        border-radius: 999px;
       }
-      [data-composition-id="scene1-intro"] .intro-content {
+
+      [data-composition-id="scene1-intro"] .nav-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      [data-composition-id="scene1-intro"] .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        color: #a1a1aa;
+        font-size: 15px;
+        font-weight: 500;
+      }
+      [data-composition-id="scene1-intro"] .nav-item.active {
+        background: rgba(0, 242, 254, 0.12);
+        color: #00f2fe;
+        border: 1px solid rgba(0, 242, 254, 0.25);
+        font-weight: 600;
+      }
+      [data-composition-id="scene1-intro"] .nav-icon {
+        width: 20px;
+        height: 20px;
+      }
+
+      [data-composition-id="scene1-intro"] .sidebar-chats {
+        margin-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      [data-composition-id="scene1-intro"] .chats-header {
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.1em;
+        color: #71717a;
+        margin-bottom: 6px;
+        padding-left: 8px;
+      }
+      [data-composition-id="scene1-intro"] .chat-entry {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #a1a1aa;
+      }
+      [data-composition-id="scene1-intro"] .chat-entry.active {
+        background: rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+      }
+      [data-composition-id="scene1-intro"] .chat-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #00f2fe;
+      }
+
+      /* Main Content Area */
+      [data-composition-id="scene1-intro"] .main-area {
+        flex: 1;
+        height: 100%;
         position: relative;
-        z-index: 10;
-        text-align: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        max-width: 1400px;
+        justify-content: space-between;
+        padding: 30px 48px 40px;
+        z-index: 10;
       }
-      [data-composition-id="scene1-intro"] .logo-box {
-        position: relative;
-        padding: 24px 64px;
-        margin-bottom: 40px;
+
+      [data-composition-id="scene1-intro"] .top-bar {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
       }
-      [data-composition-id="scene1-intro"] .select-stroke-box {
-        position: absolute;
-        inset: 0;
-        border: 2px solid #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
-      }
-      [data-composition-id="scene1-intro"] .logo-text {
-        color: #ffffff;
-        font-size: 84px;
-        font-weight: 800;
-        letter-spacing: -0.04em;
-        margin: 0;
-        line-height: 1;
-      }
-      [data-composition-id="scene1-intro"] .intro-eyebrow {
-        color: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: 0.2em;
-        margin-bottom: 24px;
-      }
-      [data-composition-id="scene1-intro"] .intro-title {
-        color: #ffffff;
-        font-size: 64px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-        margin-bottom: 24px;
-        line-height: 1.15;
-      }
-      [data-composition-id="scene1-intro"] .intro-subtitle {
-        color: #a1a1aa;
-        font-size: 32px;
-        font-weight: 400;
-        max-width: 960px;
-        line-height: 1.5;
-        margin-bottom: 48px;
-      }
-      [data-composition-id="scene1-intro"] .step-indicator {
+      [data-composition-id="scene1-intro"] .model-badge {
         display: inline-flex;
         align-items: center;
-        gap: 16px;
-        padding: 12px 28px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        gap: 10px;
+        padding: 8px 18px;
         border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #d4d4d8;
+        letter-spacing: 0.05em;
       }
-      [data-composition-id="scene1-intro"] .active-dot {
-        width: 12px;
-        height: 12px;
+      [data-composition-id="scene1-intro"] .badge-pulse {
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 0 12px #ffffff;
+        background: #10b981;
+        box-shadow: 0 0 10px #10b981;
       }
-      [data-composition-id="scene1-intro"] .step-label {
-        color: #ffffff;
-        font-family: 'Inter', monospace;
-        font-size: 20px;
-        letter-spacing: 0.1em;
+
+      [data-composition-id="scene1-intro"] .welcome-container {
+        text-align: center;
+        max-width: 900px;
+        margin-top: -30px;
+      }
+      [data-composition-id="scene1-intro"] .hero-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
         font-weight: 600;
+        letter-spacing: 0.15em;
+        color: #00f2fe;
+        margin-bottom: 14px;
+      }
+      [data-composition-id="scene1-intro"] .hero-headline {
+        font-size: 52px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #ffffff;
+        margin-bottom: 16px;
+      }
+      [data-composition-id="scene1-intro"] .hero-subtext {
+        font-size: 20px;
+        color: #a1a1aa;
+        line-height: 1.5;
+        margin-bottom: 36px;
+      }
+
+      [data-composition-id="scene1-intro"] .suggestion-chips {
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+      }
+      [data-composition-id="scene1-intro"] .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 999px;
+        font-size: 15px;
+        color: #e4e4e7;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+      [data-composition-id="scene1-intro"] .chip-icon {
+        font-size: 16px;
+      }
+
+      /* Composer Dock */
+      [data-composition-id="scene1-intro"] .composer-dock {
+        width: 100%;
+        max-width: 860px;
+        position: relative;
+      }
+      [data-composition-id="scene1-intro"] .composer-pill {
+        position: relative;
+        background: rgba(18, 18, 24, 0.85);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        padding: 10px 12px 10px 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 242, 254, 0.1);
+      }
+      [data-composition-id="scene1-intro"] .attach-btn {
+        background: transparent;
+        border: none;
+        color: #a1a1aa;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      [data-composition-id="scene1-intro"] .input-wrapper {
+        flex: 1;
+        position: relative;
+        font-size: 17px;
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        align-items: center;
+      }
+      [data-composition-id="scene1-intro"] .placeholder-text {
+        position: absolute;
+        left: 0;
+        color: #71717a;
+        pointer-events: none;
+      }
+      [data-composition-id="scene1-intro"] .typed-text {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      [data-composition-id="scene1-intro"] .caret {
+        display: inline-block;
+        width: 2px;
+        height: 22px;
+        background: #00f2fe;
+        margin-left: 3px;
+        animation: blink 0.9s infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+
+      [data-composition-id="scene1-intro"] .send-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #71717a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Virtual Cursor */
+      [data-composition-id="scene1-intro"] .virtual-cursor {
+        position: absolute;
+        top: 400px;
+        left: 1000px;
+        z-index: 100;
+        pointer-events: none;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
       }
     </style>
 
     <script>
       (function () {
         const tl = gsap.timeline({ paused: true });
-        const logoBox = document.querySelector('[data-composition-id="scene1-intro"] .logo-box');
-        const strokeBox = document.querySelector('[data-composition-id="scene1-intro"] .select-stroke-box');
-        const eyebrow = document.querySelector('[data-composition-id="scene1-intro"] .intro-eyebrow');
-        const title = document.querySelector('[data-composition-id="scene1-intro"] .intro-title');
-        const subtitle = document.querySelector('[data-composition-id="scene1-intro"] .intro-subtitle');
-        const badge = document.querySelector('[data-composition-id="scene1-intro"] .step-indicator');
+        const cursor = document.querySelector('[data-composition-id="scene1-intro"] .virtual-cursor');
+        const typedTextEl = document.querySelector('[data-composition-id="scene1-intro"] .typed-text');
+        const placeholder = document.querySelector('[data-composition-id="scene1-intro"] .placeholder-text');
+        const sendBtn = document.querySelector('[data-composition-id="scene1-intro"] .send-btn');
+        const composerPill = document.querySelector('[data-composition-id="scene1-intro"] .composer-pill');
 
-        tl.fromTo(strokeBox, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.2);
-        tl.fromTo(logoBox, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.2);
-        tl.fromTo(eyebrow, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.6);
-        tl.fromTo(title, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.8);
-        tl.fromTo(subtitle, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 1.0);
-        tl.fromTo(badge, { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }, 1.3);
+        const fullPrompt = "Revisa este plano: verifica accesos, ventilación en baños y áreas mínimas.";
 
-        // Outro transition
-        tl.to('[data-composition-id="scene1-intro"] .intro-content', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 3.1);
+        // 0.0s: Base scene reveal
+        tl.fromTo('[data-composition-id="scene1-intro"] .studio-screen', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0);
+
+        // 0.4s: Cursor glides towards the input box
+        tl.to(cursor, { x: -60, y: 550, duration: 1.0, ease: "power3.inOut" }, 0.4);
+
+        // 1.3s: Focus on input: placeholder fades, caret appears
+        tl.to(placeholder, { opacity: 0, duration: 0.2 }, 1.3);
+        tl.to(composerPill, { borderColor: "rgba(0, 242, 254, 0.45)", boxShadow: "0 12px 36px rgba(0, 242, 254, 0.15)", duration: 0.3 }, 1.3);
+
+        // 1.4s - 3.1s: Realistic typing effect
+        const obj = { len: 0 };
+        tl.to(obj, {
+          len: fullPrompt.length,
+          duration: 1.7,
+          ease: "none",
+          onUpdate: function () {
+            typedTextEl.textContent = fullPrompt.substring(0, Math.round(obj.len));
+          }
+        }, 1.4);
+
+        // 3.1s: Send button wakes up slightly, cursor moves toward attach button
+        tl.to(cursor, { x: -440, y: 550, duration: 0.5, ease: "power2.out" }, 3.2);
+
+        // Outro transition: smooth pan
+        tl.to('[data-composition-id="scene1-intro"] .studio-screen', { opacity: 0, duration: 0.3, ease: "power2.in" }, 3.5);
 
         window.__timelines = window.__timelines || {};
         window.__timelines["scene1-intro"] = tl;

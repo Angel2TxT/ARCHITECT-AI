@@ -8,77 +8,128 @@
     <div class="detect-canvas">
       <div class="grid-bg"></div>
 
-      <div class="detect-layout">
-        <div class="detect-stage">
-          <div class="laser-beam"></div>
-          
-          <svg class="cad-svg" viewBox="0 0 800 520" data-layout-ignore>
-            <!-- Cotas -->
-            <line class="cota-line top-cota" x1="50" y1="30" x2="750" y2="30" />
-            <line class="cota-tick" x1="45" y1="25" x2="55" y2="35" />
-            <line class="cota-tick" x1="340" y1="25" x2="350" y2="35" />
-            <line class="cota-tick" x1="745" y1="25" x2="755" y2="35" />
-            <text class="cota-text cota-val1" x="195" y="22">6.40 m</text>
-            <text class="cota-text cota-val2" x="545" y="22">8.20 m</text>
+      <!-- Header AI Status -->
+      <div class="ai-status-header">
+        <div class="ai-avatar-badge">
+          <span class="avatar-text">IA</span>
+          <span class="avatar-ring"></span>
+        </div>
+        <div class="ai-status-text">
+          <h2 class="ai-phase-title">ARCHITECT AI · Análisis e Inferencia Espacial</h2>
+          <p class="ai-phase-sub" data-layout-ignore>Escaneando elementos arquitectónicos, vanos y medidas según normativa Chiapas / RCDF</p>
+        </div>
+      </div>
 
-            <line class="cota-line left-cota" x1="25" y1="50" x2="25" y2="470" />
-            <line class="cota-tick" x1="20" y1="45" x2="30" y2="55" />
-            <line class="cota-tick" x1="20" y1="260" x2="30" y2="270" />
-            <line class="cota-tick" x1="20" y1="465" x2="30" y2="475" />
-            <text class="cota-text cota-val3" x="18" y="160" transform="rotate(-90 18 160)">5.20 m</text>
-            <text class="cota-text cota-val4" x="18" y="370" transform="rotate(-90 18 370)">4.10 m</text>
+      <!-- Blueprint Inspection Stage -->
+      <div class="blueprint-inspection-stage">
+        <!-- The Floor Plan Canvas -->
+        <div class="blueprint-card">
+          <!-- Laser Scan Line -->
+          <div class="laser-scanner">
+            <div class="laser-beam"></div>
+            <div class="laser-flare" data-layout-allow-overflow></div>
+          </div>
 
-            <!-- Walls -->
-            <rect class="wall-rect" x="50" y="50" width="700" height="420" />
-            <path class="part-line p1" d="M350 50 V470" />
-            <path class="part-line p2" d="M50 260 H350" />
-            <path class="part-line p3" d="M350 280 H750" />
+          <svg class="cad-svg" viewBox="0 0 960 540">
+            <!-- Grid Lines -->
+            <defs>
+              <pattern id="smallGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="960" height="540" fill="url(#smallGrid)" />
 
-            <!-- Doors & Arcs -->
-            <path class="door d1" d="M160 50 H230" />
-            <path class="arc a1" d="M160 50 A70 70 0 0 1 230 120" />
+            <!-- Room Background Fills (Lit up during scan) -->
+            <rect class="room-fill rf1" x="120" y="80" width="360" height="190" rx="4" />
+            <rect class="room-fill rf2" x="120" y="270" width="360" height="190" rx="4" />
+            <rect class="room-fill rf3" x="480" y="80" width="360" height="230" rx="4" />
+            <rect class="room-fill rf4" x="480" y="310" width="360" height="150" rx="4" />
 
-            <path class="door d2" d="M350 140 V210" />
-            <path class="arc a2" d="M350 140 A70 70 0 0 0 280 210" />
+            <!-- Exterior Walls (Thick white architectural) -->
+            <path class="wall ext" d="M120 80 H840 V460 H120 Z" />
+
+            <!-- Interior Partition Walls -->
+            <path class="wall int1" d="M480 80 V460" />
+            <path class="wall int2" d="M120 270 H480" />
+            <path class="wall int3" d="M480 310 H840" />
+
+            <!-- Doors (with swing arcs) -->
+            <g class="door-elem d-main">
+              <path class="door d1" d="M120 160 H210" />
+              <path class="arc a1" d="M120 160 A90 90 0 0 1 210 250" />
+              <rect class="bbox-hint bh1" x="110" y="150" width="110" height="110" rx="3" />
+            </g>
+
+            <g class="door-elem d-room">
+              <path class="door d2" d="M480 180 V250" />
+              <path class="arc a2" d="M480 180 A70 70 0 0 0 410 250" />
+              <rect class="bbox-hint bh2" x="400" y="170" width="90" height="90" rx="3" />
+            </g>
+
+            <g class="door-elem d-bath">
+              <path class="door d3" d="M480 360 V420" />
+              <path class="arc a3" d="M480 360 A60 60 0 0 0 420 420" />
+              <rect class="bbox-hint bh3" x="410" y="350" width="80" height="80" rx="3" />
+            </g>
 
             <!-- Windows -->
-            <path class="win w1" d="M460 50 H580" />
-            <path class="win w2" d="M750 130 V220" />
+            <g class="win-elem w-top">
+              <path class="win w1" d="M540 80 H680" />
+              <rect class="bbox-hint bh4" x="530" y="72" width="160" height="16" rx="2" />
+            </g>
+            <g class="win-elem w-side">
+              <path class="win w2" d="M840 160 V260" />
+              <rect class="bbox-hint bh5" x="832" y="150" width="16" height="120" rx="2" />
+            </g>
 
-            <!-- Room Labels -->
-            <text class="room r1" x="200" y="170">SALA · 33.2 m²</text>
-            <text class="room r2" x="200" y="370">COCINA · 24.5 m²</text>
-            <text class="room r3" x="550" y="170">RECÁMARA · 32.8 m²</text>
-            <text class="room r4" x="550" y="380">BAÑO PPAL · 11.4 m²</text>
+            <!-- Room Labels & Measured Areas -->
+            <text class="room-label rl1" x="240" y="180">SALA ESTANCIA · 28.5 m²</text>
+            <text class="room-label rl2" x="240" y="370">COCINA COMEDOR · 18.2 m²</text>
+            <text class="room-label rl3" x="620" y="200">RECÁMARA PRINCIPAL · 22.4 m²</text>
+            <text class="room-label rl4" x="620" y="390">BAÑO COMPLETO · 6.8 m²</text>
           </svg>
 
-          <!-- Floating Inspection Badges -->
-          <div class="cad-badge badge1" style="left: 20%; top: 7%;" data-layout-ignore>01 · PUERTA 0.72m</div>
-          <div class="cad-badge badge2" style="left: 58%; top: 7%;" data-layout-ignore>02 · VANOS 2.40m²</div>
+          <!-- Floating Detection Tags -->
+          <div class="detect-badge db1" data-layout-ignore>
+            <span class="badge-icon">✓</span>
+            <span>PUERTA ACCESO (90px)</span>
+          </div>
+          <div class="detect-badge db2" data-layout-ignore>
+            <span class="badge-icon">✓</span>
+            <span>VANO VENTANA (140px)</span>
+          </div>
+          <div class="detect-badge db3" data-layout-ignore>
+            <span class="badge-icon">✓</span>
+            <span>RECINTO HABITABLE (4)</span>
+          </div>
         </div>
 
-        <div class="detect-sidebar">
-          <p class="side-kicker" data-layout-ignore>FASE 02 · MODELO YOLOv8</p>
-          <h2 class="side-title">Extracción de geometría</h2>
-          <div class="metric-card mc1">
-            <span class="metric-num">12</span>
-            <div>
-              <strong class="metric-title">Vanos y accesos</strong>
-              <p class="metric-sub" data-layout-ignore>Detección de carpinterías y circulaciones</p>
+        <!-- Telemetry Sidebar (Right) -->
+        <div class="telemetry-sidebar">
+          <div class="telemetry-card tc1">
+            <div class="card-icon">📐</div>
+            <div class="card-info">
+              <span class="metric-big">14</span>
+              <strong class="card-title">Vanos y Carpinterías</strong>
+              <p class="card-sub" data-layout-ignore>Puertas de paso, accesos y ventanas exteriores</p>
             </div>
           </div>
-          <div class="metric-card mc2">
-            <span class="metric-num">04</span>
-            <div>
-              <strong class="metric-title">Espacios habitables</strong>
-              <p class="metric-sub" data-layout-ignore>Superficie calculada automáticamente</p>
+
+          <div class="telemetry-card tc2">
+            <div class="card-icon">🏠</div>
+            <div class="card-info">
+              <span class="metric-big">04</span>
+              <strong class="card-title">Espacios Delimitados</strong>
+              <p class="card-sub" data-layout-ignore>Cálculo de superficies y ventilación requerida</p>
             </div>
           </div>
-          <div class="metric-card mc3">
-            <span class="metric-num">100%</span>
-            <div>
-              <strong class="metric-title">Muros identificados</strong>
-              <p class="metric-sub" data-layout-ignore>Cierre perimetral y particiones interiores</p>
+
+          <div class="telemetry-card tc3">
+            <div class="card-icon">⚡</div>
+            <div class="card-info">
+              <span class="metric-big">100 px/m</span>
+              <strong class="card-title">Escala Autocalibrada</strong>
+              <p class="card-sub" data-layout-ignore>Precisión milimétrica para comprobación normativa</p>
             </div>
           </div>
         </div>
@@ -92,170 +143,293 @@
         height: 1080px;
         background: #060608;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        padding: 40px 60px;
         overflow: hidden;
+        color: #f4f4f5;
       }
       [data-composition-id="scene3-detection"] .grid-bg {
         position: absolute;
         inset: 0;
         background-image: 
-          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
         background-size: 60px 60px;
       }
-      [data-composition-id="scene3-detection"] .detect-layout {
+
+      /* Header AI Status */
+      [data-composition-id="scene3-detection"] .ai-status-header {
         position: relative;
         z-index: 10;
-        display: grid;
-        grid-template-columns: 1080px 560px;
-        gap: 60px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        width: 100%;
+        max-width: 1560px;
+        margin-bottom: 30px;
+      }
+      [data-composition-id="scene3-detection"] .ai-avatar-badge {
+        position: relative;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #00f2fe, #3b82f6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+      }
+      [data-composition-id="scene3-detection"] .avatar-text {
+        font-weight: 800;
+        font-size: 18px;
+        color: #060608;
+      }
+      [data-composition-id="scene3-detection"] .avatar-ring {
+        position: absolute;
+        inset: -4px;
+        border-radius: 18px;
+        border: 2px solid rgba(0, 242, 254, 0.6);
+        animation: pulseRing 1.5s infinite ease-out;
+      }
+      @keyframes pulseRing {
+        0% { transform: scale(0.95); opacity: 1; }
+        100% { transform: scale(1.15); opacity: 0; }
+      }
+      [data-composition-id="scene3-detection"] .ai-phase-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+      [data-composition-id="scene3-detection"] .ai-phase-sub {
+        font-size: 14px;
+        color: #a1a1aa;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      /* Inspection Stage */
+      [data-composition-id="scene3-detection"] .blueprint-inspection-stage {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        gap: 36px;
+        width: 100%;
+        max-width: 1560px;
         align-items: center;
       }
-      [data-composition-id="scene3-detection"] .detect-stage {
+
+      /* Blueprint Viewport Card */
+      [data-composition-id="scene3-detection"] .blueprint-card {
         position: relative;
-        height: 700px;
-        background: #09090d;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        flex: 1;
+        height: 640px;
+        background: #090a10;
+        border: 1px solid rgba(0, 242, 254, 0.25);
         border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
-        padding: 40px;
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Laser Scanner Effect */
+      [data-composition-id="scene3-detection"] .laser-scanner {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 4px;
+        z-index: 50;
+        pointer-events: none;
       }
       [data-composition-id="scene3-detection"] .laser-beam {
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 2px;
-        top: 0;
-        background: linear-gradient(90deg, transparent, #ffffff, transparent);
-        box-shadow: 0 0 24px rgba(255, 255, 255, 0.9);
-        z-index: 20;
-      }
-      [data-composition-id="scene3-detection"] .cad-svg {
         width: 100%;
         height: 100%;
+        background: #00f2fe;
+        box-shadow: 0 0 24px #00f2fe, 0 0 60px #00f2fe;
       }
-      [data-composition-id="scene3-detection"] .cota-line {
-        stroke: rgba(255, 255, 255, 0.25);
+      [data-composition-id="scene3-detection"] .laser-flare {
+        position: absolute;
+        top: 0;
+        left: -80px;
+        width: 160px;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.2), transparent);
+      }
+
+      /* CAD SVG Styles */
+      [data-composition-id="scene3-detection"] .cad-svg {
+        width: 95%;
+        height: 95%;
+      }
+      [data-composition-id="scene3-detection"] .room-fill {
+        fill: rgba(0, 242, 254, 0.04);
+        stroke: rgba(0, 242, 254, 0.15);
         stroke-dasharray: 4 4;
-        stroke-width: 1.5;
+        opacity: 0;
       }
-      [data-composition-id="scene3-detection"] .cota-tick {
-        stroke: rgba(255, 255, 255, 0.6);
-        stroke-width: 2;
-      }
-      [data-composition-id="scene3-detection"] .cota-text {
-        fill: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 16px;
-        text-anchor: middle;
-      }
-      [data-composition-id="scene3-detection"] .wall-rect {
+      [data-composition-id="scene3-detection"] .wall {
         fill: none;
-        stroke: #ffffff;
+        stroke: #f4f4f5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      [data-composition-id="scene3-detection"] .wall.ext {
+        stroke-width: 7;
+      }
+      [data-composition-id="scene3-detection"] .wall.int1,
+      [data-composition-id="scene3-detection"] .wall.int2,
+      [data-composition-id="scene3-detection"] .wall.int3 {
         stroke-width: 4;
-      }
-      [data-composition-id="scene3-detection"] .part-line {
-        fill: none;
-        stroke: rgba(255, 255, 255, 0.6);
-        stroke-width: 2.5;
+        stroke: #d4d4d8;
       }
       [data-composition-id="scene3-detection"] .door {
-        stroke: #ffffff;
+        fill: none;
+        stroke: #38bdf8;
         stroke-width: 3.5;
       }
       [data-composition-id="scene3-detection"] .arc {
         fill: none;
-        stroke: rgba(255, 255, 255, 0.4);
-        stroke-dasharray: 4 4;
-        stroke-width: 2;
+        stroke: #38bdf8;
+        stroke-width: 1.5;
+        stroke-dasharray: 5 4;
       }
       [data-composition-id="scene3-detection"] .win {
-        stroke: #ffffff;
-        stroke-width: 3.5;
+        fill: none;
+        stroke: #00f2fe;
+        stroke-width: 5;
       }
-      [data-composition-id="scene3-detection"] .room {
-        fill: rgba(255, 255, 255, 0.6);
-        font-family: 'Inter', monospace;
-        font-size: 18px;
-        letter-spacing: 0.1em;
+      [data-composition-id="scene3-detection"] .bbox-hint {
+        fill: none;
+        stroke: #00f2fe;
+        stroke-width: 1.5;
+        stroke-dasharray: 3 3;
+        opacity: 0;
       }
-      [data-composition-id="scene3-detection"] .cad-badge {
+      [data-composition-id="scene3-detection"] .room-label {
+        fill: #a1a1aa;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 15px;
+        font-weight: 600;
+        text-anchor: middle;
+        opacity: 0;
+      }
+
+      /* Floating Detection Badges */
+      [data-composition-id="scene3-detection"] .detect-badge {
         position: absolute;
-        background: rgba(10, 10, 14, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        color: #ffffff;
-        font-family: 'Inter', monospace;
-        font-size: 16px;
-        font-weight: 600;
-        padding: 6px 16px;
-        border-radius: 6px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      }
-      [data-composition-id="scene3-detection"] .detect-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-      [data-composition-id="scene3-detection"] .side-kicker {
-        color: #a1a1aa;
-        font-family: 'Inter', monospace;
-        font-size: 20px;
-        font-weight: 600;
-        letter-spacing: 0.15em;
-      }
-      [data-composition-id="scene3-detection"] .side-title {
-        color: #ffffff;
-        font-size: 48px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-        line-height: 1.15;
-        margin-bottom: 8px;
-      }
-      [data-composition-id="scene3-detection"] .metric-card {
-        background: #09090d;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
-        padding: 24px 28px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(18, 18, 24, 0.9);
+        border: 1px solid #00f2fe;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: #00f2fe;
         display: flex;
         align-items: center;
-        gap: 24px;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(0, 242, 254, 0.3);
+        opacity: 0;
       }
-      [data-composition-id="scene3-detection"] .metric-num {
-        color: #ffffff;
-        font-family: 'Inter', monospace;
-        font-size: 44px;
-        font-weight: 700;
-        min-width: 90px;
+      [data-composition-id="scene3-detection"] .db1 { top: 22%; left: 16%; }
+      [data-composition-id="scene3-detection"] .db2 { top: 12%; left: 56%; }
+      [data-composition-id="scene3-detection"] .db3 { bottom: 15%; left: 24%; }
+
+      /* Telemetry Sidebar */
+      [data-composition-id="scene3-detection"] .telemetry-sidebar {
+        width: 440px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
       }
-      [data-composition-id="scene3-detection"] .metric-title {
-        color: #ffffff;
-        font-size: 24px;
+      [data-composition-id="scene3-detection"] .telemetry-card {
+        background: rgba(16, 16, 22, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 22px 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+      [data-composition-id="scene3-detection"] .card-icon {
+        font-size: 26px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+      }
+      [data-composition-id="scene3-detection"] .metric-big {
+        font-size: 32px;
+        font-weight: 800;
+        color: #00f2fe;
         display: block;
-        margin-bottom: 6px;
+        line-height: 1.1;
+        margin-bottom: 4px;
       }
-      [data-composition-id="scene3-detection"] .metric-sub {
-        color: #a1a1aa;
-        font-size: 18px;
+      [data-composition-id="scene3-detection"] .card-title {
+        font-size: 16px;
+        color: #ffffff;
+        display: block;
+      }
+      [data-composition-id="scene3-detection"] .card-sub {
+        font-size: 12px;
+        color: #71717a;
+        margin-top: 4px;
       }
     </style>
 
     <script>
       (function () {
         const tl = gsap.timeline({ paused: true });
-        const stage = document.querySelector('[data-composition-id="scene3-detection"] .detect-stage');
-        const laser = document.querySelector('[data-composition-id="scene3-detection"] .laser-beam');
-        const cards = document.querySelectorAll('[data-composition-id="scene3-detection"] .metric-card');
-        const badges = document.querySelectorAll('[data-composition-id="scene3-detection"] .cad-badge');
+        const laser = document.querySelector('[data-composition-id="scene3-detection"] .laser-scanner');
+        const roomFills = document.querySelectorAll('[data-composition-id="scene3-detection"] .room-fill');
+        const roomLabels = document.querySelectorAll('[data-composition-id="scene3-detection"] .room-label');
+        const bboxHints = document.querySelectorAll('[data-composition-id="scene3-detection"] .bbox-hint');
+        const badges = document.querySelectorAll('[data-composition-id="scene3-detection"] .detect-badge');
+        const cards = document.querySelectorAll('[data-composition-id="scene3-detection"] .telemetry-card');
 
-        tl.fromTo(stage, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.1);
-        tl.fromTo(laser, { y: 0 }, { y: 690, duration: 2.8, ease: "power1.inOut" }, 0.4);
-        tl.fromTo(badges, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.4, ease: "back.out(2)" }, 1.2);
-        tl.fromTo(cards, { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.3, ease: "power2.out" }, 0.6);
+        // 0.0s: Stage fade in
+        tl.fromTo('[data-composition-id="scene3-detection"] .detect-canvas', { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0);
 
-        // Outro transition
-        tl.to('[data-composition-id="scene3-detection"] .detect-layout', { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 4.1);
+        // 0.3s - 3.2s: Laser scanner sweeps smoothly across the blueprint
+        tl.fromTo(laser, 
+          { x: 40 }, 
+          { x: 1000, duration: 2.8, ease: "power1.inOut" }, 
+          0.3
+        );
+
+        // Room fills & labels reveal in sequence as laser passes
+        tl.to(roomFills[0], { opacity: 1, duration: 0.5 }, 0.8);
+        tl.to(roomLabels[0], { opacity: 1, duration: 0.5 }, 0.9);
+        tl.to(bboxHints[0], { opacity: 1, duration: 0.4 }, 1.0);
+        tl.fromTo(badges[0], { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "back.out(1.5)" }, 1.2);
+
+        tl.to(roomFills[1], { opacity: 1, duration: 0.5 }, 1.4);
+        tl.to(roomLabels[1], { opacity: 1, duration: 0.5 }, 1.5);
+        tl.fromTo(badges[2], { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "back.out(1.5)", immediateRender: false }, 1.7);
+
+        tl.to(roomFills[2], { opacity: 1, duration: 0.5 }, 2.0);
+        tl.to(roomLabels[2], { opacity: 1, duration: 0.5 }, 2.1);
+        tl.to(bboxHints[3], { opacity: 1, duration: 0.4 }, 2.2);
+        tl.fromTo(badges[1], { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "back.out(1.5)", immediateRender: false }, 2.3);
+
+        tl.to(roomFills[3], { opacity: 1, duration: 0.5 }, 2.5);
+        tl.to(roomLabels[3], { opacity: 1, duration: 0.5 }, 2.6);
+
+        // Telemetry cards cascade in on right side with immediateRender: false on secondary
+        tl.fromTo(cards[0], { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 1.0);
+        tl.fromTo(cards[1], { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out", immediateRender: false }, 1.6);
+        tl.fromTo(cards[2], { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out", immediateRender: false }, 2.2);
+
+        // 3.4s: Laser fades out, lock in
+        tl.to(laser, { opacity: 0, duration: 0.4 }, 3.3);
+
+        // 4.1s: Outro transition
+        tl.to('[data-composition-id="scene3-detection"] .detect-canvas', { opacity: 0, duration: 0.4, ease: "power2.in" }, 4.1);
 
         window.__timelines = window.__timelines || {};
         window.__timelines["scene3-detection"] = tl;
