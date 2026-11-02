@@ -34,6 +34,67 @@ class _HomeProjectDetailViewState extends State<HomeProjectDetailView> {
     super.dispose();
   }
 
+  Future<void> _promptRename(HomeProject project) async {
+    final textController = TextEditingController(text: project.name);
+    final formKey = GlobalKey<FormState>();
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar nombre del proyecto'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: textController,
+            autofocus: true,
+            maxLength: 160,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del proyecto',
+              hintText: 'Ingresa el nuevo nombre',
+            ),
+            validator: (value) {
+              final trimmed = (value ?? '').trim();
+              if (trimmed.isEmpty) {
+                return 'Ingresa el nombre del proyecto';
+              }
+              if (trimmed.length < 2) {
+                return 'Debe tener al menos 2 caracteres';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() == true) {
+                Navigator.pop(context, textController.text.trim());
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (newName == null || newName.isEmpty || newName == project.name || !mounted) return;
+
+    final ok = await _controller.renameProject(newName);
+    if (!mounted) return;
+    if (ok) {
+      AppNotifications.success(context, 'Nombre del proyecto actualizado');
+    } else {
+      AppNotifications.error(
+        context,
+        _controller.actionError ?? 'No se pudo actualizar el nombre',
+      );
+    }
+  }
+
   Future<void> _advance() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -239,6 +300,14 @@ class _HomeProjectDetailViewState extends State<HomeProjectDetailView> {
               ),
             ),
             actions: [
+              if (project != null && project.permissions.canRenameProject)
+                IconButton(
+                  tooltip: 'Editar nombre',
+                  onPressed: _controller.busy
+                      ? null
+                      : () => _promptRename(project),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
               IconButton(
                 tooltip: 'Equipo',
                 onPressed: project == null
@@ -334,6 +403,36 @@ class _HomeProjectDetailViewState extends State<HomeProjectDetailView> {
                                   ],
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  project.name,
+                                  style: TextStyle(
+                                    color: primaryBlack,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 20,
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
+                              ),
+                              if (project.permissions.canRenameProject)
+                                IconButton(
+                                  tooltip: 'Editar nombre',
+                                  visualDensity: VisualDensity.compact,
+                                  iconSize: 20,
+                                  onPressed: _controller.busy
+                                      ? null
+                                      : () => _promptRename(project),
+                                  icon: Icon(
+                                    Icons.edit_outlined,
+                                    color: secondaryText,
+                                  ),
+                                ),
                             ],
                           ),
                           if (project.clientName.isNotEmpty) ...[

@@ -99,10 +99,18 @@ async def ask_construction(
                     .first()
                 )
 
-    # 2. Si hay un plano asociado, responder de forma conversacional sobre el plano real
-    if target_analysis:
-        from services.plan_conversation_service import answer_plan_conversation
+    # 2. Discriminar si la consulta refiere al plano adjunto previo o si es una consulta general
+    from services.plan_conversation_service import (
+        answer_plan_conversation,
+        is_measure_request,
+        is_plan_context_query,
+    )
 
+    is_plan_query = False
+    if target_analysis:
+        is_plan_query = is_plan_context_query(q) or is_measure_request(q)
+
+    if target_analysis and is_plan_query:
         recent_msgs: list[dict] = []
         if chat:
             recent_rows = (
@@ -122,23 +130,25 @@ async def ask_construction(
             target_analysis,
             recent_messages=recent_msgs,
         )
+        associated_analysis_id = target_analysis.id
     else:
         result = answer_construction_question(q)
+        associated_analysis_id = None
 
     db.add(
         Message(
             chat_id=chat.id,
             role="user",
             content={"text": q, "type": "question"},
-            analysis_id=target_analysis.id if target_analysis else None,
+            analysis_id=associated_analysis_id,
         )
     )
 
     assistant_content = {
         "text": result["text"],
         "type": result.get("type", "qa"),
-        "analysis_id": target_analysis.id if target_analysis else None,
-        "measures_report": result.get("measures_report"),
+        "analysis_id": associated_analysis_id,
+        "measures_report": result.get("measures_report") if associated_analysis_id else None,
         "municipality": result.get("municipality"),
         "local_sources": result.get("local_sources"),
         "web_sources": result.get("web_sources"),
@@ -152,7 +162,7 @@ async def ask_construction(
             chat_id=chat.id,
             role="assistant",
             content=assistant_content,
-            analysis_id=target_analysis.id if target_analysis else None,
+            analysis_id=associated_analysis_id,
         )
     )
     chat.updated_at = datetime.utcnow()
@@ -162,6 +172,6 @@ async def ask_construction(
 
     result["chat_id"] = chat.id
     result["subscription"] = subscription_payload(db, user)
-    result["analysis_id"] = target_analysis.id if target_analysis else None
+    result["analysis_id"] = associated_analysis_id
     result.update(assistant_content)
     return result

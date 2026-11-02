@@ -174,9 +174,6 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
               if (trimmed.isEmpty) {
                 return 'Ingresa el nombre del proyecto';
               }
-              if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$').hasMatch(trimmed)) {
-                return 'Solo se admiten letras';
-              }
               if (trimmed.length < 2) {
                 return 'Debe tener al menos 2 caracteres';
               }
@@ -503,7 +500,9 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                         project,
                         wasPinned: _controller.isPinned(project.id),
                       ),
-                      onRename: () => _promptRename(project),
+                      onRename: project.permissions.canRenameProject
+                          ? () => _promptRename(project)
+                          : null,
                       onDelete: project.permissions.canDeleteProject
                           ? () => _confirmDelete(project)
                           : null,

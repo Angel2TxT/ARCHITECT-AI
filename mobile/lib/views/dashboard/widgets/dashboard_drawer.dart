@@ -42,6 +42,11 @@ class _DashboardDrawerState extends State<DashboardDrawer> {
     _searchController.addListener(() {
       if (mounted) setState(() {});
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.controller.load(refresh: true);
+      }
+    });
   }
 
   @override
@@ -246,7 +251,71 @@ class _DashboardDrawerState extends State<DashboardDrawer> {
                             child: widget.controller.state ==
                                     DashboardState.loading
                                 ? const ChatHistorySkeleton()
-                                : chats.isEmpty
+                                : widget.controller.state ==
+                                            DashboardState.error &&
+                                        chats.isEmpty
+                                    ? LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          return SingleChildScrollView(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            child: ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                minHeight:
+                                                    constraints.maxHeight,
+                                              ),
+                                              child: Center(
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .sync_problem_rounded,
+                                                        size: 32,
+                                                        color: colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        widget.controller
+                                                                .errorMessage ??
+                                                            'No se pudieron sincronizar las conversaciones.',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          color: colorScheme
+                                                              .onSurfaceVariant,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      TextButton.icon(
+                                                        onPressed: () => widget
+                                                            .controller
+                                                            .load(
+                                                                refresh: true),
+                                                        icon: const Icon(
+                                                            Icons.refresh,
+                                                            size: 16),
+                                                        label: const Text(
+                                                          'Reintentar',
+                                                          style: TextStyle(
+                                                              fontSize: 13),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : chats.isEmpty
                                 ? LayoutBuilder(
                                     builder: (context, constraints) {
                                       return SingleChildScrollView(

@@ -19,23 +19,25 @@ from services.feedback_service import dict_to_detection
 from services.llm_service import generate_reasoned_answer, llm_configured, llm_status
 
 PLAN_CONVERSATION_SYSTEM_PROMPT = """Eres el arquitecto técnico e inspector principal de ARCHITECT.
-Estás conversando con el usuario sobre un plano arquitectónico que ya fue analizado previamente en este chat.
+Estás conversando con el usuario en un chat donde previamente se analizó un plano arquitectónico o documento técnico.
 
 REGLAS DE CONVERSACIÓN:
 1. Responde de forma clara, natural, profesional y directa en español.
-2. Utiliza SIEMPRE los DATOS REALES del plano adjuntos (medidas calculadas, recintos detectados, errores y avisos normativos).
+2. Si el usuario pregunta sobre el plano analizado, utiliza SIEMPRE los DATOS REALES del plano adjuntos (medidas calculadas, recintos detectados, errores y avisos normativos).
 3. Si el usuario pide las medidas o dimensiones ("dame las medidas", "cuánto mide...", "área", "dimensiones"):
    - Entrega las dimensiones (ancho, largo y área en m²) de cada espacio y vano de forma limpia y estructurada con viñetas.
    - Especifica las medidas de puertas y ventanas si están disponibles.
    - Menciona la escala utilizada en píxeles por metro (px/m).
-4. Si el usuario pregunta por errores, avisos o normativa:
+4. Si el usuario pregunta por errores, avisos o normativa sobre el plano:
    - Explica con precisión qué elemento no cumple, cuánto mide vs cuánto exige el reglamento (ej. Art. 150 para puertas, Art. 145 para habitabilidad).
    - Explica el siguiente paso práctico para corregir el plano (ej. "ampliar el vano de la puerta al menos a 0.90 m").
-5. Si el usuario hace preguntas de seguimiento o consejos ("¿qué opinas?", "¿está bien la cocina?", "¿cómo lo soluciono?"):
+5. Si el usuario hace preguntas de seguimiento o consejos sobre el diseño analizado ("¿qué opinas?", "¿está bien la cocina?", "¿cómo lo soluciono?"):
    - Razona sobre la distribución real de los espacios y la habitabilidad basándote en los datos del plano.
 6. NO inventes elementos que no existan en el plano analizado.
 7. NO cites manuales genéricos de construcción que no tengan relación con este plano a menos que el usuario pregunte explícitamente por un manual o libro.
-8. Formato: respuesta directa, estructurada con negritas (**), viñetas con guion (- ) y emojis arquitectónicos discretos (📐, 🚪, 🪟, ⚠️, ✅).
+8. DIRECTIVA DE CAMBIO DE TEMA Y CONSULTAS GENERALES:
+   Si la pregunta del usuario es una consulta general o técnica de arquitectura, ingeniería o construcción que no guarda relación con el plano analizado (por ejemplo: tiempos de fraguado de concreto, normativa sísmica general, cálculo de zapatas, costos paramétricos, saludos o teoría de diseño), respóndela directamente con tu conocimiento profesional, SIN forzar menciones al plano previo ni inventar conexiones artificiales con él.
+9. Formato: respuesta directa, estructurada con negritas (**), viñetas con guion (- ) y emojis arquitectónicos discretos (📐, 🚪, 🪟, ⚠️, ✅).
 """
 
 
@@ -55,6 +57,52 @@ def is_measure_request(text: str) -> bool:
             q,
         )
     )
+
+
+def is_plan_context_query(text: str) -> bool:
+    """
+    Determina si la consulta del usuario hace referencia explícita o contextual
+    al plano, archivo o análisis arquitectónico previo en el chat.
+    Evita forzar el contexto de planos cuando el usuario hace preguntas técnicas
+    generales o cambia de tema.
+    """
+    q = _normalize(text)
+    if not q:
+        return False
+
+    # 1. Petición explícita de medidas o dimensiones
+    if is_measure_request(q):
+        return True
+
+    # 2. Referencia explícita al plano, documento, imagen o archivo previo
+    explicit_plan_refs = (
+        r"\b(plano|planos|croquis|dibujo|diseno|archivo|documento|imagen|foto|"
+        r"adjunto|subi|subido|analisis|dictamen)\b"
+    )
+    if re.search(explicit_plan_refs, q):
+        return True
+
+    # Si es una pregunta teórica, conceptual o normativa general sin referencia deíctica
+    theoretical_patterns = (
+        r"\b(que\s+es|que\s+significa|que\s+diferencia\s+existe|diferencia\s+entre|"
+        r"definicion\s+de|concepto\s+de|como\s+se\s+calcula|como\s+se\s+disena|"
+        r"cuales\s+son\s+las\s+normas|cual\s+es\s+la\s+norma|cuanto\s+tiempo\s+tarda|"
+        r"que\s+tipo\s+de|a\s+que\s+profundidad)\b"
+    )
+    if re.search(theoretical_patterns, q) and not re.search(r"\b(este|esta|estos|estas|mi|anterior|adjunto)\b", q):
+        return False
+
+    # 3. Referencia a elementos específicos del plano contextual (deícticos o espacios)
+    plan_elements = (
+        r"\b(este\s+espacio|en\s+esa\s+zona|aqui|ahi|este\s+cuarto|"
+        r"esta\s+habitacion|este\s+bano|esta\s+cocina|este\s+acceso|"
+        r"la\s+cocina|el\s+bano|la\s+recamara|la\s+sala|el\s+comedor|el\s+pasillo|"
+        r"la\s+puerta\s+principal|las\s+puertas|las\s+ventanas|"
+        r"la\s+distribucion|la\s+habitabilidad|las\s+incidencias|las\s+observaciones|"
+        r"los\s+errores|los\s+avisos|como\s+lo\s+soluciono|como\s+lo\s+corrijo|"
+        r"puedo\s+mover|puedo\s+quitar|puedo\s+ampliar|cabe\s+un|cabe\s+una)\b"
+    )
+    return bool(re.search(plan_elements, q))
 
 
 def format_plan_context(analysis: Any) -> tuple[str, dict]:

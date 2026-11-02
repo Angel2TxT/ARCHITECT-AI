@@ -59,7 +59,8 @@ class MobileApiService {
       final data = response.data;
       if (data is List) {
         return data
-            .whereType<Map<String, dynamic>>()
+            .map((item) => asJsonMap(item))
+            .where((map) => map.isNotEmpty)
             .map(AnalysisSummary.fromJson)
             .toList();
       }
@@ -78,7 +79,8 @@ class MobileApiService {
       final data = response.data;
       if (data is List) {
         return data
-            .whereType<Map<String, dynamic>>()
+            .map((item) => asJsonMap(item))
+            .where((map) => map.isNotEmpty)
             .map(ChatSummary.fromJson)
             .toList();
       }

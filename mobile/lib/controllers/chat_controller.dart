@@ -127,21 +127,13 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final analysisId = activeAnalysisId;
-      if (analysisId != null) {
-        final result = await _mobileApiService.sendFollowup(
-          message: text,
-          analysisId: analysisId,
-          chatId: chatId,
-        );
-        if (_disposed) return false;
-        await applyAnalysisResult(result);
-      } else {
-        await _mobileApiService.sendAsk(
-          message: text,
-          chatId: chatId,
-        );
-      }
+      // Los mensajes de texto conversacionales se envían a sendAsk para que el backend
+      // determine si la consulta refiere al plano analizado o es una pregunta general,
+      // evitando reanalizar la imagen pesada cruda o forzar el contexto previo.
+      await _mobileApiService.sendAsk(
+        message: text,
+        chatId: chatId,
+      );
       if (_disposed) return false;
       await load(showLoading: false);
       if (_disposed) return false;

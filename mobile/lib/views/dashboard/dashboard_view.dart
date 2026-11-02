@@ -207,7 +207,10 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
+  void _openDrawer() {
+    _controller.load(refresh: true);
+    _scaffoldKey.currentState?.openDrawer();
+  }
 
   Listenable get _askBarListenable {
     if (_chatController != null) {

@@ -301,11 +301,10 @@ class DashboardController extends ChangeNotifier {
       final validChats = <ChatSummary>[];
       for (final chat in rawChats) {
         if (chat.title == 'Nuevo chat' && chat.messageCount == 0) {
-          // Chat huérfano sin mensajes creado previamente: limpiar del servidor
-          _mobileApiService.deleteChat(chat.id).catchError((_) {});
-        } else {
-          validChats.add(chat);
+          // Omitir placeholders temporales vacíos sin eliminarlos destructivamente del servidor
+          continue;
         }
+        validChats.add(chat);
       }
       _chats = validChats;
       await _loadPinnedChats();

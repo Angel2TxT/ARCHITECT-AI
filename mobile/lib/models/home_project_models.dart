@@ -2,6 +2,7 @@ class HomeProjectPermissions {
   const HomeProjectPermissions({
     required this.canView,
     required this.canEdit,
+    this.canRenameProject = false,
     required this.canUpload,
     required this.canComment,
     required this.canAdvanceStage,
@@ -19,6 +20,7 @@ class HomeProjectPermissions {
 
   final bool canView;
   final bool canEdit;
+  final bool canRenameProject;
   final bool canUpload;
   final bool canComment;
   final bool canAdvanceStage;
@@ -38,6 +40,7 @@ class HomeProjectPermissions {
     return HomeProjectPermissions(
       canView: flag('can_view'),
       canEdit: flag('can_edit'),
+      canRenameProject: flag('can_rename_project') || flag('can_edit'),
       canUpload: flag('can_upload'),
       canComment: flag('can_comment'),
       canAdvanceStage: flag('can_advance_stage'),
@@ -57,6 +60,7 @@ class HomeProjectPermissions {
   static const empty = HomeProjectPermissions(
     canView: false,
     canEdit: false,
+    canRenameProject: false,
     canUpload: false,
     canComment: false,
     canAdvanceStage: false,
