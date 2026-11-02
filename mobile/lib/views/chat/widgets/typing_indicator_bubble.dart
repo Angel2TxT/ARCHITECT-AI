@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Burbuja del asistente con estado de razonamiento / pensamiento animado.
+/// Burbuja del asistente con estado de pensamiento animado (estilo Apple monocromático).
 class TypingIndicatorBubble extends StatefulWidget {
   const TypingIndicatorBubble({super.key});
 
@@ -17,7 +17,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1300),
+      duration: const Duration(milliseconds: 1400),
     )..repeat();
   }
 
@@ -36,6 +36,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
+    final primaryColor = isDark ? Colors.white : Colors.black;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -43,9 +44,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF16171E)
-              : Colors.white,
+          color: isDark ? const Color(0xFF161618) : Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
@@ -53,9 +52,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
             bottomLeft: Radius.circular(4),
           ),
           border: Border.all(
-            color: isDark
-                ? const Color(0x22FFFFFF)
-                : const Color(0x18000000),
+            color: isDark ? const Color(0x22FFFFFF) : const Color(0x18000000),
           ),
           boxShadow: [
             BoxShadow(
@@ -71,19 +68,19 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
             AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
-                final scale = 0.9 + 0.15 * (0.5 + 0.5 * _dotOpacity(_controller.value));
+                final scale = 0.92 + 0.12 * (0.5 + 0.5 * _dotOpacity(_controller.value));
                 return Transform.scale(
                   scale: scale,
                   child: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                      color: isDark ? const Color(0x18FFFFFF) : const Color(0x0A000000),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.auto_awesome,
                       size: 13,
-                      color: Color(0xFF10B981),
+                      color: primaryColor,
                     ),
                   ),
                 );
@@ -91,7 +88,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
             ),
             const SizedBox(width: 9),
             Text(
-              'Pensando respuesta…',
+              'Pensando…',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -115,8 +112,8 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
                         child: Container(
                           width: 5,
                           height: 5,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
+                          decoration: BoxDecoration(
+                            color: primaryColor,
                             shape: BoxShape.circle,
                           ),
                         ),

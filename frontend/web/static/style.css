@@ -3330,15 +3330,15 @@ html.dark .typing span {
   }
 }
 
-/* --- ARCHITECT Thinking / Razonando Animation State --- */
+/* --- ARCHITECT Thinking Animation (Monochrome Apple Style) --- */
 .msg--thinking {
-  animation: fadeInThinking 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInThinking 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeInThinking {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -3348,31 +3348,42 @@ html.dark .typing span {
 
 .msg-avatar--thinking {
   position: relative;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+html.dark .msg-avatar--thinking {
+  background: #000000 !important;
   color: #ffffff !important;
-  border: 1px solid rgba(16, 185, 129, 0.4) !important;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
 }
 
 .thinking-sparkle {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   line-height: 1;
-  animation: sparkleRotate 2.6s ease-in-out infinite;
+  color: #000000;
+  animation: sparkleRotate 2.8s ease-in-out infinite;
+}
+
+html.dark .thinking-sparkle {
+  color: #ffffff;
 }
 
 @keyframes sparkleRotate {
   0% {
-    transform: scale(0.85) rotate(0deg);
+    transform: scale(0.9) rotate(0deg);
     opacity: 0.75;
   }
   50% {
-    transform: scale(1.15) rotate(180deg);
+    transform: scale(1.1) rotate(180deg);
     opacity: 1;
-    filter: drop-shadow(0 0 4px #a7f3d0);
   }
   100% {
-    transform: scale(0.85) rotate(360deg);
+    transform: scale(0.9) rotate(360deg);
     opacity: 0.75;
   }
 }
@@ -3380,35 +3391,35 @@ html.dark .typing span {
 .thinking-card {
   display: inline-flex;
   flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.65rem 0.95rem 0.55rem;
-  background: rgba(255, 255, 255, 0.95);
+  gap: 0.42rem;
+  padding: 0.6rem 0.95rem 0.5rem;
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px 14px 14px 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   max-width: fit-content;
 }
 
 html.dark .thinking-card {
-  background: linear-gradient(135deg, rgba(23, 23, 30, 0.92) 0%, rgba(14, 14, 18, 0.96) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(16, 185, 129, 0.06);
+  background: rgba(18, 18, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   line-height: 1.2;
 }
 
 .thinking-pulse-wrap {
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3416,25 +3427,34 @@ html.dark .thinking-card {
 }
 
 .thinking-dot {
-  width: 6px;
-  height: 6px;
-  background: #10b981;
+  width: 5px;
+  height: 5px;
+  background: #000000;
   border-radius: 50%;
   display: block;
+}
+
+html.dark .thinking-dot {
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
 }
 
 .thinking-ring {
   position: absolute;
   inset: -2px;
-  border: 1.5px solid #10b981;
+  border: 1.5px solid rgba(0, 0, 0, 0.4);
   border-radius: 50%;
   animation: thinkingRadar 1.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+html.dark .thinking-ring {
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 @keyframes thinkingRadar {
   0% {
     transform: scale(0.5);
-    opacity: 0.9;
+    opacity: 0.85;
   }
   100% {
     transform: scale(2.2);
@@ -3444,31 +3464,32 @@ html.dark .thinking-card {
 
 .thinking-badge {
   font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  color: #059669;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: #000000;
   text-transform: uppercase;
 }
 
 html.dark .thinking-badge {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .thinking-sep {
-  color: rgba(140, 140, 150, 0.5);
+  color: rgba(140, 140, 150, 0.4);
   font-size: 0.7rem;
 }
 
 .thinking-status {
   margin: 0;
-  color: #4b5563;
-  font-weight: 500;
+  color: #555558;
+  font-weight: 450;
+  font-size: 0.75rem;
   transition: opacity 0.2s ease, transform 0.2s ease;
   white-space: nowrap;
 }
 
 html.dark .thinking-status {
-  color: #d1d5db;
+  color: #a1a1aa;
 }
 
 .thinking-track {
@@ -3481,7 +3502,7 @@ html.dark .thinking-status {
 }
 
 html.dark .thinking-track {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .thinking-beam {
@@ -3490,9 +3511,13 @@ html.dark .thinking-track {
   left: 0;
   height: 100%;
   width: 45%;
-  background: linear-gradient(90deg, transparent 0%, #10b981 50%, #06b6d4 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
   border-radius: 999px;
-  animation: thinkingBeamMove 1.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: thinkingBeamMove 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+html.dark .thinking-beam {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.85) 50%, transparent 100%);
 }
 
 @keyframes thinkingBeamMove {
@@ -18140,15 +18165,19 @@ html.dark .admin-topbar .notif-bell {
 
 
 
-/* --- Typewriter & Staggered Reveal --- */
+/* --- Typewriter & Staggered Reveal (Monochrome Apple Style) --- */
 .typewriter-cursor {
   display: inline-block;
-  color: #10b981;
-  font-weight: 700;
+  color: #000000;
+  font-weight: 600;
   margin-left: 2px;
   animation: typewriterBlink 0.75s infinite;
   line-height: 1;
   vertical-align: baseline;
+}
+
+html.dark .typewriter-cursor {
+  color: #ffffff;
 }
 
 @keyframes typewriterBlink {
@@ -18157,13 +18186,13 @@ html.dark .admin-topbar .notif-bell {
 }
 
 .msg-panel-fade-in {
-  animation: panelFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: panelFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes panelFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -18171,18 +18200,18 @@ html.dark .admin-topbar .notif-bell {
   }
 }
 
-/* --- Cuadro de Calibración / Generación de Plano Corregido (0% a 100%) --- */
+/* --- Cuadro de Calibración / Generación de Plano Corregido (Monochrome Apple Style) --- */
 .correction-progress-card {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   padding: 1rem 1.15rem;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06), 0 0 20px rgba(16, 185, 129, 0.05);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   margin-top: 0.5rem;
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
@@ -18190,9 +18219,9 @@ html.dark .admin-topbar .notif-bell {
 }
 
 html.dark .correction-progress-card {
-  background: linear-gradient(135deg, rgba(22, 24, 30, 0.94) 0%, rgba(13, 14, 18, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(16, 185, 129, 0.08);
+  background: rgba(18, 18, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 
 .cpc-header {
@@ -18210,38 +18239,43 @@ html.dark .correction-progress-card {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #059669;
+  color: #000000;
 }
 
 html.dark .cpc-badge {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .cpc-pulse-dot {
-  width: 7px;
-  height: 7px;
-  background: #10b981;
+  width: 6px;
+  height: 6px;
+  background: #000000;
   border-radius: 50%;
-  box-shadow: 0 0 10px #10b981;
   animation: radarDot 1.4s infinite;
+}
+
+html.dark .cpc-pulse-dot {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 
 @keyframes radarDot {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
 .cpc-counter {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   font-size: 1.35rem;
-  font-weight: 800;
-  color: #10b981;
+  font-weight: 700;
+  color: #000000;
   line-height: 1;
-  text-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+  letter-spacing: -0.02em;
 }
 
 html.dark .cpc-counter {
-  color: #34d399;
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 
 .cpc-body {
@@ -18254,29 +18288,29 @@ html.dark .cpc-counter {
   width: 2.3rem;
   height: 2.3rem;
   border-radius: 10px;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #10b981;
+  color: #000000;
   flex-shrink: 0;
 }
 
 html.dark .cpc-icon-scan {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #34d399;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 
 .cpc-scan-svg {
-  animation: scanRotatePulse 3s ease-in-out infinite;
+  animation: scanRotatePulse 3.5s ease-in-out infinite;
 }
 
 @keyframes scanRotatePulse {
-  0% { transform: rotate(0deg) scale(0.95); }
-  50% { transform: rotate(90deg) scale(1.05); }
-  100% { transform: rotate(180deg) scale(0.95); }
+  0% { transform: rotate(0deg) scale(0.96); }
+  50% { transform: rotate(90deg) scale(1.04); }
+  100% { transform: rotate(180deg) scale(0.96); }
 }
 
 .cpc-info {
@@ -18288,7 +18322,7 @@ html.dark .cpc-icon-scan {
 
 .cpc-title {
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--black);
   margin: 0;
   line-height: 1.25;
@@ -18312,14 +18346,14 @@ html.dark .cpc-sub {
 .cpc-progress-track {
   position: relative;
   width: 100%;
-  height: 7px;
+  height: 6px;
   background: rgba(0, 0, 0, 0.07);
   border-radius: 999px;
   overflow: hidden;
 }
 
 html.dark .cpc-progress-track {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .cpc-progress-fill {
@@ -18328,9 +18362,14 @@ html.dark .cpc-progress-track {
   left: 0;
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, #000000 100%);
   border-radius: 999px;
   transition: width 0.05s linear;
+}
+
+html.dark .cpc-progress-fill {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, #ffffff 100%);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
 }
 
 .cpc-progress-glow {
@@ -18356,35 +18395,35 @@ html.dark .cpc-progress-track {
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.6rem;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   font-size: 0.68rem;
   color: #4b5563;
 }
 
 html.dark .cpc-metric-chip {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.07);
-  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d1d5db;
 }
 
 .cpc-m-lbl {
   opacity: 0.75;
-  font-weight: 500;
+  font-weight: 450;
 }
 
 .cpc-m-val {
   font-weight: 600;
-  color: #059669;
+  color: #000000;
 }
 
 html.dark .cpc-m-val {
-  color: #34d399;
+  color: #ffffff;
 }
 
 .cpc-m-val--alert {
-  color: #f59e0b !important;
+  color: #e5e5ea !important;
 }
 
 .cpc-done {
@@ -18399,13 +18438,11 @@ html.dark .cpc-m-val {
 @keyframes imageRevealZoom {
   0% {
     opacity: 0;
-    transform: scale(0.96) translateY(6px);
-  }
-  50% {
-    box-shadow: 0 0 28px rgba(16, 185, 129, 0.25);
+    transform: scale(0.97) translateY(6px);
   }
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 }

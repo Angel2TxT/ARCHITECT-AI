@@ -2081,7 +2081,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
 
   const cursor = document.createElement("span");
   cursor.className = "typewriter-cursor";
-  cursor.textContent = "▌";
+  cursor.textContent = "│";
 
   let targetIdx = 0;
   let textRecIdx = 0;
@@ -2131,7 +2131,11 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
     const currentRec = records[textRecIdx];
     const fullText = currentRec.full;
 
-    const chunk = Math.min(3, fullText.length - charIdx);
+    const isShort = (answerBlock.textContent || "").length < 140;
+    const charsPerTick = isShort ? 4 : 3;
+    const tickInterval = isShort ? 8 : 12;
+
+    const chunk = Math.min(charsPerTick, fullText.length - charIdx);
     charIdx += chunk;
     currentRec.node.nodeValue = fullText.slice(0, charIdx);
 
@@ -2146,7 +2150,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
 
     if (charIdx % 6 === 0) scrollToBottom();
 
-    setTimeout(stepLine, 14);
+    setTimeout(stepLine, tickInterval);
   }
 
   stepLine();
@@ -2965,10 +2969,9 @@ async function withNetworkRetry(doFetch, { retries = 4, label = "la solicitud", 
 }
 
 const THINKING_STEPS = [
-  "Razonando consulta técnica…",
-  "Consultando normativas y criterios de habitabilidad…",
-  "Calculando dimensiones y especificaciones…",
-  "Sintetizando solución constructiva…"
+  "Pensando…",
+  "Analizando proyecto…",
+  "Preparando respuesta…"
 ];
 
 function updateTypingStatus(text) {
