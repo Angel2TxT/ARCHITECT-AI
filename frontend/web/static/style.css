@@ -1670,81 +1670,102 @@ html.dark .msg.user .msg-text {
   background: var(--white);
   color: var(--black);
   border: 1px solid var(--border);
-  border-radius: 18px 18px 18px 4px;
-  max-width: min(100%, 42rem);
+  border-radius: 16px 16px 16px 4px;
+  max-width: min(100%, 45rem);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 html.dark .msg.assistant .msg-text {
-  background: var(--black);
-  color: var(--white);
-  border-color: var(--border);
+  background: linear-gradient(180deg, rgba(23, 23, 30, 0.88) 0%, rgba(15, 15, 20, 0.94) 100%);
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.035) inset;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .msg-answer {
-  padding: 0.85rem 1rem 0.95rem;
+  padding: 0.95rem 1.2rem 1.05rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.6rem;
 }
 
 .msg-answer p {
   margin: 0;
+  line-height: 1.55;
+  color: inherit;
 }
 
 .msg-answer-lead {
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   font-weight: 550;
-  line-height: 1.45;
+  line-height: 1.5;
   letter-spacing: -0.01em;
+  color: #ffffff;
 }
 
 .msg-answer-heading {
-  margin: 0.15rem 0 0 !important;
-  font-size: 0.72rem;
+  margin: 0.45rem 0 0.15rem !important;
+  font-size: 0.73rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .msg-answer-ul,
 .msg-answer-ol {
   margin: 0;
-  padding: 0 0 0 0.15rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
   list-style: none;
 }
 
 .msg-answer-ul li,
 .msg-answer-ol li {
   position: relative;
-  padding: 0.45rem 0.65rem 0.45rem 1.65rem;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--black) 4%, transparent);
+  padding: 0.45rem 0.75rem 0.45rem 1.85rem;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--black) 3%, transparent);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   font-size: 0.84rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 html.dark .msg-answer-ul li,
 html.dark .msg-answer-ol li {
-  background: color-mix(in srgb, var(--white) 6%, transparent);
+  background: rgba(255, 255, 255, 0.032);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e4e4e7;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+html.dark .msg-answer-ul li:hover,
+html.dark .msg-answer-ol li:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.09);
 }
 
 .msg-answer-ul li::before {
   content: "";
   position: absolute;
   left: 0.7rem;
-  top: 0.85rem;
+  top: 0.82rem;
   width: 0.35rem;
   height: 0.35rem;
   border-radius: 50%;
-  background: var(--black);
+  background: #16a34a;
 }
 
 html.dark .msg-answer-ul li::before {
-  background: var(--white);
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.65);
 }
 
 .msg-answer-ol {
@@ -1802,15 +1823,22 @@ html.dark .msg-inline-code {
 
 .msg-panel {
   width: 100%;
-  max-width: min(100%, 42rem);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--black) 2.5%, var(--white));
+  max-width: min(100%, 45rem);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  margin-top: 0.35rem;
+  transition: all 0.2s ease;
 }
 
 html.dark .msg-panel {
-  background: color-mix(in srgb, var(--white) 4%, var(--black));
+  background: rgba(14, 14, 18, 0.55);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.msg-panel:hover {
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .msg-panel-summary {
@@ -6927,12 +6955,19 @@ html.dark .msg-mode-badge--llm {
 .msg-mode-badge--architect {
   background: rgba(34, 197, 94, 0.12);
   color: #15803d;
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 html.dark .msg-mode-badge--architect {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.32);
+  box-shadow: 0 0 12px -2px rgba(34, 197, 94, 0.3);
 }
 
 html.dark .msg-mode-badge--rules {

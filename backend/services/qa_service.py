@@ -367,11 +367,10 @@ def answer_construction_question(question: str) -> dict:
 
     ctx = _gather_qa_context(q)
     user_instruction = (
-        "Responde como un arquitecto y especialista técnico experto. "
-        "Entrega una respuesta muy completa, clara, didáctica y práctica para el usuario. "
-        "Si la consulta trata sobre diseño, dimensiones, procesos de obra, cálculo de materiales, costos o normas, "
-        "proporciona datos numéricos claros, pasos constructivos y consejos de buenas prácticas. "
-        "Sé profesional, cordial y seguro."
+        "Responde de forma muy concisa, directa y profesional. "
+        "Sin preámbulos ni relleno innecesario: entrega la respuesta concreta, cifras, medidas o pasos exactos "
+        "en viñetas breves y claras, cerrando con un consejo clave de obra. "
+        "Solo lo necesario, sin textos excesivos."
     )
     llm_text = generate_reasoned_answer(
         format_context_for_llm(q, ctx),
