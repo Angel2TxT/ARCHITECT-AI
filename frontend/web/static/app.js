@@ -2171,7 +2171,13 @@ function appendMessageDOM(msg, scroll = true) {
   if (scroll) scrollToBottom();
 }
 
+let thinkingInterval = null;
+
 function hideTyping() {
+  if (thinkingInterval) {
+    clearInterval(thinkingInterval);
+    thinkingInterval = null;
+  }
   $("#typingIndicator")?.remove();
 }
 
@@ -2675,25 +2681,63 @@ async function withNetworkRetry(doFetch, { retries = 4, label = "la solicitud", 
   throw lastErr || new Error(`No se pudo completar ${label}`);
 }
 
+const THINKING_STEPS = [
+  "Razonando consulta técnica…",
+  "Consultando normativas y criterios de habitabilidad…",
+  "Calculando dimensiones y especificaciones…",
+  "Sintetizando solución constructiva…"
+];
+
 function updateTypingStatus(text) {
-  const tip = $("#typingIndicator .typing-status");
+  const tip = document.getElementById("thinkingStatusText") || $("#typingIndicator .typing-status");
   if (tip) tip.textContent = text || "";
 }
 
 function showTyping() {
+  hideTyping();
   const wrap = $("#messages");
+  if (!wrap) return;
   const el = document.createElement("div");
-  el.className = "msg assistant";
+  el.className = "msg assistant msg--thinking";
   el.id = "typingIndicator";
   el.innerHTML = `
-    <div class="msg-avatar">IA</div>
+    <div class="msg-avatar msg-avatar--thinking" aria-label="ARCHITECT IA pensando">
+      <span class="thinking-sparkle">✦</span>
+    </div>
     <div class="msg-body">
-      <div class="typing"><span></span><span></span><span></span></div>
-      <p class="typing-status"></p>
+      <div class="thinking-card">
+        <div class="thinking-header">
+          <div class="thinking-pulse-wrap">
+            <span class="thinking-dot"></span>
+            <span class="thinking-ring"></span>
+          </div>
+          <span class="thinking-badge">ARCHITECT IA</span>
+          <span class="thinking-sep">•</span>
+          <span class="thinking-status typing-status" id="thinkingStatusText">Pensando respuesta…</span>
+        </div>
+        <div class="thinking-track">
+          <div class="thinking-beam"></div>
+        </div>
+      </div>
     </div>
   `;
   wrap.appendChild(el);
   scrollToBottom();
+
+  let stepIdx = 0;
+  thinkingInterval = setInterval(() => {
+    stepIdx = (stepIdx + 1) % THINKING_STEPS.length;
+    const txtEl = document.getElementById("thinkingStatusText");
+    if (txtEl) {
+      txtEl.style.opacity = "0.2";
+      txtEl.style.transform = "translateY(2px)";
+      setTimeout(() => {
+        txtEl.textContent = THINKING_STEPS[stepIdx];
+        txtEl.style.opacity = "1";
+        txtEl.style.transform = "translateY(0)";
+      }, 180);
+    }
+  }, 2400);
 }
 
 function removeAskRetryBanner() {
