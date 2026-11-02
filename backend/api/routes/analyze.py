@@ -7,10 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from api.deps import get_current_user
+from api.deps import get_current_user, security
 from core.pipeline import analyze_plano_json, find_default_weights
 from db.database import get_db
 from db.models import Analysis, Chat, Message, User
@@ -471,11 +472,31 @@ async def plano_preview(
     }
 
 
+def _resolve_download_user(
+    creds: HTTPAuthorizationCredentials | None,
+    token: str | None,
+    db: Session,
+) -> User | None:
+    raw_token = creds.credentials if (creds and creds.credentials) else token
+    if not raw_token:
+        return None
+    from services.auth_service import decode_token
+    payload = decode_token(raw_token)
+    if not payload or "sub" not in payload:
+        return None
+    try:
+        user_id = int(payload["sub"])
+    except (TypeError, ValueError):
+        return None
+    return db.query(User).filter(User.id == user_id).first()
+
+
 @router.get("/api/analyses/{analysis_id}/dossier.pdf")
 def download_dossier_pdf(
     analysis_id: int,
-    user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
+    token: str | None = Query(None),
 ):
     """Descarga el dictamen técnico pericial oficial en PDF con evidencia y sellos normativos."""
     from fastapi.responses import Response
@@ -485,14 +506,20 @@ def download_dossier_pdf(
     if not analysis:
         raise HTTPException(404, "Análisis no encontrado")
 
-    if analysis.user_id != user.id and getattr(user, "role", "") not in ("admin", "support"):
-        raise HTTPException(403, "No tienes permiso para descargar este dictamen")
+    user = _resolve_download_user(creds, token, db)
+
+    # Si el análisis tiene dueño registrado, comprobar que coincida o sea admin/soporte
+    if analysis.user_id is not None:
+        if not user:
+            raise HTTPException(401, "Inicia sesión para descargar este dictamen")
+        if analysis.user_id != user.id and getattr(user, "role", "") not in ("admin", "support"):
+            raise HTTPException(403, "No tienes permiso para descargar este dictamen")
 
     pdf_bytes = build_dossier_pdf(analysis, user)
     filename = f"Dictamen_ARCHITECT_{analysis.id:06d}.pdf"
 
     return Response(
-        content=pdf_bytes,
+        content=bytes(pdf_bytes),
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
@@ -504,8 +531,9 @@ def download_dossier_pdf(
 @router.get("/api/analyses/{analysis_id}/export.dxf")
 def download_analysis_dxf(
     analysis_id: int,
-    user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None,
+    token: str | None = Query(None),
 ):
     """Descarga el plano en formato CAD DXF con capas separadas (MUROS, PUERTAS, VENTANAS, RECINTOS, ESCALERAS)."""
     from fastapi.responses import Response
@@ -515,8 +543,13 @@ def download_analysis_dxf(
     if not analysis:
         raise HTTPException(404, "Análisis no encontrado")
 
-    if analysis.user_id != user.id and getattr(user, "role", "") not in ("admin", "support"):
-        raise HTTPException(403, "No tienes permiso para descargar este archivo CAD")
+    user = _resolve_download_user(creds, token, db)
+
+    if analysis.user_id is not None:
+        if not user:
+            raise HTTPException(401, "Inicia sesión para descargar este archivo CAD")
+        if analysis.user_id != user.id and getattr(user, "role", "") not in ("admin", "support"):
+            raise HTTPException(403, "No tienes permiso para descargar este archivo CAD")
 
     detections = analysis.detections_json or []
     ppm = analysis.pixels_per_meter or 100.0
@@ -526,7 +559,7 @@ def download_analysis_dxf(
     filename = f"Plano_CAD_{analysis.id:06d}.dxf"
 
     return Response(
-        content=dxf_bytes,
+        content=bytes(dxf_bytes) if isinstance(dxf_bytes, (bytes, bytearray)) else dxf_bytes.encode('utf-8'),
         media_type="application/dxf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',

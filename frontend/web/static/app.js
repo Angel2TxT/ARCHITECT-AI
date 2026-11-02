@@ -1582,18 +1582,74 @@ function buildResultsPanel(msg) {
     const actions = document.createElement("div");
     actions.className = "audit-actions";
 
+    const token = typeof PlanoAuth !== "undefined" ? PlanoAuth.getToken() : null;
+    const pdfUrl = `/api/analyses/${analysisId}/dossier.pdf` + (token ? `?token=${encodeURIComponent(token)}` : "");
+    const dxfUrl = `/api/analyses/${analysisId}/export.dxf` + (token ? `?token=${encodeURIComponent(token)}` : "");
+
     const btnPdf = document.createElement("a");
-    btnPdf.href = `/api/analyses/${analysisId}/dossier.pdf`;
+    btnPdf.href = pdfUrl;
     btnPdf.target = "_blank";
     btnPdf.className = "audit-action-btn";
     btnPdf.innerHTML = `<span class="material-symbols-outlined text-[15px]">picture_as_pdf</span><span>Dictamen PDF</span>`;
+    btnPdf.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        btnPdf.classList.add("is-busy");
+        showToast("Generando dictamen técnico oficial…");
+        const res = await (typeof PlanoAuth !== "undefined" ? PlanoAuth.apiFetch(pdfUrl) : fetch(pdfUrl));
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "No se pudo generar el dictamen PDF");
+        }
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `Dictamen_ARCHITECT_${String(analysisId).padStart(6, "0")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        showToast("Dictamen PDF descargado con éxito");
+      } catch (err) {
+        showToast(err.message || "Error al descargar dictamen PDF");
+      } finally {
+        btnPdf.classList.remove("is-busy");
+      }
+    };
     actions.appendChild(btnPdf);
 
     const btnDxf = document.createElement("a");
-    btnDxf.href = `/api/analyses/${analysisId}/export.dxf`;
+    btnDxf.href = dxfUrl;
     btnDxf.download = `plano_${analysisId}.dxf`;
     btnDxf.className = "audit-action-btn";
     btnDxf.innerHTML = `<span class="material-symbols-outlined text-[15px]">architecture</span><span>Exportar DXF</span>`;
+    btnDxf.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        btnDxf.classList.add("is-busy");
+        showToast("Exportando archivo vectorial CAD DXF…");
+        const res = await (typeof PlanoAuth !== "undefined" ? PlanoAuth.apiFetch(dxfUrl) : fetch(dxfUrl));
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "No se pudo exportar el DXF");
+        }
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `Plano_CAD_${String(analysisId).padStart(6, "0")}.dxf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        showToast("Plano CAD DXF descargado con éxito");
+      } catch (err) {
+        showToast(err.message || "Error al exportar plano CAD");
+      } finally {
+        btnDxf.classList.remove("is-busy");
+      }
+    };
     actions.appendChild(btnDxf);
 
     header.appendChild(actions);
