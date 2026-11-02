@@ -252,6 +252,10 @@
             <span class="material-symbols-outlined text-[18px]">add</span>
             Nuevo proyecto
           </button>
+          <button type="button" class="w-full mt-1.5 py-1.5 px-3 rounded-[8px] text-xs font-medium text-muted hover:text-primary transition-colors flex items-center justify-center gap-1.5 cursor-pointer" id="btnJoinHomeProject" title="Unirse a un proyecto con código">
+            <span class="material-symbols-outlined text-[16px]">group_add</span>
+            Unirse con código
+          </button>
         </div>
       </div>
 
@@ -779,10 +783,14 @@
         </div>
       </form>
       <div id="homeInviteResult" class="home-invite-result hidden space-y-3" hidden>
-        <p class="text-sm leading-relaxed">Comparte este enlace con <strong id="homeInviteResultEmail"></strong>. Debe iniciar sesión con ese correo (válido 14 días).</p>
+        <p class="text-sm leading-relaxed">Comparte esta invitación con <strong id="homeInviteResultEmail"></strong>. Debe iniciar sesión con ese correo (válido 14 días).</p>
+        <div class="rounded-xl border p-3 text-center" style="background: rgba(125,125,125,0.06); border-color: rgba(125,125,125,0.18);">
+          <div class="text-[11px] uppercase tracking-wider text-muted font-bold mb-1">Código para App Móvil</div>
+          <div class="text-2xl font-extrabold font-mono tracking-[0.25em]" id="homeInviteResultCode">------</div>
+        </div>
         <div class="flex flex-wrap gap-2 items-stretch">
           <input type="text" readonly id="homeInviteLink" class="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs font-mono" />
-          <button type="button" class="btn-primary text-xs py-2 px-3 shrink-0" id="btnCopyInviteLink">Copiar enlace</button>
+          <button type="button" class="btn-primary text-xs py-2 px-3 shrink-0" id="btnCopyInviteLink">Copiar enlace web</button>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-primary text-xs py-2 px-4" id="btnCloseInviteResult">Listo</button>

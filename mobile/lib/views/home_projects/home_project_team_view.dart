@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/home_project_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
@@ -29,7 +30,10 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
     String token = raw;
     final uri = Uri.tryParse(raw);
     if (uri != null && (uri.isScheme('http') || uri.isScheme('https'))) {
-      if (uri.queryParameters.containsKey('token') &&
+      if (uri.queryParameters.containsKey('invite') &&
+          uri.queryParameters['invite']!.trim().isNotEmpty) {
+        token = uri.queryParameters['invite']!.trim();
+      } else if (uri.queryParameters.containsKey('token') &&
           uri.queryParameters['token']!.trim().isNotEmpty) {
         token = uri.queryParameters['token']!.trim();
       } else if (uri.pathSegments.isNotEmpty &&
@@ -38,8 +42,14 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
       }
     }
 
-    if (token.length < 8) {
-      setState(() => _error = 'Ingresa un enlace válido.');
+    token = token.replaceAll(' ', '').replaceAll('-', '');
+
+    if (token.isEmpty) {
+      setState(() => _error = 'Ingresa el código de 6 dígitos.');
+      return;
+    }
+    if (token.length < 6) {
+      setState(() => _error = 'El código debe tener al menos 6 dígitos.');
       return;
     }
     setState(() {
@@ -92,15 +102,25 @@ class _AcceptInviteViewState extends State<AcceptInviteView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Pega el enlace de invitación que recibiste por correo.',
+              'Ingresa el código numérico de 6 dígitos que recibiste por correo para unirte al proyecto.',
+              style: TextStyle(height: 1.4),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             TextField(
               controller: _inviteInputController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 6,
+              ),
               decoration: InputDecoration(
-                labelText: 'Enlace de invitación',
+                labelText: 'Código de invitación',
+                hintText: '000000',
+                helperText: 'Ejemplo: 482910 (o pega el enlace de invitación)',
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -180,6 +200,12 @@ class HomeProjectTeamView extends StatelessWidget {
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-Z0-9@._+-]'),
+                  ),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Correo',
                   border: OutlineInputBorder(),

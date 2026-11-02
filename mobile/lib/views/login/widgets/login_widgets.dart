@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
+import 'package:movil_architect/views/legal/legal_views.dart';
 
 class LoginAppMark extends StatelessWidget {
   const LoginAppMark({super.key});
@@ -47,6 +49,8 @@ class LoginPillField extends StatelessWidget {
     this.onSubmitted,
     this.onChanged,
     this.suffix,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   final TextEditingController controller;
@@ -58,6 +62,8 @@ class LoginPillField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
   final Widget? suffix;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +85,8 @@ class LoginPillField extends StatelessWidget {
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         autocorrect: autocorrect,
+        inputFormatters: inputFormatters,
+        textCapitalization: textCapitalization,
         onSubmitted: onSubmitted,
         onChanged: onChanged,
         style: TextStyle(
@@ -271,7 +279,13 @@ class LoginLegalFooter extends StatelessWidget {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TermsOfServiceView(),
+                  ),
+                );
+              },
               child: Text(
                 'Términos de Servicio',
                 style: TextStyle(
@@ -288,7 +302,13 @@ class LoginLegalFooter extends StatelessWidget {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PrivacyPolicyView(),
+                  ),
+                );
+              },
               child: Text(
                 'Política de Privacidad',
                 style: TextStyle(

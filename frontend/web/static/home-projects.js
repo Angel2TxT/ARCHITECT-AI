@@ -3627,8 +3627,13 @@
     }
     const emailEl = $("#homeInviteResultEmail");
     const linkEl = $("#homeInviteLink");
+    const codeEl = $("#homeInviteResultCode");
     if (emailEl) emailEl.textContent = email;
     if (linkEl) linkEl.value = link;
+    if (codeEl) {
+      const strToken = String(token || "");
+      codeEl.textContent = strToken.length === 6 ? `${strToken.slice(0, 3)} ${strToken.slice(3)}` : strToken;
+    }
   }
 
   async function handlePendingInvite() {
@@ -4080,6 +4085,30 @@
   }
 
   $("#btnNewHomeProject")?.addEventListener("click", openCreateModal);
+  $("#btnJoinHomeProject")?.addEventListener("click", async () => {
+    const raw = prompt("Ingresa el código numérico de 6 dígitos o enlace de invitación:");
+    if (!raw) return;
+    const token = raw.trim();
+    if (!token) return;
+    try {
+      const res = await PlanoAuth.apiFetch("/api/home-projects/invites/accept", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        window.showToast?.(data.detail || "No se pudo aceptar la invitación");
+        return;
+      }
+      activeId = data.id;
+      viewedStage = data.current_stage || 1;
+      await loadProjects();
+      open();
+      window.showToast?.("¡Te has unido al proyecto!");
+    } catch (err) {
+      window.showToast?.(err.message || "Error al unirse al proyecto");
+    }
+  });
   $("#btnCloseHomeProjectCreate")?.addEventListener("click", closeCreateModal);
   $("#btnCancelHomeProjectCreate")?.addEventListener("click", closeCreateModal);
   $("#homeProjectCreateForm")?.addEventListener("submit", createProjectFromForm);

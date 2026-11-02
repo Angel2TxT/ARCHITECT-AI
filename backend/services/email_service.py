@@ -353,11 +353,14 @@ def send_project_invite_email(
     role_label = "Editor" if role == "editor" else "Lector"
     invite_url = f"{_app_base_url()}/legacy-app?invite={token}"
     subject = f"Invitación al proyecto «{project_name}» — ARCHITECT"
+    code_display = f"{token[:3]} {token[3:]}" if len(token) == 6 else token
     text_body = (
         f"Hola,\n\n"
         f"{inviter_name} te ha invitado a colaborar en el proyecto «{project_name}» "
         f"como {role_label}.\n\n"
-        f"Acepta la invitación aquí (válida 14 días):\n{invite_url}\n\n"
+        f"CÓDIGO DE INVITACIÓN (App Móvil): {code_display}\n"
+        f"Ingresa este código en la app ARCHITECT para unirte.\n\n"
+        f"O entra directamente desde la web (válido 14 días):\n{invite_url}\n\n"
         f"Debes iniciar sesión con este correo: {to_email}\n\n"
         f"— ARCHITECT"
     )
@@ -365,7 +368,14 @@ def send_project_invite_email(
     <p>Hola,</p>
     <p><strong>{_e(inviter_name)}</strong> te ha invitado a colaborar en el proyecto
     <strong>«{_e(project_name)}»</strong> como <strong>{_e(role_label)}</strong>.</p>
-    <p><a href="{_e(invite_url)}">Aceptar invitación</a> (válida 14 días)</p>
+    
+    <div style="background:#f7f7f8;border:1px solid #e2e4e9;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
+      <div style="font-size:11px;font-weight:700;color:#77777c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Código de invitación para App Móvil</div>
+      <div style="font-size:32px;font-weight:800;letter-spacing:6px;color:#111111;font-family:monospace;">{_e(code_display)}</div>
+      <div style="font-size:12px;color:#77777c;margin-top:8px;">Válido durante 14 días</div>
+    </div>
+
+    <p style="margin-top:16px;">O si prefieres acceder desde la web: <br/><a href="{_e(invite_url)}" style="color:#007aff;font-weight:600;">Aceptar invitación en la web</a></p>
     <p>Debes iniciar sesión con: <strong>{_e(to_email)}</strong></p>
     <p style="color:#666;font-size:12px">ARCHITECT</p>
     """

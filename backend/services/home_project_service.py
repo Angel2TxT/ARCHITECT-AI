@@ -2193,7 +2193,20 @@ def invite_project_member(
         db.commit()
         return {"status": "member_added", "email": email, "role": member_role.value}
 
-    token = secrets.token_urlsafe(32)
+    while True:
+        token = f"{secrets.randbelow(1_000_000):06d}"
+        conflict = (
+            db.query(HomeProjectInvite)
+            .filter(
+                HomeProjectInvite.token == token,
+                HomeProjectInvite.accepted_at.is_(None),
+                HomeProjectInvite.expires_at > datetime.utcnow(),
+            )
+            .first()
+        )
+        if not conflict:
+            break
+
     invite = HomeProjectInvite(
         project_id=project.id,
         email=email,
@@ -2231,21 +2244,32 @@ def invite_project_member(
 
 
 def accept_project_invite(db: Session, user: User, token: str) -> HomeProject:
-    token = (token or "").strip()
-    if not token:
-        raise HTTPException(400, "Token de invitación requerido")
+    raw_token = (token or "").strip()
+    if not raw_token:
+        raise HTTPException(400, "Código o enlace de invitación requerido")
+
+    cleaned_token = raw_token.replace("-", "").replace(" ", "")
+    if "://" in raw_token or "invite=" in raw_token:
+        import urllib.parse
+        parsed = urllib.parse.urlparse(raw_token)
+        qs = urllib.parse.parse_qs(parsed.query)
+        if "invite" in qs and qs["invite"]:
+            cleaned_token = qs["invite"][0].strip()
+        elif parsed.path:
+            cleaned_token = parsed.path.strip("/").split("/")[-1]
+
     invite = (
         db.query(HomeProjectInvite)
         .filter(
-            HomeProjectInvite.token == token,
+            (HomeProjectInvite.token == cleaned_token) | (HomeProjectInvite.token == raw_token),
             HomeProjectInvite.accepted_at.is_(None),
         )
         .first()
     )
     if not invite:
-        raise HTTPException(404, "Invitación no encontrada o ya usada")
+        raise HTTPException(404, "Código de invitación no encontrado o ya usado")
     if invite.expires_at < datetime.utcnow():
-        raise HTTPException(410, "La invitación ha expirado")
+        raise HTTPException(410, "El código de invitación ha expirado")
     if user.email.lower() != invite.email.lower():
         raise HTTPException(403, "Esta invitación es para otro correo")
 
@@ -2792,11 +2816,14 @@ def update_project_budget(db: Session, user: User, project_id: str, payload: dic
     project.metadata_json = meta
     _log_event(
         db,
-        project_id,
-        user.id,
-        HomeProjectEventType.budget_updated,
-        f"Presupuesto de obra actualizado: {currency} ${total_est:,.2f}",
-        {"total_estimated": total_est, "currency": currency},
+        project=project,
+        actor_user_id=user.id,
+        event_type=HomeProjectEventType.budget_updated,
+        metadata={
+            "description": f"Presupuesto de obra actualizado: {currency} ${total_est:,.2f}",
+            "total_estimated": total_est,
+            "currency": currency,
+        },
     )
     db.commit()
     return get_project_budget(db, user, project_id)

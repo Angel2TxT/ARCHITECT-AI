@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/login_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
@@ -96,6 +97,11 @@ class _LoginViewState extends State<LoginView> {
                     controller: _controller.emailController,
                     hint: 'CORREO ELECTRÓNICO',
                     keyboardType: TextInputType.emailAddress,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9@._+-]'),
+                      ),
+                    ],
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     onChanged: (_) => _controller.clearError(),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/profile_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
@@ -102,8 +103,24 @@ class _ProfileViewState extends State<ProfileView> {
             TextField(
               controller: _controller.confirmDeleteController,
               obscureText: user.hasPassword,
+              keyboardType: user.hasPassword
+                  ? TextInputType.text
+                  : TextInputType.emailAddress,
+              autocorrect: false,
+              inputFormatters: user.hasPassword
+                  ? null
+                  : [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9@._+-]'),
+                      ),
+                    ],
               decoration: InputDecoration(
                 hintText: user.hasPassword ? 'Contraseña' : 'Correo',
+                prefixIcon: Icon(
+                  user.hasPassword
+                      ? Icons.lock_outline_rounded
+                      : Icons.mail_outline_rounded,
+                ),
                 filled: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -204,9 +221,48 @@ class _ProfileViewState extends State<ProfileView> {
                       controller: _controller.nameController,
                       fillColor: fieldBg,
                       prefixIcon: Icons.person_outline_rounded,
-                      hint: 'Tu nombre',
+                      hint: 'Tu nombre (solo letras)',
+                      keyboardType: TextInputType.name,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Correo electrónico',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _ProfileField(
+                      controller: _controller.emailController,
+                      fillColor: fieldBg,
+                      prefixIcon: Icons.mail_outline_rounded,
+                      hint: 'correo@ejemplo.com',
+                      keyboardType: TextInputType.emailAddress,
+                      readOnly: true,
+                      enabled: false,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9@._+-]'),
+                        ),
+                      ],
+                      suffix: Tooltip(
+                        message: 'El correo está vinculado a tu cuenta',
+                        child: Icon(
+                          Icons.lock_outline_rounded,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'Rol: $_roleLabel',
                       style: TextStyle(
@@ -215,16 +271,6 @@ class _ProfileViewState extends State<ProfileView> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (user?.email.isNotEmpty == true) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        user!.email,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 12.5,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 18),
                     _ProfilePrimaryButton(
                       label: 'Guardar nombre',
@@ -581,6 +627,11 @@ class _ProfileField extends StatelessWidget {
     this.prefixIcon,
     this.suffix,
     this.obscureText = false,
+    this.keyboardType,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+    this.readOnly = false,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -589,6 +640,11 @@ class _ProfileField extends StatelessWidget {
   final IconData? prefixIcon;
   final Widget? suffix;
   final bool obscureText;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+  final bool readOnly;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -596,9 +652,16 @@ class _ProfileField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: obscureText,
-      autocorrect: !obscureText,
+      readOnly: readOnly,
+      enabled: enabled,
+      autocorrect: !obscureText && keyboardType != TextInputType.emailAddress,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      inputFormatters: inputFormatters,
       style: TextStyle(
-        color: colorScheme.onSurface,
+        color: enabled
+            ? colorScheme.onSurface
+            : colorScheme.onSurface.withValues(alpha: 0.6),
         fontWeight: FontWeight.w600,
         fontSize: 15,
       ),

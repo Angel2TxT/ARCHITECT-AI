@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/register_controller.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/views/dashboard/dashboard_view.dart';
@@ -79,6 +80,13 @@ class _RegisterViewState extends State<RegisterView> {
                   LoginPillField(
                     controller: _controller.fullNameController,
                     hint: 'NOMBRE COMPLETO (OPCIONAL)',
+                    keyboardType: TextInputType.name,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]'),
+                      ),
+                    ],
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     onChanged: (_) => _controller.clearError(),
@@ -88,6 +96,11 @@ class _RegisterViewState extends State<RegisterView> {
                     controller: _controller.emailController,
                     hint: 'CORREO ELECTRÓNICO',
                     keyboardType: TextInputType.emailAddress,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9@._+-]'),
+                      ),
+                    ],
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     onChanged: (_) => _controller.clearError(),
@@ -159,6 +172,8 @@ class _RegisterViewState extends State<RegisterView> {
                       child: const Text('¿Ya tienes cuenta? Inicia sesión'),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  const LoginLegalFooter(),
                 ],
               ),
             ),
