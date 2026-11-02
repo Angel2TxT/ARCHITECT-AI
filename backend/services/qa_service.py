@@ -178,6 +178,34 @@ def _gather_qa_context(question: str) -> dict:
     }
 
 
+def _is_greeting(question: str) -> bool:
+    q = _normalize(question).strip(" !?.,;:¿¡")
+    if q in {
+        "hola", "buenas", "buen dia", "buenos dias", "buenas tardes", "buenas noches",
+        "hey", "saludos", "que tal", "hello", "hi", "que onda", "que hubo",
+        "hola arqui", "hola architect"
+    }:
+        return True
+    return bool(
+        re.match(r"^(hola|buen(os)?\s+dias|buenas?\s+(tardes|noches|dias)?|saludos|que\s+tal|hey)", q)
+        and len(q.split()) <= 4
+    )
+
+
+def _is_courtesy(question: str) -> bool:
+    q = _normalize(question).strip(" !?.,;:¿¡")
+    if q in {
+        "gracias", "muchas gracias", "mil gracias", "te agradezco",
+        "perfecto", "excelente", "de acuerdo", "entendido", "ok", "vale",
+        "adios", "hasta luego", "nos vemos", "chao", "bye"
+    }:
+        return True
+    return bool(
+        re.match(r"^(muchas\s+gracias|gracias|perfecto|excelente|de\s+acuerdo|entendido|hasta\s+luego|adios)", q)
+        and len(q.split()) <= 4
+    )
+
+
 def _is_meta_capability_question(question: str) -> bool:
     q = _normalize(question)
     return bool(
@@ -224,6 +252,66 @@ def answer_construction_question(question: str) -> dict:
                 "Si ya analizaste el plano en este chat, puedes repetir la misma pregunta "
                 "y el sistema reutilizará el último archivo sin volver a subirlo."
             ),
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_greeting(q):
+        meta_ctx = format_context_for_llm(
+            q,
+            {
+                "municipality": None,
+                "local_sources": [],
+                "web_sources": [],
+                "thresholds": [],
+            },
+        )
+        llm_text = generate_reasoned_answer(
+            meta_ctx,
+            user_instruction=(
+                "Saluda cordialmente en español como el asistente técnico de ARCHITECT. "
+                "Explica brevemente (2-3 oraciones) que puedes ayudarle a resolver dudas normativas, "
+                "dimensiones de diseño o auditar planos adjuntos, y pregúntale en qué proyecto le ayudas hoy. "
+                "No cites manuales ni uses formatos pesados."
+            ),
+        )
+        default_greeting = (
+            "¡Hola! Soy el asistente técnico de ARCHITECT.\n\n"
+            "Puedo ayudarte con consultas sobre normativas de construcción, medidas y requerimientos mínimos "
+            "de habitabilidad, o realizar la auditoría técnica de tus planos arquitectónicos.\n\n"
+            "¿En qué proyecto o plano te puedo colaborar hoy?"
+        )
+        return {
+            "text": llm_text or default_greeting,
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": bool(llm_text),
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_courtesy(q):
+        default_courtesy = (
+            "¡Con gusto! Quedo a tu disposición si necesitas verificar otra normativa, "
+            "resolver dudas de diseño o auditar un nuevo plano."
+        )
+        return {
+            "text": default_courtesy,
             "municipality": None,
             "local_sources": [],
             "web_sources": [],

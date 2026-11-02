@@ -282,7 +282,7 @@ def search_knowledge_for_question(question: str, *, max_refs: int = 8) -> list[d
 
     terms = expand_query_terms(question)
     if not terms:
-        terms = ["construccion", "vivienda", "habitabilidad"]
+        return []
 
     priority_hints = _priority_doc_hints(terms)
     out: list[dict] = []
