@@ -183,12 +183,12 @@ def _is_greeting(question: str) -> bool:
     if q in {
         "hola", "buenas", "buen dia", "buenos dias", "buenas tardes", "buenas noches",
         "hey", "saludos", "que tal", "hello", "hi", "que onda", "que hubo",
-        "hola arqui", "hola architect"
+        "hola arqui", "hola architect", "hola buenos dias", "hola buenas tardes", "hola buenas noches"
     }:
         return True
     return bool(
-        re.match(r"^(hola|buen(os)?\s+dias|buenas?\s+(tardes|noches|dias)?|saludos|que\s+tal|hey)", q)
-        and len(q.split()) <= 4
+        re.match(r"^(hola|buen(os)?\s+dias|buenas?\s+(tardes|noches|dias)?|saludos|que\s+tal|hey)\b", q)
+        and len(q.split()) <= 5
     )
 
 
@@ -201,8 +201,8 @@ def _is_courtesy(question: str) -> bool:
     }:
         return True
     return bool(
-        re.match(r"^(muchas\s+gracias|gracias|perfecto|excelente|de\s+acuerdo|entendido|hasta\s+luego|adios)", q)
-        and len(q.split()) <= 4
+        re.match(r"^(muchas\s+gracias|gracias|perfecto|excelente|de\s+acuerdo|entendido|hasta\s+luego|adios)\b", q)
+        and len(q.split()) <= 5
     )
 
 
