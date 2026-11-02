@@ -66,6 +66,19 @@ TOPIC_THRESHOLD_CODES: dict[str, list[str]] = {
     "neufert": ["ROOM_DIMENSION_MIN", "CORRIDOR_WIDTH_MIN", "STAIR_WIDTH_UNIFAM"],
     "losa": ["ROOM_HEIGHT_MIN"],
     "muro": ["WALL_COVERAGE_LOW"],
+    "sala": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "comedor": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "estancia": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "cochera": ["PARKING_PCD_WIDTH"],
+    "garage": ["PARKING_PCD_WIDTH"],
+    "cemento": ["BUILT_AREA_MINOR_WORK"],
+    "concreto": ["BUILT_AREA_MINOR_WORK"],
+    "material": ["BUILT_AREA_MINOR_WORK"],
+    "costo": ["BUILT_AREA_MINOR_WORK"],
+    "presupuesto": ["BUILT_AREA_MINOR_WORK"],
+    "cimentacion": ["WALL_COVERAGE_LOW"],
+    "zapata": ["WALL_COVERAGE_LOW"],
+    "castillo": ["WALL_COVERAGE_LOW"],
 }
 
 
@@ -353,7 +366,17 @@ def answer_construction_question(question: str) -> dict:
         }
 
     ctx = _gather_qa_context(q)
-    llm_text = generate_reasoned_answer(format_context_for_llm(q, ctx))
+    user_instruction = (
+        "Responde como un arquitecto y especialista técnico experto. "
+        "Entrega una respuesta muy completa, clara, didáctica y práctica para el usuario. "
+        "Si la consulta trata sobre diseño, dimensiones, procesos de obra, cálculo de materiales, costos o normas, "
+        "proporciona datos numéricos claros, pasos constructivos y consejos de buenas prácticas. "
+        "Sé profesional, cordial y seguro."
+    )
+    llm_text = generate_reasoned_answer(
+        format_context_for_llm(q, ctx),
+        user_instruction=user_instruction,
+    )
     text = llm_text or compose_knowledge_answer(q, ctx)
     used_llm = bool(llm_text)
 
