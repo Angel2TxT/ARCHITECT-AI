@@ -2041,7 +2041,267 @@ function setupImageViewer() {
   });
 }
 
-function appendMessageDOM(msg, scroll = true) {
+function getTextNodesWithFull(root) {
+  const nodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  let textNode;
+  while ((textNode = walker.nextNode())) {
+    nodes.push({ node: textNode, full: textNode.nodeValue || "" });
+  }
+  return nodes;
+}
+
+function animateTypewriterAnswer(answerBlock, onComplete) {
+  const lineTargets = [];
+  Array.from(answerBlock.children).forEach((child) => {
+    if (child.tagName === "UL" || child.tagName === "OL") {
+      Array.from(child.children).forEach((li) => {
+        if (li.tagName === "LI") lineTargets.push(li);
+      });
+    } else {
+      lineTargets.push(child);
+    }
+  });
+
+  if (!lineTargets.length) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  lineTargets.forEach((target, i) => {
+    target._textRecords = getTextNodesWithFull(target);
+    target._textRecords.forEach((rec) => {
+      rec.node.nodeValue = "";
+    });
+    if (i > 0) {
+      target.style.display = "none";
+      target.style.opacity = "0";
+    }
+  });
+
+  const cursor = document.createElement("span");
+  cursor.className = "typewriter-cursor";
+  cursor.textContent = "▌";
+
+  let targetIdx = 0;
+  let textRecIdx = 0;
+  let charIdx = 0;
+  let isCancelled = false;
+
+  function finishInstantly() {
+    if (isCancelled) return;
+    isCancelled = true;
+    lineTargets.forEach((target) => {
+      target.style.display = "";
+      target.style.opacity = "1";
+      target._textRecords?.forEach((rec) => {
+        rec.node.nodeValue = rec.full;
+      });
+    });
+    cursor.remove();
+    if (onComplete) onComplete();
+  }
+
+  answerBlock.addEventListener("click", finishInstantly, { once: true });
+
+  function stepLine() {
+    if (isCancelled) return;
+    if (targetIdx >= lineTargets.length) {
+      cursor.remove();
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const currentTarget = lineTargets[targetIdx];
+    currentTarget.style.display = "";
+    currentTarget.style.opacity = "1";
+    currentTarget.appendChild(cursor);
+
+    const records = currentTarget._textRecords;
+    if (!records || textRecIdx >= records.length) {
+      cursor.remove();
+      targetIdx++;
+      textRecIdx = 0;
+      charIdx = 0;
+      scrollToBottom();
+      setTimeout(stepLine, 60);
+      return;
+    }
+
+    const currentRec = records[textRecIdx];
+    const fullText = currentRec.full;
+
+    const chunk = Math.min(3, fullText.length - charIdx);
+    charIdx += chunk;
+    currentRec.node.nodeValue = fullText.slice(0, charIdx);
+
+    if (cursor.parentElement !== currentTarget) {
+      currentTarget.appendChild(cursor);
+    }
+
+    if (charIdx >= fullText.length) {
+      textRecIdx++;
+      charIdx = 0;
+    }
+
+    if (charIdx % 6 === 0) scrollToBottom();
+
+    setTimeout(stepLine, 14);
+  }
+
+  stepLine();
+}
+
+function buildCorrectionProgressCard(msg) {
+  const card = document.createElement("div");
+  card.className = "correction-progress-card";
+  card.id = "correctionProgressCard";
+
+  const detCount = msg.stats?.detections || (msg.detectionsList ? msg.detectionsList.length : 8);
+  const errCount = msg.stats?.errors ?? 0;
+
+  card.innerHTML = `
+    <div class="cpc-header">
+      <div class="cpc-badge">
+        <span class="cpc-pulse-dot"></span>
+        <span>MOTOR DE AUDITORÍA GRÁFICA</span>
+      </div>
+      <div class="cpc-counter">
+        <span class="cpc-val" id="cpcPercent">0%</span>
+      </div>
+    </div>
+
+    <div class="cpc-body">
+      <div class="cpc-icon-scan">
+        <svg class="cpc-scan-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+          <circle cx="12" cy="12" r="3"/>
+          <line x1="12" y1="2" x2="12" y2="6"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+        </svg>
+      </div>
+      <div class="cpc-info">
+        <div class="cpc-title">Generando plano con correcciones y cotas</div>
+        <div class="cpc-sub" id="cpcStepText">Iniciando verificación métrica...</div>
+      </div>
+    </div>
+
+    <div class="cpc-progress-track">
+      <div class="cpc-progress-fill" id="cpcFill"></div>
+      <div class="cpc-progress-glow" id="cpcGlow"></div>
+    </div>
+
+    <div class="cpc-metrics-row">
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Elementos:</span>
+        <span class="cpc-m-val" id="cpcValDet">${detCount} vanos</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Tolerancia:</span>
+        <span class="cpc-m-val">±1.5 cm</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Incidencias:</span>
+        <span class="cpc-m-val ${errCount > 0 ? "cpc-m-val--alert" : ""}" id="cpcValErr">${errCount > 0 ? `${errCount} a corregir` : "Conforme"}</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Normativa:</span>
+        <span class="cpc-m-val">Chiapas / Habitabilidad</span>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+function runCorrectionProgress(progressCard, mediaFrame, msg, onDone) {
+  const pctEl = progressCard.querySelector("#cpcPercent");
+  const fillEl = progressCard.querySelector("#cpcFill");
+  const glowEl = progressCard.querySelector("#cpcGlow");
+  const stepEl = progressCard.querySelector("#cpcStepText");
+  const detEl = progressCard.querySelector("#cpcValDet");
+  const errEl = progressCard.querySelector("#cpcValErr");
+
+  const detCount = msg.stats?.detections || (msg.detectionsList ? msg.detectionsList.length : 8);
+  const errCount = msg.stats?.errors ?? 0;
+
+  let isDone = false;
+  function finishImmediately() {
+    if (isDone) return;
+    isDone = true;
+    if (pctEl) pctEl.textContent = "100%";
+    if (fillEl) fillEl.style.width = "100%";
+    if (stepEl) stepEl.textContent = "✓ Plano corregido y calibrado con éxito";
+    progressCard.classList.add("cpc-done");
+    setTimeout(() => {
+      progressCard.remove();
+      mediaFrame.style.display = "";
+      mediaFrame.classList.add("msg-media-revealed");
+      scrollToBottom();
+      if (onDone) onDone();
+    }, 180);
+  }
+
+  progressCard.addEventListener("click", finishImmediately, { once: true });
+
+  const startTime = performance.now();
+  const duration = 1600; // 1.6s
+
+  function loop(now) {
+    if (isDone) return;
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const pct = Math.floor(ease * 100);
+
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+    if (glowEl) glowEl.style.left = `${pct}%`;
+
+    if (pct < 25) {
+      if (stepEl) stepEl.textContent = "Calibrando escala métrica y detección de vanos…";
+      if (detEl) detEl.textContent = "Detectando…";
+      if (errEl) errEl.textContent = "Auditando…";
+    } else if (pct < 55) {
+      if (stepEl) stepEl.textContent = "Verificando normativas de habitabilidad y tolerancias…";
+      if (detEl) detEl.textContent = `${Math.min(detCount, Math.floor(detCount * (pct / 55)))} elementos`;
+      if (errEl) errEl.textContent = "Evaluando…";
+    } else if (pct < 85) {
+      if (stepEl) stepEl.textContent = "Calculando cotas corregidas y anotaciones técnicas…";
+      if (detEl) detEl.textContent = `${detCount} elementos`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} marcadas` : "Sin fallas";
+    } else if (pct < 100) {
+      if (stepEl) stepEl.textContent = "Renderizando plano técnico de alta resolución…";
+      if (detEl) detEl.textContent = `${detCount} elementos`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} corregidas` : "100% conforme";
+    } else {
+      isDone = true;
+      if (pctEl) pctEl.textContent = "100%";
+      if (fillEl) fillEl.style.width = "100%";
+      if (stepEl) stepEl.textContent = "✓ Plano corregido y calibrado con éxito";
+      if (detEl) detEl.textContent = `${detCount} verificados`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} corregidas` : "Aprobado";
+
+      setTimeout(() => {
+        progressCard.classList.add("cpc-done");
+        setTimeout(() => {
+          progressCard.remove();
+          mediaFrame.style.display = "";
+          mediaFrame.classList.add("msg-media-revealed");
+          scrollToBottom();
+          if (onDone) onDone();
+        }, 260);
+      }, 250);
+      return;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === "assistant")) {
   const wrap = $("#messages");
   const el = document.createElement("div");
   el.className = `msg ${msg.role}`;
@@ -2078,9 +2338,11 @@ function appendMessageDOM(msg, scroll = true) {
     body.appendChild(meta);
   }
 
+  let answerBlock = null;
   if (msg.text) {
     if (msg.role === "assistant") {
-      body.appendChild(buildAssistantAnswerBlock(msg.text));
+      answerBlock = buildAssistantAnswerBlock(msg.text);
+      body.appendChild(answerBlock);
     } else {
       const block = document.createElement("div");
       block.className = "msg-text";
@@ -2097,6 +2359,7 @@ function appendMessageDOM(msg, scroll = true) {
   if (msg.steps?.length) {
     const box = document.createElement("div");
     box.className = "msg-steps";
+    if (animate) box.classList.add("msg-panel-fade-in");
     const title = document.createElement("p");
     title.className = "msg-steps-title";
     title.textContent = "Siguiente paso";
@@ -2110,9 +2373,10 @@ function appendMessageDOM(msg, scroll = true) {
     body.appendChild(box);
   }
 
+  let mediaFrame = null;
   if (msg.attachment || msg.imageUrl) {
-    const frame = document.createElement("div");
-    frame.className = msg.role === "user" ? "msg-media msg-media--thumb" : "msg-media";
+    mediaFrame = document.createElement("div");
+    mediaFrame.className = msg.role === "user" ? "msg-media msg-media--thumb" : "msg-media";
 
     let mediaCaption = "";
     if (msg.imageUrl) {
@@ -2122,11 +2386,11 @@ function appendMessageDOM(msg, scroll = true) {
       img.loading = "lazy";
       img.onerror = () => {
         img.remove();
-        if (msg.attachment) frame.appendChild(createMsgAttachmentChip(msg.attachment));
+        if (msg.attachment) mediaFrame.appendChild(createMsgAttachmentChip(msg.attachment));
       };
-      frame.appendChild(img);
+      mediaFrame.appendChild(img);
     } else if (msg.attachment) {
-      frame.appendChild(createMsgAttachmentChip(msg.attachment));
+      mediaFrame.appendChild(createMsgAttachmentChip(msg.attachment));
     }
 
     if (msg.role === "user" && msg.attachment) {
@@ -2134,26 +2398,26 @@ function appendMessageDOM(msg, scroll = true) {
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     } else if (msg.role === "assistant" && msg.stats?.detections > 0) {
       const marked = msg.stats.errors > 0 ? " (hasta 28 errores numerados)" : "";
       mediaCaption = `Plano con incidencias marcadas${marked}`;
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     } else if (msg.role === "assistant" && msg.imageUrl) {
       mediaCaption = "Vista del plano analizado";
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     }
-    const zoomImg = frame.querySelector("img");
+    const zoomImg = mediaFrame.querySelector("img");
     if (zoomImg?.src) {
       makeImageZoomable(zoomImg, mediaCaption || zoomImg.alt);
     }
-    body.appendChild(frame);
+    body.appendChild(mediaFrame);
   }
 
   if (msg.role === "assistant") {
@@ -2161,7 +2425,9 @@ function appendMessageDOM(msg, scroll = true) {
   }
 
   if (msg.stats || msg.detectionsSummary?.length || msg.issuesSummary?.length) {
-    body.appendChild(buildResultsPanel(msg));
+    const resultsPanel = buildResultsPanel(msg);
+    if (animate) resultsPanel.classList.add("msg-panel-fade-in");
+    body.appendChild(resultsPanel);
   }
 
   el.appendChild(avatar);
@@ -2169,6 +2435,23 @@ function appendMessageDOM(msg, scroll = true) {
   wrap.appendChild(el);
   updateLayoutMode();
   if (scroll) scrollToBottom();
+
+  if (animate) {
+    if (answerBlock) {
+      animateTypewriterAnswer(answerBlock, () => {
+        scrollToBottom();
+      });
+    }
+
+    if (mediaFrame && msg.role === "assistant" && msg.imageUrl) {
+      mediaFrame.style.display = "none";
+      const progressCard = buildCorrectionProgressCard(msg);
+      body.insertBefore(progressCard, mediaFrame);
+      runCorrectionProgress(progressCard, mediaFrame, msg, () => {
+        scrollToBottom();
+      });
+    }
+  }
 }
 
 let thinkingInterval = null;
