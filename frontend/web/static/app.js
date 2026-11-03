@@ -1656,6 +1656,15 @@ function buildResultsPanel(msg) {
   }
   panel.appendChild(header);
 
+  // 1.1 VEREDICTO TÉCNICO EJECUTIVO (Integrado en la tarjeta para evitar efecto sándwich)
+  let verdictBlock = null;
+  if (msg.text && String(msg.text).trim()) {
+    verdictBlock = buildAssistantAnswerBlock(msg.text);
+    verdictBlock.classList.add("audit-verdict");
+    panel.appendChild(verdictBlock);
+    panel._verdictBlock = verdictBlock;
+  }
+
   // 2. RIBBON DE MÉTRICAS KPI (3 tarjetas limpias con tipografía tabular)
   if (msg.stats) {
     const kpis = document.createElement("div");
@@ -2405,42 +2414,15 @@ function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === 
     body.appendChild(meta);
   }
 
+  const hasResults = Boolean(
+    msg.role === "assistant" &&
+    (msg.stats || msg.detectionsSummary?.length || msg.issuesSummary?.length)
+  );
+
   let answerBlock = null;
-  if (msg.text) {
-    if (msg.role === "assistant") {
-      answerBlock = buildAssistantAnswerBlock(msg.text);
-      body.appendChild(answerBlock);
-    } else {
-      const block = document.createElement("div");
-      block.className = "msg-text";
-      msg.text.split("\n").forEach((line) => {
-        if (!line.trim()) return;
-        const p = document.createElement("p");
-        p.textContent = line;
-        block.appendChild(p);
-      });
-      body.appendChild(block);
-    }
-  }
-
-  if (msg.steps?.length) {
-    const box = document.createElement("div");
-    box.className = "msg-steps";
-    if (animate) box.classList.add("msg-panel-fade-in");
-    const title = document.createElement("p");
-    title.className = "msg-steps-title";
-    title.textContent = "Siguiente paso";
-    box.appendChild(title);
-    msg.steps.forEach((step, i) => {
-      const row = document.createElement("div");
-      row.className = "msg-step-row";
-      row.innerHTML = `<span class="msg-step-num">${i + 1}</span><code>${step}</code>`;
-      box.appendChild(row);
-    });
-    body.appendChild(box);
-  }
-
+  let resultsPanel = null;
   let mediaFrame = null;
+
   if (msg.attachment || msg.imageUrl) {
     mediaFrame = document.createElement("div");
     mediaFrame.className = msg.role === "user" ? "msg-media msg-media--thumb" : "msg-media";
@@ -2484,17 +2466,62 @@ function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === 
     if (zoomImg?.src) {
       makeImageZoomable(zoomImg, mediaCaption || zoomImg.alt);
     }
-    body.appendChild(mediaFrame);
+  }
+
+  // Si hay resultados de análisis, unificamos la interfaz sin efecto sándwich:
+  // 1) Plano visual arriba (con progreso 0%-100% y zoom táctil)
+  // 2) Tarjeta unificada abajo (Status + Dictamen/DXF -> Veredicto ejecutivo con mecanografiado -> KPIs -> Pestañas)
+  if (hasResults) {
+    if (mediaFrame) {
+      body.appendChild(mediaFrame);
+    }
+    resultsPanel = buildResultsPanel(msg);
+    answerBlock = resultsPanel._verdictBlock || null;
+    if (animate) resultsPanel.classList.add("msg-panel-fade-in");
+    body.appendChild(resultsPanel);
+  } else {
+    // Chat conversacional estándar
+    if (msg.text) {
+      if (msg.role === "assistant") {
+        answerBlock = buildAssistantAnswerBlock(msg.text);
+        body.appendChild(answerBlock);
+      } else {
+        const block = document.createElement("div");
+        block.className = "msg-text";
+        msg.text.split("\n").forEach((line) => {
+          if (!line.trim()) return;
+          const p = document.createElement("p");
+          p.textContent = line;
+          block.appendChild(p);
+        });
+        body.appendChild(block);
+      }
+    }
+
+    if (msg.steps?.length) {
+      const box = document.createElement("div");
+      box.className = "msg-steps";
+      if (animate) box.classList.add("msg-panel-fade-in");
+      const title = document.createElement("p");
+      title.className = "msg-steps-title";
+      title.textContent = "Siguiente paso";
+      box.appendChild(title);
+      msg.steps.forEach((step, i) => {
+        const row = document.createElement("div");
+        row.className = "msg-step-row";
+        row.innerHTML = `<span class="msg-step-num">${i + 1}</span><code>${step}</code>`;
+        box.appendChild(row);
+      });
+      body.appendChild(box);
+    }
+
+    if (mediaFrame) {
+      body.appendChild(mediaFrame);
+    }
   }
 
   if (msg.role === "assistant") {
     appendSourcesToBody(body, msg);
-  }
-
-  if (msg.stats || msg.detectionsSummary?.length || msg.issuesSummary?.length) {
-    const resultsPanel = buildResultsPanel(msg);
-    if (animate) resultsPanel.classList.add("msg-panel-fade-in");
-    body.appendChild(resultsPanel);
   }
 
   el.appendChild(avatar);

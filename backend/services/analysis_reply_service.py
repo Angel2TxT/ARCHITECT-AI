@@ -1,5 +1,7 @@
 """
 Texto ordenado para respuestas de análisis de plano (con LLM opcional).
+Sintetiza la conclusión en un veredicto técnico ejecutivo directo (estilo Apple),
+sin duplicar viñetas de hallazgos que ya se muestran en la tarjeta interactiva.
 """
 
 from __future__ import annotations
@@ -8,13 +10,13 @@ from services.llm_service import generate_reasoned_answer, llm_configured
 
 ANALYSIS_SYSTEM_PROMPT = """Eres el asistente de ARCHITECT al revisar un plano arquitectónico en planta.
 
-Reglas:
-1. Responde en español claro y directo. Conclusión primero, luego 3–6 viñetas con guion (- ).
-2. Usa SOLO los datos del análisis (conteos, incidencias, veredicto, hallazgos). No inventes medidas ni normas.
-3. Si hay errores/avisos, nómbralos de forma concreta (tipo + cantidad). Si todo OK, dilo sin relleno.
-4. Incluye 1 línea de siguiente paso práctico (qué revisar en el plano marcado).
-5. No pegues comandos de terminal, listados de biblioteca ni disclaimers largos.
-6. Máximo ~120 palabras.
+Tu misión es emitir un veredicto técnico ejecutivo, directo, sobrio y elegante (estilo Apple).
+
+Reglas ESTRICTAS:
+1. Longitud máxima: 1 a 2 oraciones breves (entre 30 y 45 palabras en total).
+2. NUNCA generes listas con viñetas (- o *), ni enumeraciones, ni títulos de secciones como "PRINCIPALES HALLAZGOS" o "Siguiente paso". El desglose completo de incidencias ya aparece en la tarjeta interactiva y en el plano marcado.
+3. Dictamen claro: indica si el plano aprueba o requiere adecuaciones normativas (mencionando municipio o reglamento si aplica) y señala el ajuste prioritario más crítico (por ejemplo, ancho de acceso o ventilación).
+4. Tono sobrio, profesional y de alta gama. Cero relleno, cero disclaimers, cero repetición de datos.
 """
 
 
@@ -47,9 +49,11 @@ def format_analysis_context_for_llm(data: dict) -> str:
     det_count = int((data.get("counts") or {}).get("detections") or 0)
     intent = data.get("analysis_intent") or {}
     verdict = data.get("verdict") or {}
+    juris = data.get("jurisdiction_title") or data.get("jurisdiction") or ""
     lines = [
-        "Resultado del análisis de plano ARCHITECT:",
+        "DATOS DEL ANÁLISIS DE PLANO:",
         f"- Enfoque: {intent.get('title') or 'Revisión'}",
+        f"- Jurisdicción: {juris}",
         f"- Detecciones: {det_count}",
         f"- Errores: {errors}",
         f"- Avisos: {warnings}",
@@ -57,17 +61,11 @@ def format_analysis_context_for_llm(data: dict) -> str:
     ]
     if verdict.get("detail"):
         lines.append(f"- Detalle: {verdict['detail']}")
-    for g in (data.get("issues_summary") or [])[:6]:
+    for g in (data.get("issues_summary") or [])[:3]:
         lines.append(
             f"- Incidencia: {g.get('label') or g.get('code')} "
-            f"({g.get('count', 1)}×) {(g.get('sample_message') or '')[:160]}"
+            f"({g.get('count', 1)}×) {(g.get('sample_message') or '')[:120]}"
         )
-    for d in (data.get("detections_summary") or [])[:6]:
-        lines.append(
-            f"- Elemento: {d.get('label') or d.get('class')}: {d.get('count')}"
-        )
-    for cf in (data.get("custom_findings") or [])[:4]:
-        lines.append(f"- Hallazgo ({cf.get('severity')}): {cf.get('message')}")
     return "\n".join(lines)
 
 
@@ -78,16 +76,32 @@ def _maybe_llm_polish(draft: str, data: dict) -> tuple[str, bool]:
         return draft, False
     ctx = format_analysis_context_for_llm(data)
     polished = generate_reasoned_answer(
-        f"Borrador interno (puedes mejorarlo, sin inventar datos):\n{draft}\n\n"
-        f"Datos del motor:\n{ctx}",
+        f"Borrador base:\n{draft}\n\n"
+        f"Datos del análisis:\n{ctx}",
         system_prompt=ANALYSIS_SYSTEM_PROMPT,
         user_instruction=(
-            "Redacta la respuesta final al usuario sobre este plano. "
-            "Si el borrador ya es correcto, solo ordénalo y aclara."
+            "Redacta un veredicto ejecutivo conciso de 1 a 2 oraciones (máximo 45 palabras). "
+            "PROHIBIDO usar viñetas, guiones, listas o títulos de secciones: "
+            "el usuario ya cuenta con la tarjeta interactiva y el plano marcado. "
+            "Solo da el veredicto general y el ajuste prioritario."
         ),
     )
-    if polished and len(polished) > 40:
-        return polished, True
+    if polished and len(polished) > 25:
+        # Filtro de seguridad anti-slop: remover viñetas o encabezados redundantes
+        clean_lines = []
+        for line in polished.splitlines():
+            s = line.strip()
+            if not s:
+                continue
+            if s.startswith(("-", "*", "•")) or (len(s) > 2 and s[:2] in ("1.", "2.", "3.", "4.")):
+                continue
+            if any(s.upper().startswith(pfx) for pfx in ("PRINCIPALES", "HALLAZGOS", "SIGUIENTE PASO", "OBSERVACIONES")):
+                continue
+            clean_lines.append(s)
+        cleaned = " ".join(clean_lines).strip()
+        if cleaned and len(cleaned) > 20:
+            return cleaned, True
+        return polished.strip(), True
     return draft, False
 
 
@@ -120,7 +134,6 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
     verdict = data.get("verdict") or {}
     issues = data.get("issues_summary") or []
     dets = data.get("detections_summary") or []
-    custom = data.get("custom_findings") or []
     steps: list[str] | None = None
 
     parts: list[str] = []
@@ -128,9 +141,6 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
     note = (data.get("conversion_note") or "").strip()
     if note:
         parts.append(note)
-
-    # No anteponemos auto_sum ("Escala automática...") al texto de conversación;
-    # se envía de forma estructurada en auto_calibration para que la UI lo muestre en su pestaña técnica.
 
     if list_measures and measures_report.get("text"):
         body = measures_report["text"].strip()
@@ -141,91 +151,50 @@ def compose_analysis_reply(data: dict) -> tuple[str, list[str] | None, bool]:
     if det_count == 0:
         if data.get("is_demo_model"):
             draft = (
-                "No pude reconocer puertas, ventanas ni muros en este plano.\n\n"
-                "- El modelo demo está pensado para dibujos simples, no para láminas reales.\n"
-                "- Prueba con una sola planta bien recortada (PNG/JPG nítido).\n"
-                "- Si tienes plan Starter o superior, usa el modelo entrenado desde Ajustes.\n\n"
-                "Sin detecciones no puedo dar un veredicto normativo confiable."
+                "No se reconocieron puertas, ventanas ni muros claros en este plano. "
+                "Para planos reales se sugiere subir un recorte nítido en planta o usar el modelo entrenado desde Ajustes."
             )
         else:
             draft = (
-                "No detecté elementos claros en el dibujo.\n\n"
-                "- Revisa que sea una planta en planta (no corte ni 3D).\n"
-                "- Sube un recorte de una sola planta, con buen contraste.\n"
-                "- En Ajustes puedes bajar un poco la confianza o desactivar "
-                "calibración automática.\n\n"
-                "Cuando haya detecciones, te marco incidencias sobre el plano."
+                "No se detectaron elementos claros en el dibujo. "
+                "Asegúrate de subir una vista en planta nítida y con buen contraste para realizar la auditoría."
             )
         text, used = _maybe_llm_polish(draft, data)
         return text, steps, used
 
+    juris = data.get("jurisdiction_title") or data.get("jurisdiction")
+    juris_bit = f" ({juris})" if juris else ""
+
     if conversational and verdict.get("headline"):
         lead = verdict["headline"].strip()
         detail = (verdict.get("detail") or "").strip()
-        parts.append(lead)
-        if detail:
-            parts.append(detail)
+        verdict_text = f"{lead}. {detail}" if detail and detail not in lead else lead
+        parts.append(verdict_text)
     elif errors == 0 and warnings == 0:
         parts.append(
-            f"En «{intent_title}» no encontré incidencias normativas pendientes."
-        )
-        parts.append(_detection_line(dets, det_count))
-    else:
-        juris = data.get("jurisdiction_title") or data.get("jurisdiction")
-        juris_bit = f" ({juris})" if juris else ""
-        parts.append(
-            f"Revisión «{intent_title}»{juris_bit}: "
-            f"{errors} error{'es' if errors != 1 else ''} y "
-            f"{warnings} aviso{'s' if warnings != 1 else ''}."
-        )
-
-    # Resumen de observaciones clave para el chat (sin duplicar el detalle exhaustivo de la tarjeta de resultados)
-    top_issues = [
-        f"{g.get('label') or g.get('code')} ({g.get('count', 1)}×)"
-        for g in (issues or [])[:3]
-    ]
-    if top_issues:
-        parts.append("Principales observaciones:\n" + "\n".join(f"- {t}" for t in top_issues))
-    elif errors or warnings:
-        parts.append(
-            "Revisa las marcas numeradas en el plano: ahí están las incidencias detectadas."
-        )
-
-    for cf in custom[:4]:
-        msg = (cf.get("message") or "").strip()
-        if not msg:
-            continue
-        if cf.get("severity") == "ok":
-            parts.append(f"- ✓ {msg}")
-        else:
-            parts.append(f"- {msg}")
-
-    tips = verdict.get("suggestions") or []
-    if tips:
-        parts.append("Siguiente paso:\n" + "\n".join(f"- {t}" for t in tips[:3]))
-    elif errors > 0:
-        parts.append(
-            "Siguiente paso:\n"
-            "- Corrige primero lo marcado en rojo en el plano y vuelve a analizar."
-        )
-    elif warnings > 0:
-        parts.append(
-            "Siguiente paso:\n"
-            "- Revisa los avisos; en algunos municipios pesan igual que un error."
+            f"El plano aprueba satisfactoriamente la revisión «{intent_title}»{juris_bit}. "
+            f"No se detectaron infracciones normativas en los {det_count} elementos analizados."
         )
     else:
-        parts.append(
-            "Siguiente paso:\n"
-            "- Confirma estructura, instalaciones y cortes en el proyecto completo "
-            "(esta revisión es solo en planta)."
+        status_phrase = (
+            "requiere adecuaciones normativas"
+            if errors > 0
+            else "presenta observaciones menores de habitabilidad"
         )
+        primary_fix = ""
+        if issues:
+            top = issues[0]
+            label = top.get("label") or top.get("code") or "dimensión"
+            sample = (top.get("sample_message") or "").strip()
+            if sample:
+                primary_fix = f" Ajuste principal: {label} ({sample})."
+            else:
+                primary_fix = f" Ajuste principal: {label}."
 
-    refs = data.get("knowledge_references") or []
-    if refs and not list_measures:
-        r0 = refs[0]
-        title = r0.get("doc_title") or "manual"
-        page = r0.get("page", "?")
-        parts.append(f"Referencia útil: «{title}» (pág. {page}).")
+        parts.append(
+            f"El plano {status_phrase}{juris_bit}: se registraron "
+            f"{errors} error{'es' if errors != 1 else ''} y {warnings} aviso{'s' if warnings != 1 else ''}.{primary_fix}"
+        )
 
     draft = "\n\n".join(p for p in parts if p and str(p).strip())
     text, used = _maybe_llm_polish(draft, data)
