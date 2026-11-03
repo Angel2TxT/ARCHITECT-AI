@@ -2129,9 +2129,11 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
     target._textRecords.forEach((rec) => {
       rec.node.nodeValue = "";
     });
+    target.style.transition = "opacity 0.22s ease, transform 0.22s ease";
     if (i > 0) {
       target.style.display = "none";
       target.style.opacity = "0";
+      target.style.transform = "translateY(5px)";
     }
   });
 
@@ -2144,12 +2146,20 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
   let charIdx = 0;
   let isCancelled = false;
 
+  const totalLength = (answerBlock.textContent || "").length;
+  // Calibración de ritmo para que la animación sea visible, fluida y elegante
+  const isShort = totalLength < 160;
+  const charsPerTick = isShort ? 1 : 2;
+  const tickInterval = isShort ? 24 : 26;
+  const pauseBetweenLines = 140;
+
   function finishInstantly() {
     if (isCancelled) return;
     isCancelled = true;
     lineTargets.forEach((target) => {
       target.style.display = "";
       target.style.opacity = "1";
+      target.style.transform = "none";
       target._textRecords?.forEach((rec) => {
         rec.node.nodeValue = rec.full;
       });
@@ -2171,6 +2181,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
     const currentTarget = lineTargets[targetIdx];
     currentTarget.style.display = "";
     currentTarget.style.opacity = "1";
+    currentTarget.style.transform = "translateY(0)";
     currentTarget.appendChild(cursor);
 
     const records = currentTarget._textRecords;
@@ -2180,16 +2191,12 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
       textRecIdx = 0;
       charIdx = 0;
       scrollToBottom();
-      setTimeout(stepLine, 60);
+      setTimeout(stepLine, pauseBetweenLines);
       return;
     }
 
     const currentRec = records[textRecIdx];
     const fullText = currentRec.full;
-
-    const isShort = (answerBlock.textContent || "").length < 140;
-    const charsPerTick = isShort ? 4 : 3;
-    const tickInterval = isShort ? 8 : 12;
 
     const chunk = Math.min(charsPerTick, fullText.length - charIdx);
     charIdx += chunk;
@@ -2204,7 +2211,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
       charIdx = 0;
     }
 
-    if (charIdx % 6 === 0) scrollToBottom();
+    if (charIdx % 3 === 0) scrollToBottom();
 
     setTimeout(stepLine, tickInterval);
   }
@@ -2305,7 +2312,7 @@ function runCorrectionProgress(progressCard, mediaFrame, msg, onDone) {
   progressCard.addEventListener("click", finishImmediately, { once: true });
 
   const startTime = performance.now();
-  const duration = 1600; // 1.6s
+  const duration = 2100; // 2.1s para lectura clara de las fases de calibración
 
   function loop(now) {
     if (isDone) return;
