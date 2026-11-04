@@ -878,6 +878,7 @@ async function newChat(showNotice = true) {
     $("#messages").innerHTML = "";
     setAttachment(null);
     updateLayoutMode();
+    initChatScrollListener();
     refreshWelcomeHero({ advance: true, animate: true });
     if (showNotice) showToast("Nueva sesión");
     return;
@@ -2116,7 +2117,7 @@ function getTextNodesWithFull(root) {
   return nodes;
 }
 
-function animateTypewriterAnswer(answerBlock, onComplete) {
+function animateTypewriterAnswer(answerBlock, onComplete, hasParentResults = false) {
   const lineTargets = [];
   Array.from(answerBlock.children).forEach((child) => {
     if (child.tagName === "UL" || child.tagName === "OL") {
@@ -2199,7 +2200,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
       targetIdx++;
       textRecIdx = 0;
       charIdx = 0;
-      scrollToBottom();
+      if (!userScrolledUp && !hasParentResults) scrollToBottom();
       setTimeout(stepLine, pauseBetweenLines);
       return;
     }
@@ -2220,7 +2221,7 @@ function animateTypewriterAnswer(answerBlock, onComplete) {
       charIdx = 0;
     }
 
-    if (charIdx % 3 === 0) scrollToBottom();
+    if (!userScrolledUp && !hasParentResults && charIdx % 8 === 0) scrollToBottom();
 
     setTimeout(stepLine, tickInterval);
   }
@@ -2528,13 +2529,23 @@ function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === 
   el.appendChild(body);
   wrap.appendChild(el);
   updateLayoutMode();
-  if (scroll) scrollToBottom();
+  initChatScrollListener();
+
+  if (scroll) {
+    if (msg.role === "assistant" && hasResults) {
+      // Para análisis de planos, centrar el plano y dictamen en pantalla en lugar de tirarlo al fondo ciego
+      scrollMessageIntoView(el, "smooth");
+    } else {
+      userScrolledUp = false;
+      scrollToBottom(true);
+    }
+  }
 
   if (animate) {
     if (answerBlock) {
       animateTypewriterAnswer(answerBlock, () => {
-        scrollToBottom();
-      });
+        if (!userScrolledUp && !hasResults) scrollToBottom();
+      }, hasResults);
     }
 
     if (mediaFrame && msg.role === "assistant" && msg.imageUrl) {
@@ -2542,7 +2553,7 @@ function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === 
       const progressCard = buildCorrectionProgressCard(msg);
       body.insertBefore(progressCard, mediaFrame);
       runCorrectionProgress(progressCard, mediaFrame, msg, () => {
-        scrollToBottom();
+        if (!userScrolledUp && !hasResults) scrollToBottom();
       });
     }
   }
@@ -2558,8 +2569,57 @@ function hideTyping() {
   $("#typingIndicator")?.remove();
 }
 
-function scrollToBottom() {
-  $("#chatArea").scrollTop = $("#chatArea").scrollHeight;
+let userScrolledUp = false;
+let chatScrollListenerAttached = false;
+
+function initChatScrollListener() {
+  if (chatScrollListenerAttached) return;
+  const area = $("#chatArea");
+  if (!area) return;
+  chatScrollListenerAttached = true;
+
+  area.addEventListener("scroll", () => {
+    const distanceFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    // Si el usuario sube más de 65px del fondo, desactivar auto-scroll para no estorbar su lectura
+    if (distanceFromBottom > 65) {
+      userScrolledUp = true;
+    } else {
+      userScrolledUp = false;
+    }
+  }, { passive: true });
+
+  // Si el usuario usa la rueda hacia arriba o touch, registrar de inmediato la intención de subir
+  area.addEventListener("wheel", (e) => {
+    if (e.deltaY < 0) {
+      userScrolledUp = true;
+    }
+  }, { passive: true });
+
+  area.addEventListener("touchmove", () => {
+    const distanceFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    if (distanceFromBottom > 40) {
+      userScrolledUp = true;
+    }
+  }, { passive: true });
+}
+
+function scrollToBottom(force = false) {
+  const area = $("#chatArea");
+  if (!area) return;
+  if (!force && userScrolledUp) return;
+  area.scrollTop = area.scrollHeight;
+}
+
+function scrollMessageIntoView(el, behavior = "smooth") {
+  const area = $("#chatArea");
+  if (!area || !el) return;
+  if (userScrolledUp) return;
+
+  const targetTop = Math.max(0, el.offsetTop - 18);
+  area.scrollTo({
+    top: targetTop,
+    behavior: behavior,
+  });
 }
 
 function formatFileSize(bytes) {

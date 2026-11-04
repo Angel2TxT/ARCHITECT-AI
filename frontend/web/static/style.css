@@ -474,18 +474,26 @@ body.sidebar-collapsed .sidebar-rail {
 
 body:not(.sidebar-collapsed) .main-content {
   margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w)) !important;
+  max-width: calc(100% - var(--sidebar-w)) !important;
 }
 
 body:not(.sidebar-collapsed) .composer-dock {
   left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w)) !important;
+  max-width: calc(100% - var(--sidebar-w)) !important;
 }
 
 body.sidebar-collapsed .main-content {
   margin-left: var(--sidebar-rail-w) !important;
+  width: calc(100% - var(--sidebar-rail-w)) !important;
+  max-width: calc(100% - var(--sidebar-rail-w)) !important;
 }
 
 body.sidebar-collapsed .composer-dock {
   left: var(--sidebar-rail-w) !important;
+  width: calc(100% - var(--sidebar-rail-w)) !important;
+  max-width: calc(100% - var(--sidebar-rail-w)) !important;
 }
 
 .btn-sidebar-toggle {
@@ -4790,8 +4798,22 @@ body.chat-active .chat-area {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  overflow-y: auto;
+  overflow-y: auto !important;
   overscroll-behavior: contain;
+}
+
+#chatArea::-webkit-scrollbar {
+  width: 6px;
+}
+#chatArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+#chatArea::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.28);
+  border-radius: 999px;
+}
+#chatArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
 }
 
 body.chat-active .main-content::before {
