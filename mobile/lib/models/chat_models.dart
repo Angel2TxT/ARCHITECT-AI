@@ -64,10 +64,20 @@ class MessageContent {
   final AnalysisCounts? stats;
   final bool hasImage;
 
-  /// True cuando el historial no trae `image_base64` pero hay `analysis_id`.
+  /// Determina si este contenido representa una tarjeta de auditoría/análisis de plano.
+  /// Los mensajes de chat conversacionales o preguntas frecuentes no son tarjetas de análisis.
+  bool get isAnalysisCard =>
+      verdict != null ||
+      (stats != null &&
+          (stats!.detections > 0 ||
+              stats!.errors > 0 ||
+              stats!.warnings > 0)) ||
+      (imageBase64 != null && imageBase64!.trim().isNotEmpty);
+
+  /// True cuando el mensaje es una tarjeta de análisis y necesita cargar la imagen anotada del caché/servidor.
   bool get needsAnnotatedImage {
     if (imageBase64 != null && imageBase64!.trim().isNotEmpty) return false;
-    return analysisId != null;
+    return isAnalysisCard && analysisId != null;
   }
 
   factory MessageContent.fromJson(dynamic json) {

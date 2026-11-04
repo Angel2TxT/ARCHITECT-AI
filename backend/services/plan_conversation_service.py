@@ -12,10 +12,8 @@ import re
 import unicodedata
 from typing import Any
 
-from core.measures_report import CLASS_LABELS_ES, build_measures_report
 from rules.catalog import ISSUE_LABELS
 from rules.engine import Detection
-from services.feedback_service import dict_to_detection
 from services.llm_service import generate_reasoned_answer, llm_configured, llm_status
 
 PLAN_CONVERSATION_SYSTEM_PROMPT = """Eres el arquitecto técnico e inspector principal de ARCHITECT.
@@ -47,7 +45,7 @@ def _normalize(s: str) -> str:
 
 
 def is_measure_request(text: str) -> bool:
-    """Detecta si el mensaje del usuario pide medidas o dimensiones del plano."""
+    """Detecta si el mensaje del usuario pide medidas o dimensiones."""
     q = _normalize(text)
     return bool(
         re.search(
@@ -70,39 +68,90 @@ def is_plan_context_query(text: str) -> bool:
     if not q:
         return False
 
-    # 1. Petición explícita de medidas o dimensiones
+    # 1. Petición explícita o deíctica de medidas del plano analizado:
+    # "dame las medidas", "medidas del plano", "¿cuánto mide la cocina?", "¿cuánto mide la puerta de acceso?"
+    # PERO se descarta si es pregunta normativa/estándar general ("medida mínima según reglamento", "altura estándar")
+    is_general_normative = bool(
+        re.search(
+            r"\b(minima|minimas|minimo|minimos|maxima|maximas|maximo|maximos|"
+            r"estandar|estandares|recomendad[ao]s?|segun\s+(la\s+)?norma|"
+            r"segun\s+(el\s+)?reglamento|por\s+norma|reglamentari[ao]s?|"
+            r"debe\s+tener|deberia\s+tener|cuanto\s+debe|que\s+exige)\b",
+            q,
+        )
+    )
+
+    has_explicit_plan_ref = bool(
+        re.search(
+            r"\b(este\s+plano|mi\s+plano|el\s+plano|del\s+plano|en\s+el\s+plano|"
+            r"al\s+plano|que\s+subi|el\s+que\s+subi|archivo\s+adjunto|imagen\s+adjunta|"
+            r"este\s+croquis|este\s+dibujo|en\s+este\s+diseno|en\s+mi\s+diseno|"
+            r"en\s+mi\s+archivo|este\s+cuarto|esta\s+recamara|este\s+bano|esta\s+cocina|"
+            r"esta\s+puerta|esta\s+ventana|en\s+este\s+espacio|en\s+esta\s+zona|aqui|ahi)\b",
+            q,
+        )
+    )
+
     if is_measure_request(q):
-        return True
+        if is_general_normative and not has_explicit_plan_ref:
+            return False
+        # Si pide directamente "dame las medidas" o referencia su plano o elementos del mismo
+        if has_explicit_plan_ref or re.search(
+            r"\b(dame\s+las\s+medidas|pasa(me)?\s+las\s+medidas|cuales\s+son\s+las\s+medidas|"
+            r"que\s+medidas\s+tiene|resumen\s+de\s+medidas|tabla\s+de\s+medidas|"
+            r"todas\s+las\s+medidas|lista\s+de\s+medidas|cuanto\s+mide\s+(la|el|cada)|"
+            r"dimensiones\s+y\s+area|superficie\s+total|cotas\s+de\s+las?)\b",
+            q,
+        ):
+            return True
 
-    # 2. Referencia explícita al plano, documento, imagen o archivo previo
-    explicit_plan_refs = (
-        r"\b(plano|planos|croquis|dibujo|diseno|archivo|documento|imagen|foto|"
-        r"adjunto|subi|subido|analisis|dictamen)\b"
+    # 2. Descartar consultas conceptuales, saludos o preguntas teóricas generales
+    general_patterns = bool(
+        re.search(
+            r"\b(que\s+es|que\s+significa|que\s+diferencia|diferencia\s+entre|"
+            r"definicion\s+de|concepto\s+de|como\s+se\s+calcula|como\s+se\s+disena|"
+            r"cuales\s+son\s+las\s+normas|cual\s+es\s+la\s+norma|cuanto\s+tiempo\s+tarda|"
+            r"que\s+tipo\s+de|a\s+que\s+profundidad|como\s+tramitar|requisitos\s+para|"
+            r"que\s+permiso|costo\s+de|precio\s+de|presupuesto\s+de|tiempo\s+de\s+fraguado|"
+            r"concreto|cemento|varilla|ladrillo|block|mortero|pintura|impermeabilizante|"
+            r"hola|buenos\s+dias|buenas\s+tardes|buenas\s+noches|gracias|adios)\b",
+            q,
+        )
     )
-    if re.search(explicit_plan_refs, q):
-        return True
-
-    # Si es una pregunta teórica, conceptual o normativa general sin referencia deíctica
-    theoretical_patterns = (
-        r"\b(que\s+es|que\s+significa|que\s+diferencia\s+existe|diferencia\s+entre|"
-        r"definicion\s+de|concepto\s+de|como\s+se\s+calcula|como\s+se\s+disena|"
-        r"cuales\s+son\s+las\s+normas|cual\s+es\s+la\s+norma|cuanto\s+tiempo\s+tarda|"
-        r"que\s+tipo\s+de|a\s+que\s+profundidad)\b"
-    )
-    if re.search(theoretical_patterns, q) and not re.search(r"\b(este|esta|estos|estas|mi|anterior|adjunto)\b", q):
+    if general_patterns and not has_explicit_plan_ref:
         return False
 
-    # 3. Referencia a elementos específicos del plano contextual (deícticos o espacios)
-    plan_elements = (
-        r"\b(este\s+espacio|en\s+esa\s+zona|aqui|ahi|este\s+cuarto|"
-        r"esta\s+habitacion|este\s+bano|esta\s+cocina|este\s+acceso|"
-        r"la\s+cocina|el\s+bano|la\s+recamara|la\s+sala|el\s+comedor|el\s+pasillo|"
-        r"la\s+puerta\s+principal|las\s+puertas|las\s+ventanas|"
-        r"la\s+distribucion|la\s+habitabilidad|las\s+incidencias|las\s+observaciones|"
-        r"los\s+errores|los\s+avisos|como\s+lo\s+soluciono|como\s+lo\s+corrijo|"
-        r"puedo\s+mover|puedo\s+quitar|puedo\s+ampliar|cabe\s+un|cabe\s+una)\b"
+    # 3. Referencias a auditoría, incidencias, errores o feedback de distribución
+    audit_refs = bool(
+        re.search(
+            r"\b((los|que|cuales|hay|mis)\s+errores|(las|que|cuales|hay|mis)\s+incidencias|"
+            r"(las|que|cuales|hay|mis)\s+observaciones|(los|que|cuales|hay|mis)\s+avisos|"
+            r"errores\s+normativos|el\s+analisis|el\s+dictamen|la\s+auditoria|"
+            r"por\s+que\s+no\s+cumple|por\s+que\s+fallo|como\s+lo\s+soluciono|"
+            r"como\s+lo\s+corrijo|como\s+corregir|como\s+arreglar|"
+            r"(esta\s+bien|como\s+ves|que\s+opinas(\s+de)?)\s+la\s+distribucion)\b",
+            q,
+        )
     )
-    return bool(re.search(plan_elements, q))
+    if audit_refs:
+        return True
+
+    # 4. Modificaciones o consultas de distribución/habitabilidad con referencia al plano
+    if has_explicit_plan_ref:
+        action_on_element = bool(
+            re.search(
+                r"\b(puedo\s+mover|puedo\s+quitar|puedo\s+ampliar|cabe\s+un|cabe\s+una|"
+                r"cumple|no\s+cumple|esta\s+bien|que\s+opinas|como\s+lo\s+ves|"
+                r"distribucion|habitabilidad|puerta|ventana|bano|cocina|sala|recamara|pasillo|"
+                r"error|errores|aviso|avisos|incidencia|incidencias|observacion|observaciones|"
+                r"encontraste|revisaste|analizaste|articulo\s+\d+)\b",
+                q,
+            )
+        )
+        if action_on_element:
+            return True
+
+    return False
 
 
 def format_plan_context(analysis: Any) -> tuple[str, dict]:
@@ -114,6 +163,9 @@ def format_plan_context(analysis: Any) -> tuple[str, dict]:
     counts_raw = getattr(analysis, "counts_json", None) or {}
     ppm = float(getattr(analysis, "pixels_per_meter", 0.0) or 100.0)
     filename = getattr(analysis, "original_filename", "plano")
+
+    from services.feedback_service import dict_to_detection
+    from core.measures_report import build_measures_report
 
     detections: list[Detection] = []
     for d in detections_raw:

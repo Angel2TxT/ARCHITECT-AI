@@ -466,9 +466,7 @@ class _AssistantBubbleState extends State<_AssistantBubble> {
     final annotatedImage = _annotatedImage;
     final analysisId = content.analysisId;
 
-    final hasAnalysis = analysisId != null ||
-        (content.stats != null && content.stats!.detections > 0) ||
-        (annotatedImage != null && annotatedImage.isNotEmpty);
+    final hasAnalysis = content.isAnalysisCard;
 
     final isNewUnseen = widget.isLatest &&
         !ChatMessageBubble.isAnimated(widget.message.id);

@@ -108,7 +108,7 @@ async def ask_construction(
 
     is_plan_query = False
     if target_analysis:
-        is_plan_query = is_plan_context_query(q) or is_measure_request(q)
+        is_plan_query = is_plan_context_query(q)
 
     if target_analysis and is_plan_query:
         recent_msgs: list[dict] = []
