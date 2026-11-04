@@ -158,7 +158,7 @@ class HomeProjectService {
         return _projectFrom(map);
       }
       // Si solo devolvió el apartado, recargar proyecto.
-      return getProject(projectId);
+      return await getProject(projectId);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
@@ -290,7 +290,7 @@ class HomeProjectService {
         '$_base/$projectId/sections/$sectionId/comments/$commentId',
       );
       final map = _map(response.data);
-      if (map.isEmpty) return getProject(projectId);
+      if (map.isEmpty) return await getProject(projectId);
       return _projectFrom(map);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
@@ -468,7 +468,7 @@ class HomeProjectService {
         '$_base/$projectId/sections/$sectionId',
       );
       final map = _map(response.data);
-      if (map.isEmpty) return getProject(projectId);
+      if (map.isEmpty) return await getProject(projectId);
       return _projectFrom(map);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
@@ -509,7 +509,7 @@ class HomeProjectService {
         '$_base/$projectId/sections/$sectionId/slots/$slotKey',
       );
       final map = _map(response.data);
-      if (map.isEmpty) return getProject(projectId);
+      if (map.isEmpty) return await getProject(projectId);
       return _projectFrom(map);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);

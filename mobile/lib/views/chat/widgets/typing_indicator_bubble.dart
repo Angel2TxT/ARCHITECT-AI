@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Burbuja del asistente con estado de pensamiento animado (estilo Apple monocromático).
@@ -11,6 +12,15 @@ class TypingIndicatorBubble extends StatefulWidget {
 class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  Timer? _stepTimer;
+  int _stepIndex = 0;
+
+  static const List<String> _thinkingSteps = [
+    'Pensando…',
+    'Consultando normativas y habitabilidad…',
+    'Analizando proporciones métricas y vanos…',
+    'Sintetizando veredicto técnico…',
+  ];
 
   @override
   void initState() {
@@ -19,10 +29,19 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat();
+
+    _stepTimer = Timer.periodic(const Duration(milliseconds: 2300), (_) {
+      if (mounted) {
+        setState(() {
+          _stepIndex = (_stepIndex + 1) % _thinkingSteps.length;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _stepTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -87,13 +106,29 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
               },
             ),
             const SizedBox(width: 9),
-            Text(
-              'Pensando…',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
-                letterSpacing: 0.1,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.15),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: Text(
+                _thinkingSteps[_stepIndex],
+                key: ValueKey<int>(_stepIndex),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                  letterSpacing: 0.1,
+                ),
               ),
             ),
             const SizedBox(width: 8),

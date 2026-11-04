@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:movil_architect/core/network/api_client.dart';
@@ -198,6 +199,32 @@ class MobileApiService {
       );
 
       return AnalysisResult.fromJson(response.data ?? {});
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  /// Descarga el dictamen técnico en PDF de un análisis.
+  Future<Uint8List> downloadDossierPdf(int analysisId) async {
+    try {
+      final response = await _apiClient.dio.get<List<int>>(
+        '/api/analyses//dossier.pdf',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data ?? <int>[]);
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  /// Exporta el plano vectorial CAD en formato DXF.
+  Future<Uint8List> downloadDxf(int analysisId) async {
+    try {
+      final response = await _apiClient.dio.get<List<int>>(
+        '/api/analyses//export.dxf',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data ?? <int>[]);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }

@@ -101,7 +101,11 @@ class ChatMessagesList extends StatelessWidget {
 
     for (var i = 0; i < messages.length; i++) {
       if (index == offset) {
-        return ChatMessageBubble(message: messages[i]);
+        final isLatest = i == messages.length - 1;
+        return ChatMessageBubble(
+          message: messages[i],
+          isLatest: isLatest,
+        );
       }
       offset++;
     }
