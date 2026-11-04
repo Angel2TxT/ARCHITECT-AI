@@ -24,12 +24,16 @@ def detection_to_dict(det: Detection, idx: int) -> dict:
     d = {
         "idx": idx,
         "class": det.class_name,
-        "label": CLASS_LABELS_ES.get(det.class_name, det.class_name),
+        "label": getattr(det, "label", None) or CLASS_LABELS_ES.get(det.class_name, det.class_name),
         "confidence": round(det.confidence, 3),
         "width_px": round(det.width_px, 1),
         "height_px": round(det.height_px, 1),
         "bbox": [round(x, 1) for x in det.bbox_xyxy],
     }
+    if getattr(det, "real_dimensions_m", None):
+        d["real_dimensions_m"] = list(det.real_dimensions_m)
+    if getattr(det, "real_area_m2", None):
+        d["real_area_m2"] = round(float(det.real_area_m2), 2)
     if det.polygon:
         d["polygon"] = [[round(pt[0], 1), round(pt[1], 1)] for pt in det.polygon]
     return d
@@ -46,11 +50,15 @@ def dict_to_detection(item: dict) -> Detection:
     poly = None
     if item.get("polygon") and isinstance(item["polygon"], list) and len(item["polygon"]) >= 3:
         poly = [(float(pt[0]), float(pt[1])) for pt in item["polygon"]]
+    dims = tuple(item["real_dimensions_m"]) if item.get("real_dimensions_m") else None
     return Detection(
         class_name=item["class"],
         bbox_xyxy=tuple(float(v) for v in bbox),
         confidence=float(item.get("confidence", 1.0)),
         polygon=poly,
+        label=item.get("label"),
+        real_dimensions_m=dims,
+        real_area_m2=float(item["real_area_m2"]) if item.get("real_area_m2") is not None else None,
     )
 
 

@@ -878,6 +878,7 @@ async function newChat(showNotice = true) {
     $("#messages").innerHTML = "";
     setAttachment(null);
     updateLayoutMode();
+    initChatScrollListener();
     refreshWelcomeHero({ advance: true, animate: true });
     if (showNotice) showToast("Nueva sesión");
     return;
@@ -1582,23 +1583,88 @@ function buildResultsPanel(msg) {
     const actions = document.createElement("div");
     actions.className = "audit-actions";
 
+    const token = typeof PlanoAuth !== "undefined" ? PlanoAuth.getToken() : null;
+    const pdfUrl = `/api/analyses/${analysisId}/dossier.pdf` + (token ? `?token=${encodeURIComponent(token)}` : "");
+    const dxfUrl = `/api/analyses/${analysisId}/export.dxf` + (token ? `?token=${encodeURIComponent(token)}` : "");
+
     const btnPdf = document.createElement("a");
-    btnPdf.href = `/api/analyses/${analysisId}/dossier.pdf`;
+    btnPdf.href = pdfUrl;
     btnPdf.target = "_blank";
     btnPdf.className = "audit-action-btn";
     btnPdf.innerHTML = `<span class="material-symbols-outlined text-[15px]">picture_as_pdf</span><span>Dictamen PDF</span>`;
+    btnPdf.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        btnPdf.classList.add("is-busy");
+        showToast("Generando dictamen técnico oficial…");
+        const res = await (typeof PlanoAuth !== "undefined" ? PlanoAuth.apiFetch(pdfUrl) : fetch(pdfUrl));
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "No se pudo generar el dictamen PDF");
+        }
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `Dictamen_ARCHITECT_${String(analysisId).padStart(6, "0")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        showToast("Dictamen PDF descargado con éxito");
+      } catch (err) {
+        showToast(err.message || "Error al descargar dictamen PDF");
+      } finally {
+        btnPdf.classList.remove("is-busy");
+      }
+    };
     actions.appendChild(btnPdf);
 
     const btnDxf = document.createElement("a");
-    btnDxf.href = `/api/analyses/${analysisId}/export.dxf`;
+    btnDxf.href = dxfUrl;
     btnDxf.download = `plano_${analysisId}.dxf`;
     btnDxf.className = "audit-action-btn";
     btnDxf.innerHTML = `<span class="material-symbols-outlined text-[15px]">architecture</span><span>Exportar DXF</span>`;
+    btnDxf.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        btnDxf.classList.add("is-busy");
+        showToast("Exportando archivo vectorial CAD DXF…");
+        const res = await (typeof PlanoAuth !== "undefined" ? PlanoAuth.apiFetch(dxfUrl) : fetch(dxfUrl));
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "No se pudo exportar el DXF");
+        }
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `Plano_CAD_${String(analysisId).padStart(6, "0")}.dxf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        showToast("Plano CAD DXF descargado con éxito");
+      } catch (err) {
+        showToast(err.message || "Error al exportar plano CAD");
+      } finally {
+        btnDxf.classList.remove("is-busy");
+      }
+    };
     actions.appendChild(btnDxf);
 
     header.appendChild(actions);
   }
   panel.appendChild(header);
+
+  // 1.1 VEREDICTO TÉCNICO EJECUTIVO (Integrado en la tarjeta para evitar efecto sándwich)
+  let verdictBlock = null;
+  if (msg.text && String(msg.text).trim()) {
+    verdictBlock = buildAssistantAnswerBlock(msg.text);
+    verdictBlock.classList.add("audit-verdict");
+    panel.appendChild(verdictBlock);
+    panel._verdictBlock = verdictBlock;
+  }
 
   // 2. RIBBON DE MÉTRICAS KPI (3 tarjetas limpias con tipografía tabular)
   if (msg.stats) {
@@ -2041,7 +2107,278 @@ function setupImageViewer() {
   });
 }
 
-function appendMessageDOM(msg, scroll = true) {
+function getTextNodesWithFull(root) {
+  const nodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  let textNode;
+  while ((textNode = walker.nextNode())) {
+    nodes.push({ node: textNode, full: textNode.nodeValue || "" });
+  }
+  return nodes;
+}
+
+function animateTypewriterAnswer(answerBlock, onComplete, hasParentResults = false) {
+  const lineTargets = [];
+  Array.from(answerBlock.children).forEach((child) => {
+    if (child.tagName === "UL" || child.tagName === "OL") {
+      Array.from(child.children).forEach((li) => {
+        if (li.tagName === "LI") lineTargets.push(li);
+      });
+    } else {
+      lineTargets.push(child);
+    }
+  });
+
+  if (!lineTargets.length) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  lineTargets.forEach((target, i) => {
+    target._textRecords = getTextNodesWithFull(target);
+    target._textRecords.forEach((rec) => {
+      rec.node.nodeValue = "";
+    });
+    target.style.transition = "opacity 0.22s ease, transform 0.22s ease";
+    if (i > 0) {
+      target.style.display = "none";
+      target.style.opacity = "0";
+      target.style.transform = "translateY(5px)";
+    }
+  });
+
+  const cursor = document.createElement("span");
+  cursor.className = "typewriter-cursor";
+  cursor.textContent = "│";
+
+  let targetIdx = 0;
+  let textRecIdx = 0;
+  let charIdx = 0;
+  let isCancelled = false;
+
+  const totalLength = (answerBlock.textContent || "").length;
+  // Calibración de ritmo para que la animación sea visible, fluida y elegante
+  const isShort = totalLength < 160;
+  const charsPerTick = isShort ? 1 : 2;
+  const tickInterval = isShort ? 24 : 26;
+  const pauseBetweenLines = 140;
+
+  function finishInstantly() {
+    if (isCancelled) return;
+    isCancelled = true;
+    lineTargets.forEach((target) => {
+      target.style.display = "";
+      target.style.opacity = "1";
+      target.style.transform = "none";
+      target._textRecords?.forEach((rec) => {
+        rec.node.nodeValue = rec.full;
+      });
+    });
+    cursor.remove();
+    if (onComplete) onComplete();
+  }
+
+  answerBlock.addEventListener("click", finishInstantly, { once: true });
+
+  function stepLine() {
+    if (isCancelled) return;
+    if (targetIdx >= lineTargets.length) {
+      cursor.remove();
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const currentTarget = lineTargets[targetIdx];
+    currentTarget.style.display = "";
+    currentTarget.style.opacity = "1";
+    currentTarget.style.transform = "translateY(0)";
+    currentTarget.appendChild(cursor);
+
+    const records = currentTarget._textRecords;
+    if (!records || textRecIdx >= records.length) {
+      cursor.remove();
+      targetIdx++;
+      textRecIdx = 0;
+      charIdx = 0;
+      if (!userScrolledUp && !hasParentResults) scrollToBottom();
+      setTimeout(stepLine, pauseBetweenLines);
+      return;
+    }
+
+    const currentRec = records[textRecIdx];
+    const fullText = currentRec.full;
+
+    const chunk = Math.min(charsPerTick, fullText.length - charIdx);
+    charIdx += chunk;
+    currentRec.node.nodeValue = fullText.slice(0, charIdx);
+
+    if (cursor.parentElement !== currentTarget) {
+      currentTarget.appendChild(cursor);
+    }
+
+    if (charIdx >= fullText.length) {
+      textRecIdx++;
+      charIdx = 0;
+    }
+
+    if (!userScrolledUp && !hasParentResults && charIdx % 8 === 0) scrollToBottom();
+
+    setTimeout(stepLine, tickInterval);
+  }
+
+  stepLine();
+}
+
+function buildCorrectionProgressCard(msg) {
+  const card = document.createElement("div");
+  card.className = "correction-progress-card";
+  card.id = "correctionProgressCard";
+
+  const detCount = msg.stats?.detections || (msg.detectionsList ? msg.detectionsList.length : 8);
+  const errCount = msg.stats?.errors ?? 0;
+
+  card.innerHTML = `
+    <div class="cpc-header">
+      <div class="cpc-badge">
+        <span class="cpc-pulse-dot"></span>
+        <span>MOTOR DE AUDITORÍA GRÁFICA</span>
+      </div>
+      <div class="cpc-counter">
+        <span class="cpc-val" id="cpcPercent">0%</span>
+      </div>
+    </div>
+
+    <div class="cpc-body">
+      <div class="cpc-icon-scan">
+        <svg class="cpc-scan-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+          <circle cx="12" cy="12" r="3"/>
+          <line x1="12" y1="2" x2="12" y2="6"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+        </svg>
+      </div>
+      <div class="cpc-info">
+        <div class="cpc-title">Generando plano con correcciones y cotas</div>
+        <div class="cpc-sub" id="cpcStepText">Iniciando verificación métrica...</div>
+      </div>
+    </div>
+
+    <div class="cpc-progress-track">
+      <div class="cpc-progress-fill" id="cpcFill"></div>
+      <div class="cpc-progress-glow" id="cpcGlow"></div>
+    </div>
+
+    <div class="cpc-metrics-row">
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Elementos:</span>
+        <span class="cpc-m-val" id="cpcValDet">${detCount} vanos</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Tolerancia:</span>
+        <span class="cpc-m-val">±1.5 cm</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Incidencias:</span>
+        <span class="cpc-m-val ${errCount > 0 ? "cpc-m-val--alert" : ""}" id="cpcValErr">${errCount > 0 ? `${errCount} a corregir` : "Conforme"}</span>
+      </div>
+      <div class="cpc-metric-chip">
+        <span class="cpc-m-lbl">Normativa:</span>
+        <span class="cpc-m-val">Chiapas / Habitabilidad</span>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+function runCorrectionProgress(progressCard, mediaFrame, msg, onDone) {
+  const pctEl = progressCard.querySelector("#cpcPercent");
+  const fillEl = progressCard.querySelector("#cpcFill");
+  const glowEl = progressCard.querySelector("#cpcGlow");
+  const stepEl = progressCard.querySelector("#cpcStepText");
+  const detEl = progressCard.querySelector("#cpcValDet");
+  const errEl = progressCard.querySelector("#cpcValErr");
+
+  const detCount = msg.stats?.detections || (msg.detectionsList ? msg.detectionsList.length : 8);
+  const errCount = msg.stats?.errors ?? 0;
+
+  let isDone = false;
+  function finishImmediately() {
+    if (isDone) return;
+    isDone = true;
+    if (pctEl) pctEl.textContent = "100%";
+    if (fillEl) fillEl.style.width = "100%";
+    if (stepEl) stepEl.textContent = "✓ Plano corregido y calibrado con éxito";
+    progressCard.classList.add("cpc-done");
+    setTimeout(() => {
+      progressCard.remove();
+      mediaFrame.style.display = "";
+      mediaFrame.classList.add("msg-media-revealed");
+      scrollToBottom();
+      if (onDone) onDone();
+    }, 180);
+  }
+
+  progressCard.addEventListener("click", finishImmediately, { once: true });
+
+  const startTime = performance.now();
+  const duration = 2100; // 2.1s para lectura clara de las fases de calibración
+
+  function loop(now) {
+    if (isDone) return;
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const pct = Math.floor(ease * 100);
+
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+    if (glowEl) glowEl.style.left = `${pct}%`;
+
+    if (pct < 25) {
+      if (stepEl) stepEl.textContent = "Calibrando escala métrica y detección de vanos…";
+      if (detEl) detEl.textContent = "Detectando…";
+      if (errEl) errEl.textContent = "Auditando…";
+    } else if (pct < 55) {
+      if (stepEl) stepEl.textContent = "Verificando normativas de habitabilidad y tolerancias…";
+      if (detEl) detEl.textContent = `${Math.min(detCount, Math.floor(detCount * (pct / 55)))} elementos`;
+      if (errEl) errEl.textContent = "Evaluando…";
+    } else if (pct < 85) {
+      if (stepEl) stepEl.textContent = "Calculando cotas corregidas y anotaciones técnicas…";
+      if (detEl) detEl.textContent = `${detCount} elementos`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} marcadas` : "Sin fallas";
+    } else if (pct < 100) {
+      if (stepEl) stepEl.textContent = "Renderizando plano técnico de alta resolución…";
+      if (detEl) detEl.textContent = `${detCount} elementos`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} corregidas` : "100% conforme";
+    } else {
+      isDone = true;
+      if (pctEl) pctEl.textContent = "100%";
+      if (fillEl) fillEl.style.width = "100%";
+      if (stepEl) stepEl.textContent = "✓ Plano corregido y calibrado con éxito";
+      if (detEl) detEl.textContent = `${detCount} verificados`;
+      if (errEl) errEl.textContent = errCount > 0 ? `${errCount} corregidas` : "Aprobado";
+
+      setTimeout(() => {
+        progressCard.classList.add("cpc-done");
+        setTimeout(() => {
+          progressCard.remove();
+          mediaFrame.style.display = "";
+          mediaFrame.classList.add("msg-media-revealed");
+          scrollToBottom();
+          if (onDone) onDone();
+        }, 260);
+      }, 250);
+      return;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function appendMessageDOM(msg, scroll = true, animate = (scroll && msg.role === "assistant")) {
   const wrap = $("#messages");
   const el = document.createElement("div");
   el.className = `msg ${msg.role}`;
@@ -2078,41 +2415,18 @@ function appendMessageDOM(msg, scroll = true) {
     body.appendChild(meta);
   }
 
-  if (msg.text) {
-    if (msg.role === "assistant") {
-      body.appendChild(buildAssistantAnswerBlock(msg.text));
-    } else {
-      const block = document.createElement("div");
-      block.className = "msg-text";
-      msg.text.split("\n").forEach((line) => {
-        if (!line.trim()) return;
-        const p = document.createElement("p");
-        p.textContent = line;
-        block.appendChild(p);
-      });
-      body.appendChild(block);
-    }
-  }
+  const hasResults = Boolean(
+    msg.role === "assistant" &&
+    (msg.stats || msg.detectionsSummary?.length || msg.issuesSummary?.length)
+  );
 
-  if (msg.steps?.length) {
-    const box = document.createElement("div");
-    box.className = "msg-steps";
-    const title = document.createElement("p");
-    title.className = "msg-steps-title";
-    title.textContent = "Siguiente paso";
-    box.appendChild(title);
-    msg.steps.forEach((step, i) => {
-      const row = document.createElement("div");
-      row.className = "msg-step-row";
-      row.innerHTML = `<span class="msg-step-num">${i + 1}</span><code>${step}</code>`;
-      box.appendChild(row);
-    });
-    body.appendChild(box);
-  }
+  let answerBlock = null;
+  let resultsPanel = null;
+  let mediaFrame = null;
 
   if (msg.attachment || msg.imageUrl) {
-    const frame = document.createElement("div");
-    frame.className = msg.role === "user" ? "msg-media msg-media--thumb" : "msg-media";
+    mediaFrame = document.createElement("div");
+    mediaFrame.className = msg.role === "user" ? "msg-media msg-media--thumb" : "msg-media";
 
     let mediaCaption = "";
     if (msg.imageUrl) {
@@ -2122,11 +2436,11 @@ function appendMessageDOM(msg, scroll = true) {
       img.loading = "lazy";
       img.onerror = () => {
         img.remove();
-        if (msg.attachment) frame.appendChild(createMsgAttachmentChip(msg.attachment));
+        if (msg.attachment) mediaFrame.appendChild(createMsgAttachmentChip(msg.attachment));
       };
-      frame.appendChild(img);
+      mediaFrame.appendChild(img);
     } else if (msg.attachment) {
-      frame.appendChild(createMsgAttachmentChip(msg.attachment));
+      mediaFrame.appendChild(createMsgAttachmentChip(msg.attachment));
     }
 
     if (msg.role === "user" && msg.attachment) {
@@ -2134,49 +2448,178 @@ function appendMessageDOM(msg, scroll = true) {
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     } else if (msg.role === "assistant" && msg.stats?.detections > 0) {
       const marked = msg.stats.errors > 0 ? " (hasta 28 errores numerados)" : "";
       mediaCaption = `Plano con incidencias marcadas${marked}`;
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     } else if (msg.role === "assistant" && msg.imageUrl) {
       mediaCaption = "Vista del plano analizado";
       const cap = document.createElement("span");
       cap.className = "msg-media-caption";
       cap.textContent = mediaCaption;
-      frame.appendChild(cap);
+      mediaFrame.appendChild(cap);
     }
-    const zoomImg = frame.querySelector("img");
+    const zoomImg = mediaFrame.querySelector("img");
     if (zoomImg?.src) {
       makeImageZoomable(zoomImg, mediaCaption || zoomImg.alt);
     }
-    body.appendChild(frame);
+  }
+
+  // Si hay resultados de análisis, unificamos la interfaz sin efecto sándwich:
+  // 1) Plano visual arriba (con progreso 0%-100% y zoom táctil)
+  // 2) Tarjeta unificada abajo (Status + Dictamen/DXF -> Veredicto ejecutivo con mecanografiado -> KPIs -> Pestañas)
+  if (hasResults) {
+    if (mediaFrame) {
+      body.appendChild(mediaFrame);
+    }
+    resultsPanel = buildResultsPanel(msg);
+    answerBlock = resultsPanel._verdictBlock || null;
+    if (animate) resultsPanel.classList.add("msg-panel-fade-in");
+    body.appendChild(resultsPanel);
+  } else {
+    // Chat conversacional estándar
+    if (msg.text) {
+      if (msg.role === "assistant") {
+        answerBlock = buildAssistantAnswerBlock(msg.text);
+        body.appendChild(answerBlock);
+      } else {
+        const block = document.createElement("div");
+        block.className = "msg-text";
+        msg.text.split("\n").forEach((line) => {
+          if (!line.trim()) return;
+          const p = document.createElement("p");
+          p.textContent = line;
+          block.appendChild(p);
+        });
+        body.appendChild(block);
+      }
+    }
+
+    if (msg.steps?.length) {
+      const box = document.createElement("div");
+      box.className = "msg-steps";
+      if (animate) box.classList.add("msg-panel-fade-in");
+      const title = document.createElement("p");
+      title.className = "msg-steps-title";
+      title.textContent = "Siguiente paso";
+      box.appendChild(title);
+      msg.steps.forEach((step, i) => {
+        const row = document.createElement("div");
+        row.className = "msg-step-row";
+        row.innerHTML = `<span class="msg-step-num">${i + 1}</span><code>${step}</code>`;
+        box.appendChild(row);
+      });
+      body.appendChild(box);
+    }
+
+    if (mediaFrame) {
+      body.appendChild(mediaFrame);
+    }
   }
 
   if (msg.role === "assistant") {
     appendSourcesToBody(body, msg);
   }
 
-  if (msg.stats || msg.detectionsSummary?.length || msg.issuesSummary?.length) {
-    body.appendChild(buildResultsPanel(msg));
-  }
-
   el.appendChild(avatar);
   el.appendChild(body);
   wrap.appendChild(el);
   updateLayoutMode();
-  if (scroll) scrollToBottom();
+  initChatScrollListener();
+
+  if (scroll) {
+    if (msg.role === "assistant" && hasResults) {
+      // Para análisis de planos, centrar el plano y dictamen en pantalla en lugar de tirarlo al fondo ciego
+      scrollMessageIntoView(el, "smooth");
+    } else {
+      userScrolledUp = false;
+      scrollToBottom(true);
+    }
+  }
+
+  if (animate) {
+    if (answerBlock) {
+      animateTypewriterAnswer(answerBlock, () => {
+        if (!userScrolledUp && !hasResults) scrollToBottom();
+      }, hasResults);
+    }
+
+    if (mediaFrame && msg.role === "assistant" && msg.imageUrl) {
+      mediaFrame.style.display = "none";
+      const progressCard = buildCorrectionProgressCard(msg);
+      body.insertBefore(progressCard, mediaFrame);
+      runCorrectionProgress(progressCard, mediaFrame, msg, () => {
+        if (!userScrolledUp && !hasResults) scrollToBottom();
+      });
+    }
+  }
 }
 
+let thinkingInterval = null;
+
 function hideTyping() {
+  if (thinkingInterval) {
+    clearInterval(thinkingInterval);
+    thinkingInterval = null;
+  }
   $("#typingIndicator")?.remove();
 }
 
-function scrollToBottom() {
-  $("#chatArea").scrollTop = $("#chatArea").scrollHeight;
+let userScrolledUp = false;
+let chatScrollListenerAttached = false;
+
+function initChatScrollListener() {
+  if (chatScrollListenerAttached) return;
+  const area = $("#chatArea");
+  if (!area) return;
+  chatScrollListenerAttached = true;
+
+  area.addEventListener("scroll", () => {
+    const distanceFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    // Si el usuario sube más de 65px del fondo, desactivar auto-scroll para no estorbar su lectura
+    if (distanceFromBottom > 65) {
+      userScrolledUp = true;
+    } else {
+      userScrolledUp = false;
+    }
+  }, { passive: true });
+
+  // Si el usuario usa la rueda hacia arriba o touch, registrar de inmediato la intención de subir
+  area.addEventListener("wheel", (e) => {
+    if (e.deltaY < 0) {
+      userScrolledUp = true;
+    }
+  }, { passive: true });
+
+  area.addEventListener("touchmove", () => {
+    const distanceFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    if (distanceFromBottom > 40) {
+      userScrolledUp = true;
+    }
+  }, { passive: true });
+}
+
+function scrollToBottom(force = false) {
+  const area = $("#chatArea");
+  if (!area) return;
+  if (!force && userScrolledUp) return;
+  area.scrollTop = area.scrollHeight;
+}
+
+function scrollMessageIntoView(el, behavior = "smooth") {
+  const area = $("#chatArea");
+  if (!area || !el) return;
+  if (userScrolledUp) return;
+
+  const targetTop = Math.max(0, el.offsetTop - 18);
+  area.scrollTo({
+    top: targetTop,
+    behavior: behavior,
+  });
 }
 
 function formatFileSize(bytes) {
@@ -2418,7 +2861,33 @@ function appendThresholdsToBody(body, msg) {
   body.appendChild(sec);
 }
 
+function queryExplicitlyRequestsSources(text) {
+  if (!text) return false;
+  const t = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const keywords = [
+    "fuente", "fuentes", "referencia", "referencias", "bibliografia", "bibliografias",
+    "de donde salio", "de donde sacaste", "de donde obtuviste", "de donde proviene",
+    "en que manual", "en que norma", "en que reglamento", "en que libro",
+    "citame", "citas", "cita las", "citar", "manuales usados", "articulos citados",
+    "articulos usados", "fundamento", "base normativa", "base legal"
+  ];
+  return keywords.some((kw) => t.includes(kw));
+}
+
+function shouldShowSources(msg) {
+  if (!msg) return false;
+  if (msg.showSources === true) return true;
+  if (msg.showSources === false) return false;
+  if (msg.userPrompt && queryExplicitlyRequestsSources(msg.userPrompt)) {
+    return true;
+  }
+  return false;
+}
+
 function appendSourcesToBody(body, msg) {
+  // Solo se adjuntan fuentes si el usuario las solicitó expresamente
+  if (!shouldShowSources(msg)) return;
+
   appendThresholdsToBody(body, msg);
 
   const local = msg.localSources || [];
@@ -2562,9 +3031,12 @@ async function askConstructionQuestion(text, options = {}) {
     hideTyping();
     pendingAskRetry = null;
     updateConnectionBanner();
+    const userWantsSources = queryExplicitlyRequestsSources(text);
     const assistantMsg = {
       role: "assistant",
       text: data.text || "Sin respuesta.",
+      userPrompt: text,
+      showSources: Boolean(data.show_sources ?? userWantsSources),
       analysisId: data.analysis_id || c.lastAnalysisId || null,
       localSources: data.local_sources || [],
       webSources: (data.web_sources || []).map((w) => ({
@@ -2675,25 +3147,63 @@ async function withNetworkRetry(doFetch, { retries = 4, label = "la solicitud", 
   throw lastErr || new Error(`No se pudo completar ${label}`);
 }
 
+const THINKING_STEPS = [
+  "Pensando…",
+  "Consultando información…",
+  "Procesando consulta…",
+  "Preparando respuesta…"
+];
+
 function updateTypingStatus(text) {
-  const tip = $("#typingIndicator .typing-status");
+  const tip = document.getElementById("thinkingStatusText") || $("#typingIndicator .typing-status");
   if (tip) tip.textContent = text || "";
 }
 
 function showTyping() {
+  hideTyping();
   const wrap = $("#messages");
+  if (!wrap) return;
   const el = document.createElement("div");
-  el.className = "msg assistant";
+  el.className = "msg assistant msg--thinking";
   el.id = "typingIndicator";
   el.innerHTML = `
-    <div class="msg-avatar">IA</div>
+    <div class="msg-avatar msg-avatar--thinking" aria-label="ARCHITECT IA pensando">
+      <span class="thinking-sparkle">✦</span>
+    </div>
     <div class="msg-body">
-      <div class="typing"><span></span><span></span><span></span></div>
-      <p class="typing-status"></p>
+      <div class="thinking-card">
+        <div class="thinking-header">
+          <div class="thinking-pulse-wrap">
+            <span class="thinking-dot"></span>
+            <span class="thinking-ring"></span>
+          </div>
+          <span class="thinking-badge">ARCHITECT IA</span>
+          <span class="thinking-sep">•</span>
+          <span class="thinking-status typing-status" id="thinkingStatusText">Pensando…</span>
+        </div>
+        <div class="thinking-track">
+          <div class="thinking-beam"></div>
+        </div>
+      </div>
     </div>
   `;
   wrap.appendChild(el);
   scrollToBottom();
+
+  let stepIdx = 0;
+  thinkingInterval = setInterval(() => {
+    stepIdx = (stepIdx + 1) % THINKING_STEPS.length;
+    const txtEl = document.getElementById("thinkingStatusText");
+    if (txtEl) {
+      txtEl.style.opacity = "0.2";
+      txtEl.style.transform = "translateY(2px)";
+      setTimeout(() => {
+        txtEl.textContent = THINKING_STEPS[stepIdx];
+        txtEl.style.opacity = "1";
+        txtEl.style.transform = "translateY(0)";
+      }, 180);
+    }
+  }, 2400);
 }
 
 function removeAskRetryBanner() {

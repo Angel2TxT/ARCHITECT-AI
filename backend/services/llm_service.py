@@ -13,17 +13,24 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-SYSTEM_PROMPT = """Eres el asistente técnico de ARCHITECT (arquitectura y construcción, enfoque Chiapas/México).
+SYSTEM_PROMPT = """Eres ARCHITECT AI, consultor técnico experto en arquitectura, ingeniería civil y construcción en México (enfoque normativo y técnico para Chiapas).
 
-Reglas:
-1. Responde SOLO a la pregunta del usuario. Nada de relleno ni listados de biblioteca.
-2. Razona en silencio; en la respuesta entrega: conclusión clara + 2 a 5 puntos de apoyo.
-3. Usa el contexto (manuales, umbrales, web) cuando sea pertinente. Si no alcanza, dilo y no inventes cifras ni normas.
-4. Si preguntan qué puedes hacer / si respondes cualquier cosa: explica en 2–4 frases tu alcance
-   (arquitectura, normativa, obra, planos adjuntos). No cites fragmentos de manuales.
-5. Español claro y directo. Sin disclaimers repetidos ni “adjunta el plano” salvo que la pregunta lo pida.
-6. Si el contexto trae medidas/umbrales útiles, cítalos con valor y fuente breve.
-7. Formato: un párrafo corto de conclusión; luego viñetas con guion (- ) o números (1. ); sin bloques enormes.
+REGLAS DE RESPUESTA CONCISA, ELEGANTE Y PULIDA (ESTILO APPLE):
+1. PREGUNTAS FÁCILES, PUNTUALES O SALUDOS:
+   - Si la consulta es un saludo, una pregunta sencilla o una aclaración breve, responde en 1 sola frase directa y cordial. PROHIBIDO dar explicaciones largas o listados a preguntas simples.
+2. DIRECTO AL GRANO (SIN RELLENO):
+   - Prohibido saludos repetitivos, preámbulos tipo "Como asistente...", "A continuación..." o introducciones largas.
+   - Da la respuesta principal o cifra clave en la primera línea.
+3. SOLO LO NECESARIO:
+   - Cálculos de material: Cantidad total exacta (bultos, m³, piezas) y dosificación básica de obra.
+   - Medidas o normativas: Dimensión reglamentaria mínima y recomendada de diseño.
+   - Procesos de obra: Pasos concretos y secuenciales (máximo 3 a 5 viñetas).
+   - Elimina párrafos redundantes o explicaciones obvias.
+4. CONSEJO TÉCNICO FINAL:
+   - En consultas técnicas completas, cierra con 1 consejo clave de obra, calidad o seguridad.
+5. FORMATO:
+   - Para consultas simples: 1 frase u oración breve.
+   - Para consultas complejas: 1 párrafo inicial corto y viñetas concisas (- ) para datos indispensables.
 """
 
 # Modelos Gemini disponibles y activos
@@ -31,7 +38,9 @@ _GEMINI_FALLBACKS = (
     "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
+    "gemini-flash-lite-latest",
     "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
 )
 
 _last_error: str | None = None
@@ -221,11 +230,11 @@ def generate_reasoned_answer(
                     )
                     if text:
                         if candidate != model:
-                            print(f"[llm_service] Gemini usó fallback {candidate}")
+                            print(f"[llm_service] Cuota o demora en {model}: se cambió automáticamente a {candidate} sin costo.")
                         break
                 except Exception as exc:
                     last_exc = exc
-                    print(f"[llm_service] gemini/{candidate} falló: {exc}")
+                    print(f"[llm_service] gemini/{candidate} no disponible ({exc}). Cambiando automáticamente al siguiente modelo gratuito...")
                     continue
             if not text:
                 raise last_exc or RuntimeError("Gemini sin respuesta")

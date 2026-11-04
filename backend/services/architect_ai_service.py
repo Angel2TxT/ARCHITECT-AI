@@ -159,6 +159,56 @@ def _format_web(web: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _smart_offline_answer(question: str) -> str:
+    q = _normalize(question)
+    if re.search(r"cemento|concreto|material|bulto|varilla|block|ladrillo|arena|grava", q):
+        return (
+            "Orientación técnica sobre dosificación y materiales de obra:\n"
+            "• Concreto estructural (f'c=200 a 250 kg/cm² para losas, castillos y trabes): "
+            "Proporción en volumen 1:2:3 (1 bulto de cemento de 50 kg, 2 botes de arena, 3 botes de grava de 3/4 pulg. y ~18-20 L de agua).\n"
+            "• Rendimiento: 1 m³ de concreto estructural requiere aproximadamente 7 a 7.5 sacos de cemento.\n"
+            "• Losas de entrepiso/azotea: Losa maciza de 10 cm requiere 0.10 m³ de concreto por m² y armado con varilla de 3/8 pulg. a cada 15 o 20 cm.\n"
+            "• Muros de block (15x20x40 cm): Rinden ~12.5 piezas por m² más mortero proporción 1:4 (cemento-arena)."
+        )
+    if re.search(r"cimentacion|zapata|cimiento|cadena|desplante", q):
+        return (
+            "Criterios para cimentaciones residenciales:\n"
+            "• Mampostería de piedra braza: Muy empleada en suelos estables, corona mínima de 30 cm y base entre 60 y 90 cm según carga.\n"
+            "• Zapatas de concreto armado: Para terrenos arcillosos o deformables, con base mínima de 15 a 20 cm de espesor y contratrabes de rigidez.\n"
+            "• Cadena de desplante: Sección mínima de 15x20 cm armada con 4 varillas de 3/8 pulg. y estribos de 1/4 pulg. a cada 15 cm para repartir cargas y cortar humedad."
+        )
+    if re.search(r"costo|precio|presupuesto|cuanto\s+cuesta|cuanto\s+sale|m2|metro\s+cuadrado", q):
+        return (
+            "Costos paramétricos de referencia para edificación residencial (México):\n"
+            "• Obra negra básica (cimentación, muros, losas): ~$3,500 a $5,500 MXN por m².\n"
+            "• Obra gris con instalaciones hidrosanitarias y eléctricas: ~$6,000 a $8,500 MXN por m².\n"
+            "• Obra terminada con acabados medios: ~$9,500 a $14,000 MXN por m².\n"
+            "• Nota: Los costos varían por topografía, mecánica de suelos, acabados y fletes locales."
+        )
+    if re.search(r"licencia|permiso|tramite|dro|director\s+responsable|municipio", q):
+        return (
+            "Procedimiento estándar para licencias de construcción residencial:\n"
+            "1. Constancia de Alineamiento y Número Oficial vigente.\n"
+            "2. Planos arquitectónicos y ejecutivos completos (plantas, cortes, fachadas, instalaciones y cimentación).\n"
+            "3. Firma de Director Responsable de Obra (D.R.O.) cuando la superficie supera obra menor (más de 40 a 60 m²).\n"
+            "4. Pago de derechos de construcción en la tesorería municipal y predial al corriente."
+        )
+    if re.search(r"sala|comedor|estancia|cochera|estacionamiento|jardin|patio", q):
+        return (
+            "Dimensiones funcionales recomendadas (Neufert / Habitabilidad):\n"
+            "• Sala de estar: Mínimo 3.00 × 3.00 m (9.00 m²) para conjunto modular y circulación cómoda.\n"
+            "• Comedor: Mínimo 2.80 × 2.80 m para mesa de 6 sillas con holgura perimetral libre de 80 cm.\n"
+            "• Cajón de estacionamiento: Mínimo 2.50 × 5.00 m (y 3.80 × 5.00 m para accesibilidad universal PCD).\n"
+            "• Patio de servicio: Área mínima libre de 4.00 a 6.00 m² con ventilación natural directa."
+        )
+    return (
+        "Asesoría técnica de ARCHITECT:\n"
+        "• Dimensiones mínimas reglamentarias: Puertas principales ≥ 0.90 m, recámaras ≥ 0.80 m, pasillos ≥ 1.20 m, recámara principal ≥ 7.29 m² y altura libre de losa ≥ 2.50 m en Chiapas.\n"
+        "• Auditoría de planos: Puedes adjuntar tu plano en imagen o PDF para escanear cotas, vanos e incidencias normativas de habitabilidad.\n"
+        "• Consultas de obra: Pregunta sobre cálculo de materiales, cimentaciones, losas, acabados, instalaciones o presupuestos."
+    )
+
+
 def compose_knowledge_answer(question: str, ctx: dict) -> str:
     """
     Respuesta directa: primero lo útil, luego fuentes breves.
@@ -187,12 +237,7 @@ def compose_knowledge_answer(question: str, ctx: dict) -> str:
             title = first.get("title") or "fuente pública"
             parts.append(f"Según {title}: {sn}" if sn else f"Referencia: {title}")
         else:
-            parts.append(
-                "No encontré una coincidencia clara en los manuales indexados "
-                "para esa pregunta. Reformúlala con el tema concreto "
-                "(p. ej. ancho de puerta, cocina, escalera) o activa un LLM "
-                "en LLM_PROVIDER para respuestas más abiertas."
-            )
+            parts.append(_smart_offline_answer(question))
 
     # Umbrales solo si aportan y no fueron ya el lead
     if lead and thresholds:
@@ -256,8 +301,8 @@ def format_context_for_llm(question: str, ctx: dict) -> str:
 
     if not local and not thresholds and not web:
         lines.append(
-            "\n(No hay fragmentos locales ni umbrales/web útiles. "
-            "Responde con honestidad sobre el límite de evidencia.)"
+            "\n(Aplica tu conocimiento general experto en arquitectura, ingeniería civil y construcción "
+            "para entregar una respuesta completa, práctica, didáctica y profesional.)"
         )
 
     return "\n".join(lines)

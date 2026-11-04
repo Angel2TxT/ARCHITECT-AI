@@ -66,6 +66,19 @@ TOPIC_THRESHOLD_CODES: dict[str, list[str]] = {
     "neufert": ["ROOM_DIMENSION_MIN", "CORRIDOR_WIDTH_MIN", "STAIR_WIDTH_UNIFAM"],
     "losa": ["ROOM_HEIGHT_MIN"],
     "muro": ["WALL_COVERAGE_LOW"],
+    "sala": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "comedor": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "estancia": ["ROOM_DIMENSION_MIN", "ROOM_AREA_MIN"],
+    "cochera": ["PARKING_PCD_WIDTH"],
+    "garage": ["PARKING_PCD_WIDTH"],
+    "cemento": ["BUILT_AREA_MINOR_WORK"],
+    "concreto": ["BUILT_AREA_MINOR_WORK"],
+    "material": ["BUILT_AREA_MINOR_WORK"],
+    "costo": ["BUILT_AREA_MINOR_WORK"],
+    "presupuesto": ["BUILT_AREA_MINOR_WORK"],
+    "cimentacion": ["WALL_COVERAGE_LOW"],
+    "zapata": ["WALL_COVERAGE_LOW"],
+    "castillo": ["WALL_COVERAGE_LOW"],
 }
 
 
@@ -178,6 +191,68 @@ def _gather_qa_context(question: str) -> dict:
     }
 
 
+def _extract_name_introduction(question: str) -> tuple[bool, str | None]:
+    q = _normalize(question).strip(" !?.,;:¿¡\ufffd")
+    if len(q.split()) > 7:
+        return False, None
+    if any(k in q for k in ["plano", "norma", "medida", "duda", "pregunta", "casa", "terreno", "losa", "puerta", "ventana"]):
+        return False, None
+
+    patterns = [
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?(?:yo\s+)?me\s+llamo\s+([a-z\s]+)$",
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?mi\s+nombre\s+es\s+([a-z\s]+)$",
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?(?:yo\s+)?soy\s+(?:el\s+arqui(?:tecto)?\s+|la\s+arqui(?:tecta)?\s+|el\s+ing(?:eniero)?\s+|la\s+ing(?:eniera)?\s+)?([a-z\s]+)$",
+    ]
+    for pat in patterns:
+        m = re.match(pat, q)
+        if m:
+            raw_name = m.group(1).strip()
+            if raw_name in {"un", "una", "el", "la", "yo", "nuevo", "aqui", "quien", "alguien"}:
+                return False, None
+            name_words = raw_name.split()
+            orig_tokens = question.strip(" !?.,;:¿¡\ufffd").split()
+            if len(orig_tokens) >= len(name_words):
+                candidate = " ".join(orig_tokens[-len(name_words):])
+                return True, " ".join(w.capitalize() for w in candidate.split())
+            return True, " ".join(w.capitalize() for w in name_words)
+
+    if q.startswith("me llamo ") or q.startswith("mi nombre es "):
+        orig_tokens = question.strip(" !?.,;:¿¡\ufffd").split()
+        if len(orig_tokens) >= 3:
+            return True, " ".join(w.capitalize() for w in orig_tokens[2:])
+        return True, None
+
+    return False, None
+
+
+def _is_casual_small_talk(question: str) -> tuple[bool, str | None]:
+    q = _normalize(question).strip(" !?.,;:¿¡\ufffd")
+    if any(k in q for k in ["plano", "norma", "medida", "duda", "pregunta", "casa", "terreno", "losa", "puerta", "ventana"]):
+        return False, None
+    if len(q.split()) > 8:
+        return False, None
+
+    if re.search(r"^(?:(?:hola|buenas|que\s+tal)\s*,?\s*)?(?:como\s+estas|como\s+te\s+va|que\s+tal\s+estas|todo\s+bien|como\s+andas)(?:\b|$)", q):
+        return True, (
+            "¡Muy bien, gracias por preguntar! Con toda la disposición para asesorarte "
+            "en tus proyectos, planos o dudas técnicas de obra. ¿Qué revisamos hoy?"
+        )
+
+    if re.search(r"^(?:(?:hola|buenas)\s*,?\s*)?(?:quien\s+eres|que\s+eres|como\s+te\s+llamas|cual\s+es\s+tu\s+nombre)(?:\b|$)", q):
+        return True, (
+            "Soy ARCHITECT IA, tu copiloto técnico especializado en arquitectura, análisis de planos "
+            "y normativa de construcción. ¿En qué te puedo colaborar hoy?"
+        )
+
+    if re.search(r"^(?:(?:hola|buenas)\s*,?\s*)?(?:que\s+haces|a\s+que\s+te\s+dedicas|en\s+que\s+trabajas|en\s+que\s+me\s+puedes\s+ayudar)(?:\b|$)", q):
+        return True, (
+            "Puedo auditar tus planos arquitectónicos, verificar medidas y tolerancias según la normativa, "
+            "o resolver dudas técnicas de obra y diseño. ¿Qué consulta tienes hoy?"
+        )
+
+    return False, None
+
+
 def _is_greeting(question: str) -> bool:
     q = _normalize(question).strip(" !?.,;:¿¡")
     if q in {
@@ -205,6 +280,35 @@ def _is_courtesy(question: str) -> bool:
         and len(q.split()) <= 5
     )
 
+
+
+def _is_conversational_intro(question: str) -> bool:
+    q = _normalize(question).strip(" !?.,;:¿¡")
+    patterns = [
+        r"^(me\s+)?(podrias|puedes|puedo|podria)\s+(responder|hacer|contestar|preguntar)",
+        r"^(tengo|tengo\s+una|hay|tengo\s+cierta)\s+(duda|pregunta|inquietud)",
+        r"^ayudame(\s+por\s+favor)?\s+(con\s+una\s+(duda|pregunta))?",
+        r"^quiero\s+(hacerte|hacer|preguntarte)\s+(una\s+pregunta|algo)",
+        r"^necesito\s+(hacerte|preguntarte|ayuda)",
+    ]
+    return any(bool(re.search(pat, q)) for pat in patterns) and len(q.split()) <= 10
+
+
+def _wants_sources(question: str) -> bool:
+    q = _normalize(question).strip()
+    patterns = [
+        r"\bfuente(s)?\b",
+        r"\breferencia(s)?\b",
+        r"\bbibliografia(s)?\b",
+        r"\bde\s+donde\s+(salio|sacaste|obtuviste|proviene)\b",
+        r"\ben\s+que\s+(manual|norma|reglamento|libro|documento)\b",
+        r"\bcita(s|r|me)?\b",
+        r"\bmanual(es)?\s+usado(s)?\b",
+        r"\barticulo(s)?\s+(citado|usado|normativo)\b",
+        r"\bfundamento(s)?\b",
+        r"\bbase\s+(normativa|legal)\b",
+    ]
+    return any(bool(re.search(pat, q)) for pat in patterns)
 
 def _is_meta_capability_question(question: str) -> bool:
     q = _normalize(question)
@@ -265,33 +369,70 @@ def answer_construction_question(question: str) -> dict:
             **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
         }
 
-    if _is_greeting(q):
-        meta_ctx = format_context_for_llm(
-            q,
-            {
-                "municipality": None,
-                "local_sources": [],
-                "web_sources": [],
-                "thresholds": [],
-            },
-        )
-        llm_text = generate_reasoned_answer(
-            meta_ctx,
-            user_instruction=(
-                "Saluda cordialmente en español como el asistente técnico de ARCHITECT. "
-                "Explica brevemente (2-3 oraciones) que puedes ayudarle a resolver dudas normativas, "
-                "dimensiones de diseño o auditar planos adjuntos, y pregúntale en qué proyecto le ayudas hoy. "
-                "No cites manuales ni uses formatos pesados."
-            ),
-        )
-        default_greeting = (
-            "¡Hola! Soy el asistente técnico de ARCHITECT.\n\n"
-            "Puedo ayudarte con consultas sobre normativas de construcción, medidas y requerimientos mínimos "
-            "de habitabilidad, o realizar la auditoría técnica de tus planos arquitectónicos.\n\n"
-            "¿En qué proyecto o plano te puedo colaborar hoy?"
+    is_intro, user_name = _extract_name_introduction(q)
+    if is_intro:
+        intro_reply = (
+            f"¡Mucho gusto, {user_name}! Estoy a tu servicio para resolver cualquier consulta sobre "
+            "tus planos, arquitectura, diseño o normativas de construcción. ¿En qué te puedo asesorar hoy?"
+        ) if user_name else (
+            "¡Mucho gusto! Estoy a tu servicio para resolver cualquier consulta sobre "
+            "tus planos, arquitectura, diseño o normativas de construcción. ¿En qué te puedo asesorar hoy?"
         )
         return {
-            "text": llm_text or default_greeting,
+            "text": intro_reply,
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    is_small_talk, small_talk_reply = _is_casual_small_talk(q)
+    if is_small_talk:
+        return {
+            "text": small_talk_reply,
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_conversational_intro(q):
+        return {
+            "text": "¡Claro que sí! Dime cuál es tu consulta técnica sobre arquitectura, planos, obra o normativa y con gusto te asesoro.",
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_greeting(q):
+        # Respuesta inmediata, elegante y sin esperas innecesarias para saludos
+        return {
+            "text": "¡Hola! ¿En qué plano o proyecto de construcción te ayudo hoy?",
             "municipality": None,
             "local_sources": [],
             "web_sources": [],
@@ -300,16 +441,13 @@ def answer_construction_question(question: str) -> dict:
             "knowledge_pages": pages_count,
             "document_catalog": catalog,
             "assistant_mode": "architect",
-            "llm_used": bool(llm_text),
+            "llm_used": False,
             **llm_status(),
             **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
         }
 
     if _is_courtesy(q):
-        default_courtesy = (
-            "¡Con gusto! Quedo a tu disposición si necesitas verificar otra normativa, "
-            "resolver dudas de diseño o auditar un nuevo plano."
-        )
+        default_courtesy = "¡Con gusto! ¿Hay algo más que quieras revisar de tu proyecto o plano?" 
         return {
             "text": default_courtesy,
             "municipality": None,
@@ -353,15 +491,27 @@ def answer_construction_question(question: str) -> dict:
         }
 
     ctx = _gather_qa_context(q)
-    llm_text = generate_reasoned_answer(format_context_for_llm(q, ctx))
+    user_instruction = (
+        "Responde de forma concisa, directa y profesional con redacción limpia y pulida (estilo Apple). "
+        "Sin preámbulos ni relleno innecesario: entrega la respuesta concreta con cifras, medidas o normativas exactas. "
+        "Escribe en párrafos naturales y fluidos. "
+        "NO uses viñetas ni puntos de lista para respuestas cortas o explicaciones generales; utiliza viñetas únicamente si el usuario pide una lista explícita o se enumeran más de 3 requisitos técnicos estrictos. "
+        "Solo lo necesario, sin texto excesivo."
+    )
+    llm_text = generate_reasoned_answer(
+        format_context_for_llm(q, ctx),
+        user_instruction=user_instruction,
+    )
     text = llm_text or compose_knowledge_answer(q, ctx)
     used_llm = bool(llm_text)
 
+    wants_sources = _wants_sources(q)
     return {
         "text": text,
         "municipality": ctx["municipality"],
-        "local_sources": ctx["local_sources"],
-        "web_sources": ctx["web_sources"],
+        "local_sources": ctx["local_sources"] if wants_sources else [],
+        "web_sources": ctx["web_sources"] if wants_sources else [],
+        "show_sources": wants_sources,
         "thresholds": ctx["thresholds"],
         "web_search_used": ctx["web_search_used"],
         "knowledge_pages": ctx["knowledge_pages"],

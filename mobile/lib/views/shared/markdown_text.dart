@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Renderiza Markdown básico del backend: negrita, listas y títulos de sección.
+/// Renderiza Markdown básico del backend: negrita, listas y títulos de sección (estilo Apple).
 class MarkdownText extends StatelessWidget {
   const MarkdownText({
     super.key,
@@ -12,7 +12,7 @@ class MarkdownText extends StatelessWidget {
   final TextStyle? style;
 
   static final _boldPattern = RegExp(r'\*\*(.+?)\*\*');
-  static final _listPrefix = RegExp(r'^\s*[-*]\s+');
+  static final _listPrefix = RegExp(r'^\s*([-*•]|\u2022)\s+');
   static final _numberedPrefix = RegExp(r'^\s*(\d+)[.)]\s+');
   static final _headingOnly = RegExp(r'^\*\*(.+)\*\*\s*$');
 
@@ -100,7 +100,15 @@ class MarkdownText extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('•  ', style: baseStyle.copyWith(fontWeight: FontWeight.w700)),
+            Container(
+              margin: const EdgeInsets.only(top: 7, right: 8),
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: baseStyle.color?.withValues(alpha: 0.75) ?? Colors.grey,
+                shape: BoxShape.circle,
+              ),
+            ),
             Expanded(
               child: Text.rich(
                 TextSpan(

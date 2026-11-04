@@ -53,6 +53,15 @@ QUERY_SYNONYMS: dict[str, list[str]] = {
     "licencia": ["licencia", "permiso", "tramite", "obra"],
     "ventilacion": ["ventilacion", "aire", "renovacion"],
     "estacionamiento": ["estacionamiento", "garage", "cochera"],
+    "sala": ["sala", "estancia", "estar", "living"],
+    "comedor": ["comedor", "mesa", "desayunador"],
+    "cimentacion": ["cimentacion", "zapata", "cimiento", "desplante", "zanja"],
+    "estructura": ["estructura", "columna", "castillo", "trabe", "viga", "cadena", "cerramiento"],
+    "material": ["material", "cemento", "arena", "grava", "concreto", "varilla", "block", "ladrillo", "mortero"],
+    "costo": ["costo", "precio", "presupuesto", "cotizacion", "m2", "metro cuadrado"],
+    "instalacion": ["instalacion", "tuberia", "drenaje", "agua", "electrica", "sanitaria", "tinaco", "cisterna"],
+    "acabado": ["acabado", "piso", "pintura", "aplanado", "repellado", "yeso", "azulejo"],
+    "humedad": ["humedad", "impermeabilizante", "filtracion", "gotera", "grieta", "fisura"],
 }
 
 # Perfil de cada documento indexado (para enrutar preguntas a la biblioteca correcta)

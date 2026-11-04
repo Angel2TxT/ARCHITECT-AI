@@ -43,8 +43,8 @@ def detect_sheet_layout(image_bgr: np.ndarray) -> SheetRegions:
     """
     h, w = image_bgr.shape[:2]
 
-    # Para imágenes pequeñas (< 1000px) asumimos planta recortada directa
-    if max(w, h) < 1000:
+    # Para imágenes muy pequeñas (< 300px) asumimos planta recortada directa
+    if max(w, h) < 300:
         return SheetRegions(
             is_split=False,
             main_plan_bbox=(0, 0, w, h),
@@ -103,11 +103,20 @@ def detect_sheet_layout(image_bgr: np.ndarray) -> SheetRegions:
 
     is_split = title_bbox is not None
 
+    if not is_split:
+        return SheetRegions(
+            is_split=False,
+            main_plan_bbox=(0, 0, w, h),
+            title_block_bbox=None,
+            confidence=0.60,
+            note=note,
+        )
+
     return SheetRegions(
         is_split=is_split,
         main_plan_bbox=(main_x1, main_y1, main_x2, main_y2),
         title_block_bbox=title_bbox,
-        confidence=0.85 if is_split else 0.60,
+        confidence=0.85,
         note=note,
     )
 

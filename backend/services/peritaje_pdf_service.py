@@ -53,7 +53,7 @@ class DossierPDF(FPDF):
 
 def build_dossier_pdf(
     analysis: Analysis,
-    user: User,
+    user: User | None = None,
     *,
     base_url: str = "http://localhost:8000",
 ) -> bytes:
@@ -173,13 +173,14 @@ def build_dossier_pdf(
     pdf.set_text_color(20, 20, 25)
     pdf.cell(50, 4, _pdf_safe((analysis.original_filename or "plano.png")[:35]))
 
+    user_email = user.email if (user and getattr(user, "email", None)) else "Usuario ARCHITECT (Modo Invitado)"
     pdf.set_xy(col2_x, row2_y)
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(80, 80, 90)
     pdf.cell(35, 4, "Propietario / Usuario:")
     pdf.set_font("Helvetica", "", 8)
     pdf.set_text_color(20, 20, 25)
-    pdf.cell(50, 4, _pdf_safe(user.email[:35]))
+    pdf.cell(50, 4, _pdf_safe(user_email[:35]))
 
     pdf.set_xy(col1_x, row3_y)
     pdf.set_font("Helvetica", "B", 8)
@@ -296,4 +297,4 @@ def build_dossier_pdf(
     pdf.set_text_color(100, 100, 110)
     pdf.cell(70, 3, _pdf_safe(f"Folio Verificación: {folio}"), align="C")
 
-    return pdf.output()
+    return bytes(pdf.output())

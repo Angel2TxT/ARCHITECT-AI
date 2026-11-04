@@ -22,8 +22,14 @@ class HolisticConstructionValidator:
         return px / self.rules.pixels_per_meter
 
     def _dims_m(self, det: Detection) -> tuple[float, float, float]:
+        if getattr(det, "real_dimensions_m", None):
+            d1, d2 = det.real_dimensions_m
+            area = det.real_area_m2 if getattr(det, "real_area_m2", None) else (d1 * d2)
+            return d1, d2, area
         w_m = self._px_to_m(det.width_px)
         h_m = self._px_to_m(det.height_px)
+        if getattr(det, "real_area_m2", None):
+            return w_m, h_m, det.real_area_m2
         return w_m, h_m, w_m * h_m
 
     def _min_side_m(self, det: Detection) -> float:

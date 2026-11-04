@@ -1,5 +1,7 @@
 /// Normaliza texto del asistente/análisis para mostrarlo más ordenado en el chat.
 abstract final class ChatResponseFormatter {
+  static final _bulletPrefix = RegExp(r'^\s*([•\-\*]|\u2022)\s+');
+
   static final _loPrincipal = RegExp(
     r'Lo principal:\s*(.+?)(?:\.\s*En total|\.\s*$|$)',
     caseSensitive: false,
@@ -17,6 +19,53 @@ abstract final class ChatResponseFormatter {
     r'^(Siguiente paso|Resumen|Hallazgos|Detalle|Recomendaciones|Escala)\s*:\s*$',
     caseSensitive: false,
   );
+
+  /// Limpia viñetas forzadas o antiestéticas en respuestas cortas, saludos o textos conversacionales.
+  static String cleanConversationalBullets(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    final lines = trimmed.split('\n');
+    final nonEmpty = lines.where((l) => l.trim().isNotEmpty).toList();
+    if (nonEmpty.isEmpty) return trimmed;
+
+    final bulletLines =
+        nonEmpty.where((l) => _bulletPrefix.hasMatch(l.trim())).toList();
+
+    final hasHeader = nonEmpty.any(
+      (l) => l.trim().startsWith('**') && l.trim().endsWith('**'),
+    );
+    final isConversational = trimmed.toLowerCase().contains('mucho gusto') ||
+        trimmed.toLowerCase().contains('hola') ||
+        trimmed.toLowerCase().contains('servicio') ||
+        trimmed.toLowerCase().contains('bienvenido') ||
+        trimmed.toLowerCase().contains('ayudarte') ||
+        trimmed.toLowerCase().contains('asesorarte');
+
+    final shouldClean =
+        (bulletLines.isNotEmpty && !hasHeader && nonEmpty.length <= 4) ||
+            (isConversational && bulletLines.isNotEmpty);
+
+    if (!shouldClean) return text;
+
+    final cleanedItems = <String>[];
+    for (final line in nonEmpty) {
+      var item = line.trim().replaceFirst(_bulletPrefix, '').trim();
+      if (item.isEmpty) continue;
+      // Capitalizar inicial
+      item = item[0].toUpperCase() + item.substring(1);
+      // Puntuación adecuada al final
+      if (!item.endsWith('.') &&
+          !item.endsWith('!') &&
+          !item.endsWith('?') &&
+          !item.endsWith(':')) {
+        item = '$item.';
+      }
+      cleanedItems.add(item);
+    }
+
+    return cleanedItems.join(' ');
+  }
 
   /// Convierte el detalle denso del veredicto en markdown con viñetas.
   static String formatVerdictDetail(
@@ -51,6 +100,12 @@ abstract final class ChatResponseFormatter {
   static String formatAssistantText(String text) {
     var value = text.replaceAll('\r\n', '\n').trim();
     if (value.isEmpty) return value;
+
+    // Si es un texto conversacional con viñetas forzadas, limpiarlo al instante
+    final cleaned = cleanConversationalBullets(value);
+    if (cleaned != value) {
+      return cleaned;
+    }
 
     // "Lo principal: A; B; C." → lista con título.
     value = value.replaceAllMapped(_loPrincipal, (match) {
@@ -88,6 +143,7 @@ abstract final class ChatResponseFormatter {
           (trimmed.endsWith(':') &&
               !trimmed.startsWith('-') &&
               !trimmed.startsWith('*') &&
+              !trimmed.startsWith('•') &&
               trimmed.length < 40 &&
               !trimmed.contains('http'))) {
         if (out.isNotEmpty && out.last.isNotEmpty) out.add('');
@@ -97,27 +153,11 @@ abstract final class ChatResponseFormatter {
         continue;
       }
 
-      // Párrafos muy largos con "; " → viñetas si parecen hallazgos.
-      if (trimmed.contains('; ') &&
-          trimmed.length > 80 &&
-          !trimmed.startsWith('-') &&
-          !trimmed.startsWith('*') &&
-          !RegExp(r'^\d+\.').hasMatch(trimmed)) {
-        final pieces = _splitPrincipalItems(trimmed);
-        if (pieces.length >= 2) {
-          if (out.isNotEmpty && out.last.isNotEmpty) out.add('');
-          for (final piece in pieces) {
-            out.add('- $piece');
-          }
-          out.add('');
-          continue;
-        }
-      }
-
       out.add(line);
     }
 
-    return _collapseBlankLines(out).join('\n').trim();
+    final formatted = _collapseBlankLines(out).join('\n').trim();
+    return cleanConversationalBullets(formatted);
   }
 
   static List<String> _splitPrincipalItems(String raw) {

@@ -454,6 +454,7 @@ def analyze_plano(
     dxf_path: str | Path | None = None,
     jurisdiction: str | None = None,
     gemini_detections: list[Detection] | None = None,
+    gemini_suggested_ppm: float | None = None,
 ) -> tuple[np.ndarray, list[Detection], list[ValidationIssue], str, AutoCalibration | None]:
     """
     Devuelve: imagen RGB, detecciones, incidencias, status, calibración (si auto).
@@ -510,11 +511,13 @@ def analyze_plano(
             w,
             h,
             is_demo=_is_demo_model(weights),
-            manual_ppm=manual_ppm if manual_ppm and manual_ppm > 0 else cad_suggested_ppm,
+            manual_ppm=manual_ppm if manual_ppm and manual_ppm > 0 else (gemini_suggested_ppm or cad_suggested_ppm),
             manual_conf=manual_conf if manual_conf and manual_conf > 0 else None,
             ocr_ppm=ocr_ppm,
             ocr_note=ocr_note,
         )
+        if gemini_suggested_ppm and not manual_ppm:
+            calibration.ppm_note = "cotas generales del plano"
         used_ppm = calibration.pixels_per_meter
         used_conf = calibration.confidence
         if cad_suggested_ppm and not manual_ppm and abs(used_ppm - cad_suggested_ppm) > 15:
@@ -717,6 +720,19 @@ def analyze_plano_json(
                     }
                 elif gv.is_floor_plan:
                     gemini_detections = gv.detections
+                    if gv.plan_box_xyxy and gv.general_dimensions:
+                        bx1, by1, bx2, by2 = gv.plan_box_xyxy
+                        box_w = abs(bx2 - bx1)
+                        box_h = abs(by2 - by1)
+                        w_m = float(gv.general_dimensions.get("width_m") or 0.0)
+                        l_m = float(gv.general_dimensions.get("length_m") or 0.0)
+                        ppm_cands = []
+                        if box_w > 10 and w_m > 0.5:
+                            ppm_cands.append(box_w / w_m)
+                        if box_h > 10 and l_m > 0.5:
+                            ppm_cands.append(box_h / l_m)
+                        if ppm_cands:
+                            gemini_suggested_ppm = sum(ppm_cands) / len(ppm_cands)
     except Exception:
         pass
 
@@ -735,6 +751,7 @@ def analyze_plano_json(
         dxf_path=dxf_path,
         jurisdiction=jurisdiction,
         gemini_detections=gemini_detections,
+        gemini_suggested_ppm=gemini_suggested_ppm,
     )
     used_ppm = calibration.pixels_per_meter if calibration else (manual_ppm or 100.0)
     used_conf = calibration.confidence if calibration else (manual_conf or 0.18)
