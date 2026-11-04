@@ -191,6 +191,68 @@ def _gather_qa_context(question: str) -> dict:
     }
 
 
+def _extract_name_introduction(question: str) -> tuple[bool, str | None]:
+    q = _normalize(question).strip(" !?.,;:¿¡\ufffd")
+    if len(q.split()) > 7:
+        return False, None
+    if any(k in q for k in ["plano", "norma", "medida", "duda", "pregunta", "casa", "terreno", "losa", "puerta", "ventana"]):
+        return False, None
+
+    patterns = [
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?(?:yo\s+)?me\s+llamo\s+([a-z\s]+)$",
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?mi\s+nombre\s+es\s+([a-z\s]+)$",
+        r"^(?:(?:hola|buenas|buen\s+dia|buenos\s+dias|mucho\s+gusto|que\s+tal)\s*,?\s*)?(?:yo\s+)?soy\s+(?:el\s+arqui(?:tecto)?\s+|la\s+arqui(?:tecta)?\s+|el\s+ing(?:eniero)?\s+|la\s+ing(?:eniera)?\s+)?([a-z\s]+)$",
+    ]
+    for pat in patterns:
+        m = re.match(pat, q)
+        if m:
+            raw_name = m.group(1).strip()
+            if raw_name in {"un", "una", "el", "la", "yo", "nuevo", "aqui", "quien", "alguien"}:
+                return False, None
+            name_words = raw_name.split()
+            orig_tokens = question.strip(" !?.,;:¿¡\ufffd").split()
+            if len(orig_tokens) >= len(name_words):
+                candidate = " ".join(orig_tokens[-len(name_words):])
+                return True, " ".join(w.capitalize() for w in candidate.split())
+            return True, " ".join(w.capitalize() for w in name_words)
+
+    if q.startswith("me llamo ") or q.startswith("mi nombre es "):
+        orig_tokens = question.strip(" !?.,;:¿¡\ufffd").split()
+        if len(orig_tokens) >= 3:
+            return True, " ".join(w.capitalize() for w in orig_tokens[2:])
+        return True, None
+
+    return False, None
+
+
+def _is_casual_small_talk(question: str) -> tuple[bool, str | None]:
+    q = _normalize(question).strip(" !?.,;:¿¡\ufffd")
+    if any(k in q for k in ["plano", "norma", "medida", "duda", "pregunta", "casa", "terreno", "losa", "puerta", "ventana"]):
+        return False, None
+    if len(q.split()) > 8:
+        return False, None
+
+    if re.search(r"^(?:(?:hola|buenas|que\s+tal)\s*,?\s*)?(?:como\s+estas|como\s+te\s+va|que\s+tal\s+estas|todo\s+bien|como\s+andas)(?:\b|$)", q):
+        return True, (
+            "¡Muy bien, gracias por preguntar! Con toda la disposición para asesorarte "
+            "en tus proyectos, planos o dudas técnicas de obra. ¿Qué revisamos hoy?"
+        )
+
+    if re.search(r"^(?:(?:hola|buenas)\s*,?\s*)?(?:quien\s+eres|que\s+eres|como\s+te\s+llamas|cual\s+es\s+tu\s+nombre)(?:\b|$)", q):
+        return True, (
+            "Soy ARCHITECT IA, tu copiloto técnico especializado en arquitectura, análisis de planos "
+            "y normativa de construcción. ¿En qué te puedo colaborar hoy?"
+        )
+
+    if re.search(r"^(?:(?:hola|buenas)\s*,?\s*)?(?:que\s+haces|a\s+que\s+te\s+dedicas|en\s+que\s+trabajas|en\s+que\s+me\s+puedes\s+ayudar)(?:\b|$)", q):
+        return True, (
+            "Puedo auditar tus planos arquitectónicos, verificar medidas y tolerancias según la normativa, "
+            "o resolver dudas técnicas de obra y diseño. ¿Qué consulta tienes hoy?"
+        )
+
+    return False, None
+
+
 def _is_greeting(question: str) -> bool:
     q = _normalize(question).strip(" !?.,;:¿¡")
     if q in {
@@ -307,6 +369,49 @@ def answer_construction_question(question: str) -> dict:
             **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
         }
 
+    is_intro, user_name = _extract_name_introduction(q)
+    if is_intro:
+        intro_reply = (
+            f"¡Mucho gusto, {user_name}! Estoy a tu servicio para resolver cualquier consulta sobre "
+            "tus planos, arquitectura, diseño o normativas de construcción. ¿En qué te puedo asesorar hoy?"
+        ) if user_name else (
+            "¡Mucho gusto! Estoy a tu servicio para resolver cualquier consulta sobre "
+            "tus planos, arquitectura, diseño o normativas de construcción. ¿En qué te puedo asesorar hoy?"
+        )
+        return {
+            "text": intro_reply,
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    is_small_talk, small_talk_reply = _is_casual_small_talk(q)
+    if is_small_talk:
+        return {
+            "text": small_talk_reply,
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
     if _is_conversational_intro(q):
         return {
             "text": "¡Claro que sí! Dime cuál es tu consulta técnica sobre arquitectura, planos, obra o normativa y con gusto te asesoro.",
@@ -387,10 +492,11 @@ def answer_construction_question(question: str) -> dict:
 
     ctx = _gather_qa_context(q)
     user_instruction = (
-        "Responde de forma muy concisa, directa y profesional. "
-        "Sin preámbulos ni relleno innecesario: entrega la respuesta concreta, cifras, medidas o pasos exactos "
-        "en viñetas breves y claras, cerrando con un consejo clave de obra. "
-        "Solo lo necesario, sin textos excesivos."
+        "Responde de forma concisa, directa y profesional con redacción limpia y pulida (estilo Apple). "
+        "Sin preámbulos ni relleno innecesario: entrega la respuesta concreta con cifras, medidas o normativas exactas. "
+        "Escribe en párrafos naturales y fluidos. "
+        "NO uses viñetas ni puntos de lista para respuestas cortas o explicaciones generales; utiliza viñetas únicamente si el usuario pide una lista explícita o se enumeran más de 3 requisitos técnicos estrictos. "
+        "Solo lo necesario, sin texto excesivo."
     )
     llm_text = generate_reasoned_answer(
         format_context_for_llm(q, ctx),

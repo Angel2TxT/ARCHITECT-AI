@@ -139,3 +139,4 @@ class _TypewriterTextState extends State<TypewriterText> {
     );
   }
 }
+
