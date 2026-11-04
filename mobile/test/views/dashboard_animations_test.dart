@@ -4,7 +4,7 @@ import 'package:movil_architect/views/dashboard/widgets/dashboard_shell.dart';
 
 void main() {
   group('DashboardHero and DashboardAskBar Animations', () {
-    testWidgets('DashboardHero displays ARCHITECT eyebrow and rotates text on tap',
+    testWidgets('DashboardHero rotates text on tap',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -15,9 +15,6 @@ void main() {
           ),
         ),
       );
-
-      // Verify eyebrow
-      expect(find.text('ARCHITECT'), findsOneWidget);
 
       // Verify initial text
       expect(find.text('¿Qué plano revisamos hoy?'), findsOneWidget);

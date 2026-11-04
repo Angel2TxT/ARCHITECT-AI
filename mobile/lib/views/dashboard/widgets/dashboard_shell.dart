@@ -348,66 +348,6 @@ class _DashboardHeroState extends State<DashboardHero>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Eyebrow badge
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                child: Container(
-                  key: ValueKey('eyebrow_$_currentIndex'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? line.eyebrowColor.withValues(alpha: 0.12)
-                        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: isDark
-                          ? line.eyebrowColor.withValues(alpha: 0.28)
-                          : colorScheme.outlineVariant.withValues(alpha: 0.5),
-                      width: 1.0,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark
-                              ? line.eyebrowColor
-                              : colorScheme.primary,
-                          boxShadow: isDark
-                              ? [
-                                  BoxShadow(
-                                    color: line.eyebrowColor
-                                        .withValues(alpha: 0.6),
-                                    blurRadius: 4,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'ARCHITECT',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2.2,
-                          color: isDark
-                              ? line.eyebrowColor
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
               // Rotating title with glow and shimmer
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 550),
