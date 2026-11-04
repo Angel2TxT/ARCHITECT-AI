@@ -17,9 +17,9 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
 
   static const List<String> _thinkingSteps = [
     'Pensando…',
-    'Consultando normativas y habitabilidad…',
-    'Analizando proporciones métricas y vanos…',
-    'Sintetizando veredicto técnico…',
+    'Consultando información…',
+    'Procesando consulta…',
+    'Preparando respuesta…',
   ];
 
   @override

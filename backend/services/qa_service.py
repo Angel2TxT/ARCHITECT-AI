@@ -219,6 +219,35 @@ def _is_courtesy(question: str) -> bool:
     )
 
 
+
+def _is_conversational_intro(question: str) -> bool:
+    q = _normalize(question).strip(" !?.,;:¿¡")
+    patterns = [
+        r"^(me\s+)?(podrias|puedes|puedo|podria)\s+(responder|hacer|contestar|preguntar)",
+        r"^(tengo|tengo\s+una|hay|tengo\s+cierta)\s+(duda|pregunta|inquietud)",
+        r"^ayudame(\s+por\s+favor)?\s+(con\s+una\s+(duda|pregunta))?",
+        r"^quiero\s+(hacerte|hacer|preguntarte)\s+(una\s+pregunta|algo)",
+        r"^necesito\s+(hacerte|preguntarte|ayuda)",
+    ]
+    return any(bool(re.search(pat, q)) for pat in patterns) and len(q.split()) <= 10
+
+
+def _wants_sources(question: str) -> bool:
+    q = _normalize(question).strip()
+    patterns = [
+        r"\bfuente(s)?\b",
+        r"\breferencia(s)?\b",
+        r"\bbibliografia(s)?\b",
+        r"\bde\s+donde\s+(salio|sacaste|obtuviste|proviene)\b",
+        r"\ben\s+que\s+(manual|norma|reglamento|libro|documento)\b",
+        r"\bcita(s|r|me)?\b",
+        r"\bmanual(es)?\s+usado(s)?\b",
+        r"\barticulo(s)?\s+(citado|usado|normativo)\b",
+        r"\bfundamento(s)?\b",
+        r"\bbase\s+(normativa|legal)\b",
+    ]
+    return any(bool(re.search(pat, q)) for pat in patterns)
+
 def _is_meta_capability_question(question: str) -> bool:
     q = _normalize(question)
     return bool(
@@ -268,6 +297,23 @@ def answer_construction_question(question: str) -> dict:
             "municipality": None,
             "local_sources": [],
             "web_sources": [],
+            "thresholds": [],
+            "web_search_used": False,
+            "knowledge_pages": pages_count,
+            "document_catalog": catalog,
+            "assistant_mode": "architect",
+            "llm_used": False,
+            **llm_status(),
+            **architect_ai_status(knowledge_pages=pages_count, catalog=catalog),
+        }
+
+    if _is_conversational_intro(q):
+        return {
+            "text": "¡Claro que sí! Dime cuál es tu consulta técnica sobre arquitectura, planos, obra o normativa y con gusto te asesoro.",
+            "municipality": None,
+            "local_sources": [],
+            "web_sources": [],
+            "show_sources": False,
             "thresholds": [],
             "web_search_used": False,
             "knowledge_pages": pages_count,
@@ -353,11 +399,13 @@ def answer_construction_question(question: str) -> dict:
     text = llm_text or compose_knowledge_answer(q, ctx)
     used_llm = bool(llm_text)
 
+    wants_sources = _wants_sources(q)
     return {
         "text": text,
         "municipality": ctx["municipality"],
-        "local_sources": ctx["local_sources"],
-        "web_sources": ctx["web_sources"],
+        "local_sources": ctx["local_sources"] if wants_sources else [],
+        "web_sources": ctx["web_sources"] if wants_sources else [],
+        "show_sources": wants_sources,
         "thresholds": ctx["thresholds"],
         "web_search_used": ctx["web_search_used"],
         "knowledge_pages": ctx["knowledge_pages"],

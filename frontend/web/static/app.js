@@ -2801,7 +2801,33 @@ function appendThresholdsToBody(body, msg) {
   body.appendChild(sec);
 }
 
+function queryExplicitlyRequestsSources(text) {
+  if (!text) return false;
+  const t = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const keywords = [
+    "fuente", "fuentes", "referencia", "referencias", "bibliografia", "bibliografias",
+    "de donde salio", "de donde sacaste", "de donde obtuviste", "de donde proviene",
+    "en que manual", "en que norma", "en que reglamento", "en que libro",
+    "citame", "citas", "cita las", "citar", "manuales usados", "articulos citados",
+    "articulos usados", "fundamento", "base normativa", "base legal"
+  ];
+  return keywords.some((kw) => t.includes(kw));
+}
+
+function shouldShowSources(msg) {
+  if (!msg) return false;
+  if (msg.showSources === true) return true;
+  if (msg.showSources === false) return false;
+  if (msg.userPrompt && queryExplicitlyRequestsSources(msg.userPrompt)) {
+    return true;
+  }
+  return false;
+}
+
 function appendSourcesToBody(body, msg) {
+  // Solo se adjuntan fuentes si el usuario las solicitó expresamente
+  if (!shouldShowSources(msg)) return;
+
   appendThresholdsToBody(body, msg);
 
   const local = msg.localSources || [];
@@ -2945,9 +2971,12 @@ async function askConstructionQuestion(text, options = {}) {
     hideTyping();
     pendingAskRetry = null;
     updateConnectionBanner();
+    const userWantsSources = queryExplicitlyRequestsSources(text);
     const assistantMsg = {
       role: "assistant",
       text: data.text || "Sin respuesta.",
+      userPrompt: text,
+      showSources: Boolean(data.show_sources ?? userWantsSources),
       analysisId: data.analysis_id || c.lastAnalysisId || null,
       localSources: data.local_sources || [],
       webSources: (data.web_sources || []).map((w) => ({
@@ -3060,7 +3089,8 @@ async function withNetworkRetry(doFetch, { retries = 4, label = "la solicitud", 
 
 const THINKING_STEPS = [
   "Pensando…",
-  "Analizando proyecto…",
+  "Consultando información…",
+  "Procesando consulta…",
   "Preparando respuesta…"
 ];
 
@@ -3089,7 +3119,7 @@ function showTyping() {
           </div>
           <span class="thinking-badge">ARCHITECT IA</span>
           <span class="thinking-sep">•</span>
-          <span class="thinking-status typing-status" id="thinkingStatusText">Pensando respuesta…</span>
+          <span class="thinking-status typing-status" id="thinkingStatusText">Pensando…</span>
         </div>
         <div class="thinking-track">
           <div class="thinking-beam"></div>
