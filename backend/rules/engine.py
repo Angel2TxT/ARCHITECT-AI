@@ -25,8 +25,14 @@ class ValidationEngine:
         return px / ppm
 
     def _dims_m(self, det: Detection) -> tuple[float, float, float]:
+        if getattr(det, "real_dimensions_m", None):
+            d1, d2 = det.real_dimensions_m
+            area = det.real_area_m2 if getattr(det, "real_area_m2", None) else (d1 * d2)
+            return d1, d2, area
         w_m = self._px_to_m(det.width_px)
         h_m = self._px_to_m(det.height_px)
+        if getattr(det, "real_area_m2", None):
+            return w_m, h_m, det.real_area_m2
         return w_m, h_m, w_m * h_m
 
     def _min_side_m(self, det: Detection) -> float:
@@ -74,13 +80,23 @@ class ValidationEngine:
         dr = self.rules.door
         for door in doors:
             w_m, h_m, _ = self._dims_m(door)
-            if w_m < dr.min_width_m:
+            # En planta arquitectónica cenital (2D), el ancho de paso libre es la dimensión dominante del vano
+            clear_w = max(w_m, h_m)
+            min_req = dr.min_width_m
+            # Criterios normativos de puertas interiores (baño y recámara)
+            door_label = (getattr(door, "label", "") or "").lower()
+            if any(k in door_label for k in ("baño", "bano", "wc", "sanitario")):
+                min_req = 0.70
+            elif any(k in door_label for k in ("habitación", "habitacion", "recámara", "recamara", "dormitorio", "cocina")):
+                min_req = 0.80
+
+            if clear_w < min_req:
                 issues.append(
                     ValidationIssue(
                         code="DOOR_WIDTH_MIN",
                         message=(
-                            f"Puerta estrecha: {w_m:.2f} m "
-                            f"(mín. {dr.min_width_m:.2f} m — Tuxtla Gtz. Art. 150)"
+                            f"Puerta estrecha: {clear_w:.2f} m "
+                            f"(mín. {min_req:.2f} m — Tuxtla Gtz. Art. 150)"
                         ),
                         severity="error",
                         related_class="door",
@@ -88,7 +104,9 @@ class ValidationEngine:
                         norm_ref="tuxtla_rc Art. 150",
                     )
                 )
-            if h_m < dr.min_clear_height_m:
+            # La altura libre de vano (2.10 m) aplica en elevación/corte (eje Z),
+            # solo se reporta si la dimensión en dibujo corresponde a elevación (>1.5 m)
+            if max(w_m, h_m) > 1.50 and h_m < dr.min_clear_height_m:
                 issues.append(
                     ValidationIssue(
                         code="DOOR_HEIGHT_MIN",

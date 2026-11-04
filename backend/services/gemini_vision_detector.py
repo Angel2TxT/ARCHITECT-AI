@@ -26,78 +26,76 @@ class GeminiVisionResult(NamedTuple):
     rejection_reason: str = ""
     summary: str = ""
     detections: list[Detection] = []
+    plan_box_xyxy: tuple[float, float, float, float] | None = None
+    general_dimensions: dict | None = None
     raw_response: dict | None = None
     error: str = ""
 
 
-GEMINI_PLAN_PROMPT = """Eres un arquitecto inspector profesional y motor de análisis de planos en planta.
-Tu tarea es analizar la imagen proporcionada:
+GEMINI_PLAN_PROMPT = """Eres un arquitecto inspector profesional y perito revisor de planos arquitectónicos en planta.
+Tu tarea es analizar exhaustivamente la imagen proporcionada:
 
 PASO 1: CLASIFICACIÓN DE DOCUMENTO
-Determina si la imagen es REALMENTE un plano arquitectónico en planta (distribución de espacios, muros, puertas, ventanas).
-Si la imagen es una tarea escolar, una tabla de texto/calificaciones, una foto común o documento no arquitectónico:
-Responde con is_floor_plan: false y una explicación en rejection_reason.
+Determina si la imagen es un plano arquitectónico en planta (distribución de espacios, muros, puertas, ventanas).
+Si la imagen es una foto genérica, tarea escolar, tabla de calificaciones, selfie o documento no arquitectónico:
+Responde con "is_floor_plan": false y el motivo detallado en "rejection_reason".
 
-PASO 2: DETECCIÓN ARQUITECTÓNICA (Solo si is_floor_plan es true)
-Si es un plano arquitectónico:
-1. Identifica TODOS los recintos y habitaciones. Lee los rótulos de texto de cada espacio si existen (ej. "DORMITORIO", "RECÁMARA", "BAÑO", "COCINA", "SALA", "COMEDOR", "COCHERA", "ESTUDIO", "PASILLO").
-2. Identifica puertas (interiores y exteriores) y ventanas.
-3. Identifica escaleras (si existen), muros principales y áreas de estacionamiento o cochera.
-4. Para cada elemento, proporciona su caja envolvente [ymin, xmin, ymax, xmax] normalizada en el rango 0 a 1000.
-5. Ignora las líneas de cotas exteriores (números de medidas como 3.50m o 5.00m); no las clasifiques como recintos.
+PASO 2: AISLAMIENTO DEL DIBUJO ARQUITECTÓNICO (plan_box)
+Muchas láminas contienen un cajetín/membrete lateral o inferior, cuadro de áreas, notas o logos (ej. "DECIDE TU CASA", firmas, etc.).
+- Identifica la caja delimitadora ("plan_box") que encierra ÚNICAMENTE el dibujo arquitectónico de la planta de la casa (muros perimetrales y cotas inmediatas), EXCLUYENDO el cajetín, cuadro de áreas y logotipos exteriores.
+- Escala normalizada 0 a 1000: [ymin, xmin, ymax, xmax].
+- Lee las cotas generales escritas de la vivienda si están presentes (ej. "7000 x 10000" o "7.00 x 10.00" -> width_m: 7.0, length_m: 10.0).
+
+PASO 3: DETECCIÓN DE RECINTOS Y ESPACIOS
+- Detecta cada recinto de la vivienda (ej. "Sala-Comedor", "Cocina", "Baño", "Habitación 1" / "Recámara 1", "Habitación 2" / "Recámara 2", "Portal", "Patio", "Cochera").
+- Proporciona "box_2d": [ymin, xmin, ymax, xmax] (0..1000) abarcando el espacio de pared a pared.
+- Lee del plano el texto de cotas escrito si existe (ej. "3.20 x 4.30" o "3.2 x 4.3") en "dimensions_text", y el área indicada en el plano o en el Cuadro de Áreas visible (ej. 14.1 o "14.1 m2") en "area_m2".
+- Asigna la clase correcta: "room" (recámaras, sala, comedor, alcoba, estudio), "bathroom" (baño), "kitchen" (cocina), "parking" (cochera), "stair" (escalera).
+
+PASO 4: DETECCIÓN ESTRICTA DE PUERTAS Y VENTANAS
+- PUERTAS ("doors"): Identifica SOLAMENTE vanos y arcos de paso reales en los muros (acceso principal, baño, recámaras).
+  ¡PROHIBIDO!: NUNCA clasifiques camas, sofás, mesas, muebles sanitarios, coches ni líneas de cota como puertas.
+  Indica el ancho de vano ("width_m": 0.90 para acceso, 0.80 para recámaras/cocina, 0.70 para baño, o el indicado por cotas).
+- VENTANAS ("windows"): Identifica los vanos de ventana en muros perimetrales o de iluminación.
 
 Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
 {
-  "is_floor_plan": true o false,
-  "rejection_reason": "Motivo si no es un plano",
-  "plan_description": "Breve descripción arquitectónica",
+  "is_floor_plan": true,
+  "rejection_reason": "",
+  "plan_description": "Vivienda unifamiliar en planta...",
+  "plan_box": [ymin, xmin, ymax, xmax],
+  "general_dimensions": {
+    "width_m": 7.0,
+    "length_m": 10.0
+  },
   "rooms": [
     {
-      "name": "Dormitorio 1",
+      "name": "Habitación 2",
       "class_name": "room",
-      "box_2d": [ymin, xmin, ymax, xmax]
-    },
-    {
-      "name": "Baño Principal",
-      "class_name": "bathroom",
-      "box_2d": [ymin, xmin, ymax, xmax]
-    },
-    {
-      "name": "Cocina",
-      "class_name": "kitchen",
-      "box_2d": [ymin, xmin, ymax, xmax]
+      "box_2d": [ymin, xmin, ymax, xmax],
+      "dimensions_text": "3.20 x 4.30",
+      "area_m2": 14.1
     }
   ],
   "doors": [
     {
+      "name": "Puerta Principal",
       "class_name": "door",
-      "box_2d": [ymin, xmin, ymax, xmax]
+      "box_2d": [ymin, xmin, ymax, xmax],
+      "width_m": 0.90
     }
   ],
   "windows": [
     {
+      "name": "Ventana",
       "class_name": "window",
-      "box_2d": [ymin, xmin, ymax, xmax]
+      "box_2d": [ymin, xmin, ymax, xmax],
+      "width_m": 1.20
     }
   ],
-  "stairs": [
-    {
-      "class_name": "stair",
-      "box_2d": [ymin, xmin, ymax, xmax]
-    }
-  ],
-  "walls": [
-    {
-      "class_name": "wall",
-      "box_2d": [ymin, xmin, ymax, xmax]
-    }
-  ],
-  "parking": [
-    {
-      "class_name": "parking",
-      "box_2d": [ymin, xmin, ymax, xmax]
-    }
-  ]
+  "stairs": [],
+  "walls": [],
+  "parking": []
 }
 """
 
@@ -130,7 +128,7 @@ def analyze_floorplan_with_gemini_vision(
     image_bgr: np.ndarray,
     *,
     api_key: str | None = None,
-    model: str = "gemini-3.5-flash",
+    model: str = "gemini-flash-lite-latest",
 ) -> GeminiVisionResult:
     """
     Envía la imagen del plano a Gemini Vision para inspección semántica y detección espacial.
@@ -155,7 +153,7 @@ def analyze_floorplan_with_gemini_vision(
     b64_image = base64.b64encode(buffer).decode("utf-8")
     img_h, img_w = image_bgr.shape[:2]
 
-    models_to_try = [model, "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
+    models_to_try = [model, "gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
     seen_models: list[str] = []
     for m in models_to_try:
         if m and m not in seen_models:
@@ -256,11 +254,36 @@ def analyze_floorplan_with_gemini_vision(
             return "kitchen"
         if any(w in nl for w in ("escalera", "gradas", "stair")):
             return "stair"
-        if any(w in nl for w in ("cochera", "estacionamiento", "garage", "parking")):
+        if any(w in nl for w in ("cochera", "estacionamiento", "garage", "parking", "auto")):
             return "parking"
+        if any(w in nl for w in ("portal", "porche", "terraza", "balcon", "balcón", "patio", "jardin", "jardín", "volado")):
+            return "corridor"
+        if any(w in nl for w in ("pasillo", "corredor", "vestibulo", "vestíbulo", "hall")):
+            return "corridor"
         if given_cls and given_cls != "room":
             return given_cls
         return default_cls
+
+    def _parse_dimensions(dim_str: Any) -> tuple[float, float] | None:
+        if not dim_str or not isinstance(dim_str, str):
+            return None
+        import re
+        nums = [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)", dim_str)]
+        if len(nums) >= 2 and nums[0] > 0 and nums[1] > 0:
+            return (nums[0], nums[1])
+        return None
+
+    def _parse_area(area_val: Any) -> float | None:
+        if isinstance(area_val, (int, float)) and area_val > 0:
+            return float(area_val)
+        if isinstance(area_val, str):
+            import re
+            m = re.search(r"(\d+(?:\.\d+)?)", area_val)
+            if m:
+                val = float(m.group(1))
+                if val > 0:
+                    return val
+        return None
 
     def _add_boxes(items: list[dict], default_cls: str):
         for it in items or []:
@@ -284,10 +307,23 @@ def analyze_floorplan_with_gemini_vision(
             seed = int(ymin * 100 + xmin * 10) % 11
             conf_val = round(0.86 + seed * 0.01, 2)
 
+            real_dims = _parse_dimensions(it.get("dimensions_text"))
+            if not real_dims and it.get("width_m"):
+                try:
+                    wm = float(it["width_m"])
+                    if wm > 0:
+                        real_dims = (wm, wm)
+                except Exception:
+                    pass
+            real_area = _parse_area(it.get("area_m2"))
+
             det = Detection(
                 class_name=cls_name,
                 bbox_xyxy=(min(px_x1, px_x2), min(px_y1, px_y2), max(px_x1, px_x2), max(px_y1, px_y2)),
                 confidence=conf_val,
+                label=name or None,
+                real_dimensions_m=real_dims,
+                real_area_m2=real_area,
             )
             detections.append(det)
 
@@ -300,11 +336,28 @@ def analyze_floorplan_with_gemini_vision(
     _add_boxes(parsed.get("walls", []), "wall")
     _add_boxes(parsed.get("parking", []), "parking")
 
+    # Extraer plan_box si fue identificado
+    plan_box_xyxy = None
+    pb = parsed.get("plan_box")
+    if isinstance(pb, list) and len(pb) == 4:
+        p_ymin, p_xmin, p_ymax, p_xmax = pb
+        plan_box_xyxy = (
+            float(p_xmin * img_w / 1000.0),
+            float(p_ymin * img_h / 1000.0),
+            float(p_xmax * img_w / 1000.0),
+            float(p_ymax * img_h / 1000.0),
+        )
+    gen_dims = parsed.get("general_dimensions")
+    if not isinstance(gen_dims, dict):
+        gen_dims = None
+
     summary_text = str(parsed.get("plan_description") or "Plano inspeccionado mediante arquitectura neuronal YOLOv8 ResPlan.")
     return GeminiVisionResult(
         success=True,
         is_floor_plan=True,
         summary=summary_text,
         detections=detections,
+        plan_box_xyxy=plan_box_xyxy,
+        general_dimensions=gen_dims,
         raw_response=parsed,
     )

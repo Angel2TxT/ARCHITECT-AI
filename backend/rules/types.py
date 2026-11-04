@@ -15,6 +15,9 @@ class Detection:
     bbox_xyxy: tuple[float, float, float, float]
     confidence: float = 1.0
     polygon: list[tuple[float, float]] | None = None
+    label: str | None = None
+    real_area_m2: float | None = None
+    real_dimensions_m: tuple[float, float] | None = None
 
     @property
     def width_px(self) -> float:
