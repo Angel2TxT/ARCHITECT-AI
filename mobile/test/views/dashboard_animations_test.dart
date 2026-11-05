@@ -10,7 +10,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: Center(
-              child: DashboardHero(),
+              child: DashboardHero(initialIndex: 0),
             ),
           ),
         ),

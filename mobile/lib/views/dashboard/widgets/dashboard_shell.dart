@@ -281,10 +281,44 @@ const List<_WelcomeLine> _kWelcomeLines = [
     glowColor: Color(0x35E2E8F0),
     eyebrowColor: Color(0xFFCBD5E1),
   ),
+  _WelcomeLine(
+    text: 'Diseñemos con precisión milimétrica',
+    darkGradientStart: Color(0xFFA5B4FC),
+    darkGradientMiddle: Color(0xFFFFFFFF),
+    darkGradientEnd: Color(0xFF818CF8),
+    glowColor: Color(0x3D818CF8),
+    eyebrowColor: Color(0xFFA5B4FC),
+  ),
+  _WelcomeLine(
+    text: 'Validemos el cumplimiento de tu proyecto',
+    darkGradientStart: Color(0xFFFDE047),
+    darkGradientMiddle: Color(0xFFFEF9C3),
+    darkGradientEnd: Color(0xFFEAB308),
+    glowColor: Color(0x38EAB308),
+    eyebrowColor: Color(0xFFFACC15),
+  ),
+  _WelcomeLine(
+    text: 'Cada detalle arquitectónico cuenta',
+    darkGradientStart: Color(0xFF93C5FD),
+    darkGradientMiddle: Color(0xFFEFF6FF),
+    darkGradientEnd: Color(0xFF3B82F6),
+    glowColor: Color(0x3B3B82F6),
+    eyebrowColor: Color(0xFF60A5FA),
+  ),
+  _WelcomeLine(
+    text: 'Tu asistente experto en planos y normas',
+    darkGradientStart: Color(0xFF6EE7B7),
+    darkGradientMiddle: Color(0xFFF0FDF4),
+    darkGradientEnd: Color(0xFF059669),
+    glowColor: Color(0x3B059669),
+    eyebrowColor: Color(0xFF34D399),
+  ),
 ];
 
 class DashboardHero extends StatefulWidget {
-  const DashboardHero({super.key});
+  const DashboardHero({super.key, this.initialIndex});
+
+  final int? initialIndex;
 
   @override
   State<DashboardHero> createState() => _DashboardHeroState();
@@ -294,11 +328,25 @@ class _DashboardHeroState extends State<DashboardHero>
     with SingleTickerProviderStateMixin {
   late final AnimationController _shimmerController;
   Timer? _rotationTimer;
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  static int _lastInitialIndex = -1;
+
+  static int pickDistinctIndex() {
+    if (_kWelcomeLines.length <= 1) return 0;
+    final random = math.Random();
+    int next;
+    do {
+      next = random.nextInt(_kWelcomeLines.length);
+    } while (next == _lastInitialIndex);
+    _lastInitialIndex = next;
+    return next;
+  }
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex ?? pickDistinctIndex();
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 5500),

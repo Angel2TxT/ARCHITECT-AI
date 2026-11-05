@@ -33,6 +33,7 @@ class _DashboardViewState extends State<DashboardView> {
   late final DashboardController _controller;
   final _scrollController = ScrollController();
   ChatController? _chatController;
+  int _newChatSeed = 0;
 
   @override
   void initState() {
@@ -119,6 +120,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   void _newChat() {
+    _newChatSeed++;
     _closeChat();
     _controller.askController.clear();
     _controller.clearPendingPlano();
@@ -396,10 +398,12 @@ class _DashboardViewState extends State<DashboardView> {
       return _buildPendingMessages();
     }
 
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: DashboardHero(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: DashboardHero(
+          key: ValueKey('hero_$_newChatSeed'),
+        ),
       ),
     );
   }
@@ -465,12 +469,14 @@ class _DashboardViewState extends State<DashboardView> {
                                         constraints: BoxConstraints(
                                           minHeight: constraints.maxHeight,
                                         ),
-                                        child: const Center(
+                                        child: Center(
                                           child: Padding(
-                                            padding: EdgeInsets.symmetric(
+                                            padding: const EdgeInsets.symmetric(
                                               horizontal: 20,
                                             ),
-                                            child: DashboardHero(),
+                                            child: DashboardHero(
+                                              key: ValueKey('hero_$_newChatSeed'),
+                                            ),
                                           ),
                                         ),
                                       ),
