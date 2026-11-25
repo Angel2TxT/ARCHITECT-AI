@@ -20,9 +20,12 @@ from api.schemas import (
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
     UpdateProfileRequest,
+    UpdateUnverifiedEmailRequest,
     UserOut,
+    VerifyEmailRequest,
 )
 from db.database import get_db
 from db.models import Plan, Subscription, SubscriptionStatus, User, UserRole
@@ -40,6 +43,11 @@ from services.google_oauth_service import (
 )
 from services.subscription_service import subscription_payload
 from services.user_oauth_service import find_or_create_google_user
+from services.email_verification_service import (
+    issue_verification_code,
+    update_unverified_email,
+    verify_email_code,
+)
 from services.password_reset_service import (
     request_password_reset,
     reset_password_with_token,
@@ -66,6 +74,7 @@ def _user_out(user: User) -> UserOut:
         avatar_url=user.avatar_url,
         has_password=bool(user.password_hash),
         oauth_provider=user.oauth_provider,
+        email_verified=bool(user.email_verified),
     )
 
 
@@ -100,6 +109,7 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
             password_hash=hash_password(body.password),
             full_name=body.full_name.strip() or email.split("@")[0],
             role=UserRole.user,
+            email_verified=False,
         )
         db.add(user)
         db.flush()
@@ -116,7 +126,13 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
         )
         db.commit()
         db.refresh(user)
-        return _auth_response(db, user)
+        issue_verification_code(db, user, enforce_cooldown=False)
+        return AuthResponse(
+            access_token="",
+            user=_user_out(user),
+            subscription=subscription_payload(db, user),
+            requires_verification=True,
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -140,11 +156,49 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]):
             raise HTTPException(401, "Correo o contraseña incorrectos")
         if not user.is_active:
             raise HTTPException(403, "Cuenta desactivada")
+        if not user.email_verified:
+            raise HTTPException(
+                403,
+                {
+                    "code": "EMAIL_NOT_VERIFIED",
+                    "message": "Tu correo aún no está verificado. Ingresa el código enviado a tu correo.",
+                },
+            )
         return _auth_response(db, user)
     except HTTPException:
         raise
     except Exception as exc:
         raise http_db_error(exc) from exc
+
+
+@router.post("/verify-email", response_model=AuthResponse)
+def verify_email(body: VerifyEmailRequest, db: Annotated[Session, Depends(get_db)]):
+    user = verify_email_code(db, email=body.email, code=body.code)
+    return _auth_response(db, user)
+
+
+@router.post("/resend-verification")
+def resend_verification(
+    body: ResendVerificationRequest, db: Annotated[Session, Depends(get_db)]
+):
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(404, "Usuario no encontrado")
+    meta = issue_verification_code(db, user, enforce_cooldown=True)
+    return {"ok": True, **meta}
+
+
+@router.post("/update-unverified-email")
+def update_unverified_email_route(
+    body: UpdateUnverifiedEmailRequest, db: Annotated[Session, Depends(get_db)]
+):
+    user = update_unverified_email(
+        db,
+        current_email=body.current_email,
+        new_email=body.new_email,
+        password=body.password,
+    )
+    return {"ok": True, "email": user.email, "cooldown_seconds": 60}
 
 
 @router.get("/google/enabled")

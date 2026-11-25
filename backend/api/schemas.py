@@ -4,16 +4,48 @@ from __future__ import annotations
 
 import re
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, TypeAdapter, field_validator
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_EMAIL_ADAPTER = TypeAdapter(EmailStr)
+_FORBIDDEN_EMAIL_CHARS = frozenset('<>/\\"\' \t\r\n&;')
+_ALLOWED_NAME_EXTRA = frozenset(" -'’")
+
+
+def validate_full_name(value: str) -> str:
+    """Valida el nombre mediante lista blanca de letras Unicode, espacios, guiones y apóstrofes."""
+    name = (value or "").strip()
+    if not name:
+        raise ValueError("El nombre no puede estar vacío")
+    if len(name) < 2:
+        raise ValueError("El nombre debe tener al menos 2 caracteres")
+    if len(name) > 120:
+        raise ValueError("El nombre no puede exceder 120 caracteres")
+    if not any(ch.isalpha() for ch in name):
+        raise ValueError("El nombre debe contener al menos una letra")
+    for ch in name:
+        if not (ch.isalpha() or ch in _ALLOWED_NAME_EXTRA):
+            raise ValueError(
+                "El nombre contiene caracteres no permitidos; solo se aceptan letras, espacios, guiones y apóstrofes"
+            )
+    return name
 
 
 def _normalize_email(value: str) -> str:
-    email = value.strip().lower()
-    if not _EMAIL_RE.match(email):
+    email = (value or "").strip().lower()
+    if not email:
+        raise ValueError("El correo electrónico no puede estar vacío")
+    if any(ch in _FORBIDDEN_EMAIL_CHARS for ch in email):
+        raise ValueError(
+            "Correo electrónico inválido: contiene caracteres no permitidos"
+        )
+    try:
+        validated = str(_EMAIL_ADAPTER.validate_python(email)).lower()
+    except Exception as exc:
+        raise ValueError("Correo electrónico inválido") from exc
+    domain = validated.split("@", 1)[1] if "@" in validated else ""
+    if "." not in domain:
         raise ValueError("Correo electrónico inválido")
-    return email
+    return validated
 
 
 class RegisterRequest(BaseModel):
@@ -25,6 +57,11 @@ class RegisterRequest(BaseModel):
     @classmethod
     def valid_email(cls, v: str) -> str:
         return _normalize_email(v)
+
+    @field_validator("full_name")
+    @classmethod
+    def valid_full_name(cls, v: str) -> str:
+        return validate_full_name(v)
 
 
 class LoginRequest(BaseModel):
@@ -59,6 +96,7 @@ class UserOut(BaseModel):
     avatar_url: str | None = None
     has_password: bool = True
     oauth_provider: str | None = None
+    email_verified: bool = True
 
     class Config:
         from_attributes = True
@@ -66,6 +104,11 @@ class UserOut(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=120)
+
+    @field_validator("full_name")
+    @classmethod
+    def valid_full_name(cls, v: str) -> str:
+        return validate_full_name(v)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -88,12 +131,43 @@ class RefundReviewRequest(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    access_token: str
+    access_token: str = ""
     token_type: str = "bearer"
     user: UserOut
     subscription: dict
     impersonation: bool = False
     impersonator: dict | None = None
+    requires_verification: bool = False
+
+
+class VerifyEmailRequest(BaseModel):
+    email: str
+    code: str = Field(min_length=6, max_length=6)
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v: str) -> str:
+        return _normalize_email(v)
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v: str) -> str:
+        return _normalize_email(v)
+
+
+class UpdateUnverifiedEmailRequest(BaseModel):
+    current_email: str
+    new_email: str
+    password: str
+
+    @field_validator("current_email", "new_email")
+    @classmethod
+    def valid_emails(cls, v: str) -> str:
+        return _normalize_email(v)
 
 
 class PlanChangeRequest(BaseModel):

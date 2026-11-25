@@ -31,6 +31,7 @@ from services.home_project_service import (
     get_home_project,
     get_stage_document,
     invite_project_member,
+    leave_project,
     list_home_projects,
     list_project_events,
     list_section_comments,
@@ -351,6 +352,16 @@ def delete_member(
     remove_project_member(db, user, project_id, member_user_id)
     project = get_home_project(db, user.id, project_id)
     return _payload(db, project, user.id)
+
+
+@router.post("/{project_id}/leave")
+def leave_project_route(
+    project_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    leave_project(db, user, project_id)
+    return {"ok": True}
 
 
 @router.post("/{project_id}/stages/{stage_number}/sections")

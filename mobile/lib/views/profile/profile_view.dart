@@ -18,6 +18,7 @@ class _ProfileViewState extends State<ProfileView> {
   late final ProfileController _controller;
   bool _obscureCurrent = true;
   bool _obscureNew = true;
+  bool _obscureConfirm = true;
 
   @override
   void initState() {
@@ -387,6 +388,32 @@ class _ProfileViewState extends State<ProfileView> {
                             setState(() => _obscureNew = !_obscureNew),
                         icon: Icon(
                           _obscureNew
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Confirmar contraseña',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _ProfileField(
+                      controller: _controller.confirmPasswordController,
+                      fillColor: fieldBg,
+                      obscureText: _obscureConfirm,
+                      hint: 'Repite la nueva contraseña',
+                      suffix: IconButton(
+                        onPressed: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
+                        icon: Icon(
+                          _obscureConfirm
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                           size: 20,

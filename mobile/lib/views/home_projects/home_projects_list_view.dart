@@ -151,6 +151,43 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
     }
   }
 
+  Future<void> _confirmLeave(HomeProject project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Darse de baja'),
+        content: Text(
+          '¿Seguro que deseas salir de "${project.name}"? Ya no tendrás acceso a sus etapas ni documentos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Darse de baja',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final ok = await _controller.leaveProject(project.id);
+    if (!mounted) return;
+    if (ok) {
+      AppNotifications.success(context, 'Te diste de baja del proyecto');
+    } else {
+      AppNotifications.error(
+        context,
+        _controller.errorMessage ?? 'No se pudo dar de baja',
+      );
+    }
+  }
+
   Future<void> _promptRename(HomeProject project) async {
     final textController = TextEditingController(text: project.name);
     final formKey = GlobalKey<FormState>();
@@ -505,6 +542,10 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                           : null,
                       onDelete: project.permissions.canDeleteProject
                           ? () => _confirmDelete(project)
+                          : null,
+                      onLeave: (project.myRole != 'owner' &&
+                              !project.permissions.canDeleteProject)
+                          ? () => _confirmLeave(project)
                           : null,
                     ),
                     const SizedBox(height: 12),

@@ -327,7 +327,6 @@ class DashboardHero extends StatefulWidget {
 class _DashboardHeroState extends State<DashboardHero>
     with SingleTickerProviderStateMixin {
   late final AnimationController _shimmerController;
-  Timer? _rotationTimer;
   late int _currentIndex;
 
   static int _lastInitialIndex = -1;
@@ -351,18 +350,6 @@ class _DashboardHeroState extends State<DashboardHero>
       vsync: this,
       duration: const Duration(milliseconds: 5500),
     )..repeat();
-
-    _startRotationTimer();
-  }
-
-  void _startRotationTimer() {
-    _rotationTimer?.cancel();
-    _rotationTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (!mounted) return;
-      setState(() {
-        _currentIndex = (_currentIndex + 1) % _kWelcomeLines.length;
-      });
-    });
   }
 
   void _advancePrompt() {
@@ -370,12 +357,10 @@ class _DashboardHeroState extends State<DashboardHero>
     setState(() {
       _currentIndex = (_currentIndex + 1) % _kWelcomeLines.length;
     });
-    _startRotationTimer();
   }
 
   @override
   void dispose() {
-    _rotationTimer?.cancel();
     _shimmerController.dispose();
     super.dispose();
   }
@@ -417,23 +402,6 @@ class _DashboardHeroState extends State<DashboardHero>
                   key: ValueKey('title_$_currentIndex'),
                   alignment: Alignment.center,
                   children: [
-                    if (isDark)
-                      Positioned(
-                        child: Container(
-                          width: 220,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: line.glowColor.withValues(alpha: 0.22),
-                                blurRadius: 45,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     AnimatedBuilder(
                       animation: _shimmerController,
                       builder: (context, _) {
@@ -450,11 +418,11 @@ class _DashboardHeroState extends State<DashboardHero>
                               return LinearGradient(
                                 begin: Alignment(-1.8 + shift * 2.8, -0.2),
                                 end: Alignment(0.6 + shift * 2.8, 0.2),
-                                colors: [
-                                  line.darkGradientStart,
-                                  line.darkGradientMiddle,
-                                  line.darkGradientEnd,
-                                  line.darkGradientStart,
+                                colors: const [
+                                  Color(0xFFE4E4E7),
+                                  Colors.white,
+                                  Colors.white,
+                                  Color(0xFFE4E4E7),
                                 ],
                                 stops: const [0.0, 0.45, 0.75, 1.0],
                               ).createShader(bounds);

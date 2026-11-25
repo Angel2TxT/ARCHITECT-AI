@@ -1,0 +1,47 @@
+﻿• Building apk with entrypoint test_bundle.dart...
+✓ Completed building apk with entrypoint test_bundle.dart (40.1s)
+• Executing tests of apk with entrypoint test_bundle.dart on emulator-5554...
+🧪 mov_012.mov_012_html_tags_registration_test MOV-012: registro de nombre y correo con etiquetas HTML
+        ⏳   1. [36mwaitUntilVisible[0m widgets with text "Iniciar sesión".
+[A[K        ✅   1. [36mwaitUntilVisible[0m widgets with text "Iniciar sesión".
+        ⏳   2. [33mtap[0m widgets with text "Crear cuenta".
+[A[K        ✅   2. [33mtap[0m widgets with text "Crear cuenta".
+        ⏳   3. [36mwaitUntilVisible[0m widgets with text "Regístrate".
+[A[K        ✅   3. [36mwaitUntilVisible[0m widgets with text "Regístrate".
+        ⏳   4. [35menterText[0m widgets with type "TextField" (ignoring all but index 0).
+[A[K        ✅   4. [35menterText[0m widgets with type "TextField" (ignoring all but index 0).
+        ⏳   5. [35menterText[0m widgets with type "TextField" (ignoring all but index 1).
+[A[K        ✅   5. [35menterText[0m widgets with type "TextField" (ignoring all but index 1).
+        ⏳   6. [35menterText[0m widgets with type "TextField" (ignoring all but index 2).
+[A[K        ✅   6. [35menterText[0m widgets with type "TextField" (ignoring all but index 2).
+        ⏳   7. [35menterText[0m widgets with type "TextField" (ignoring all but index 3).
+[A[K        ✅   7. [35menterText[0m widgets with type "TextField" (ignoring all but index 3).
+        ⏳   8. [32mscrollTo[0m widgets with type "FilledButton" that are ancestors of widgets with text "Crear cuenta".
+[A[K        ✅   8. [32mscrollTo[0m widgets with type "FilledButton" that are ancestors of widgets with text "Crear cuenta".
+        ⏳   9. [33mtap[0m widgets with type "FilledButton" that are ancestors of widgets with text "Crear cuenta".
+[A[K        ✅   9. [33mtap[0m widgets with type "FilledButton" that are ancestors of widgets with text "Crear cuenta".
+        ⏳  10. [36mwaitUntilVisible[0m widgets with icon "IconData(U+0F8B6)".
+[A[K        ✅  10. [36mwaitUntilVisible[0m widgets with icon "IconData(U+0F8B6)".
+        ⏳  11. [33mtap[0m widgets with icon "IconData(U+0F8B6)".
+[A[K        ✅  11. [33mtap[0m widgets with icon "IconData(U+0F8B6)".
+        ⏳  12. [36mwaitUntilVisible[0m widgets with type "InkWell" descending from widgets with type "Drawer" (ignoring all but last).
+[A[K        ✅  12. [36mwaitUntilVisible[0m widgets with type "InkWell" descending from widgets with type "Drawer" (ignoring all but last).
+        ⏳  13. [33mtap[0m widgets with type "InkWell" descending from widgets with type "Drawer" (ignoring all but last).
+[A[K        ✅  13. [33mtap[0m widgets with type "InkWell" descending from widgets with type "Drawer" (ignoring all but last).
+        ⏳  14. [36mwaitUntilVisible[0m widgets with text "Perfil".
+[A[K        ✅  14. [36mwaitUntilVisible[0m widgets with text "Perfil".
+        ⏳  15. [33mtap[0m widgets with text "Perfil".
+[A[K        ✅  15. [33mtap[0m widgets with text "Perfil".
+        ⏳  16. [36mwaitUntilVisible[0m widgets with text "DATOS DE LA CUENTA".
+[A[K        ✅  16. [36mwaitUntilVisible[0m widgets with text "DATOS DE LA CUENTA".
+[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K[A[K✅ MOV-012: registro de nombre y correo con etiquetas HTML [90m(/mov_012/mov_012_html_tags_registration_test.dart)[0m [90m(46s)[0m
+
+[1mTest summary:[0m
+📝 Total: 1
+✅ Successful: 1
+❌ Failed: 0
+⏩ Skipped: 0
+📊 Report: file://C:/Users/rolda/Documents/Universidad/10%20cuatrimestre/app%20creadas/integradora/ARCHITECT-AI/mobile/build/app/reports/androidTests/connected/debug/index.html
+⏱️  Duration: 2m 20s
+
+✓ Completed executing apk with entrypoint test_bundle.dart on emulator-5554 (140.9s)

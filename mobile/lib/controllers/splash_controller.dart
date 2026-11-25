@@ -5,7 +5,13 @@ import 'package:movil_architect/services/auth_service.dart';
 import 'package:movil_architect/services/mobile_api_service.dart';
 import 'package:movil_architect/services/push_notification_service.dart';
 
-enum SplashStatus { loading, readyDashboard, readyLogin, serverError }
+enum SplashStatus {
+  loading,
+  readyDashboard,
+  readyLogin,
+  readyVerifyEmail,
+  serverError,
+}
 
 class SplashController extends ChangeNotifier {
   SplashController({
@@ -23,10 +29,12 @@ class SplashController extends ChangeNotifier {
 
   SplashStatus _status = SplashStatus.loading;
   String? _errorMessage;
+  String? _pendingVerificationEmail;
   bool _disposed = false;
 
   SplashStatus get status => _status;
   String? get errorMessage => _errorMessage;
+  String? get pendingVerificationEmail => _pendingVerificationEmail;
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -63,7 +71,13 @@ class SplashController extends ChangeNotifier {
 
       final hasToken = await _authService.hasToken();
       if (!hasToken) {
-        _status = SplashStatus.readyLogin;
+        final pendingEmail = await _authService.pendingVerificationEmail();
+        if (pendingEmail != null && pendingEmail.isNotEmpty) {
+          _pendingVerificationEmail = pendingEmail;
+          _status = SplashStatus.readyVerifyEmail;
+        } else {
+          _status = SplashStatus.readyLogin;
+        }
         _notify();
         return;
       }

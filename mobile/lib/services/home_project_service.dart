@@ -136,6 +136,14 @@ class HomeProjectService {
     }
   }
 
+  Future<void> leaveProject(String projectId) async {
+    try {
+      await _apiClient.dio.post<void>('$_base/$projectId/leave');
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
   Future<HomeProject> updateSection({
     required String projectId,
     required int sectionId,

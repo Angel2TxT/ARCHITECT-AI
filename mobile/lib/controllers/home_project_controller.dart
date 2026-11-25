@@ -110,6 +110,30 @@ class HomeProjectsController extends ChangeNotifier {
     }
   }
 
+  Future<bool> leaveProject(String projectId) async {
+    try {
+      await _service.leaveProject(projectId);
+      if (_disposed) return false;
+      _projects = _projects.where((p) => p.id != projectId).toList();
+      _pinnedIds.remove(projectId);
+      await _secureStorage.savePinnedHomeProjectIds(_pinnedIds.toList());
+      _state =
+          _projects.isEmpty ? HomeProjectsState.empty : HomeProjectsState.success;
+      _notify();
+      return true;
+    } on ApiException catch (error) {
+      if (_disposed) return false;
+      _errorMessage = error.message;
+      _notify();
+      return false;
+    } catch (_) {
+      if (_disposed) return false;
+      _errorMessage = 'No se pudo dar de baja del proyecto.';
+      _notify();
+      return false;
+    }
+  }
+
   Future<bool> updateProject(
     String projectId, {
     required String name,
@@ -307,6 +331,30 @@ class HomeProjectDetailController extends ChangeNotifier {
     } catch (_) {
       if (_disposed) return false;
       _actionError = 'No se pudo eliminar el proyecto.';
+      return false;
+    } finally {
+      if (!_disposed) {
+        _busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<bool> leaveProject() async {
+    if (_disposed || _busy) return false;
+    _busy = true;
+    _actionError = null;
+    _notify();
+    try {
+      await _service.leaveProject(projectId);
+      return !_disposed;
+    } on ApiException catch (error) {
+      if (_disposed) return false;
+      _actionError = error.message;
+      return false;
+    } catch (_) {
+      if (_disposed) return false;
+      _actionError = 'No se pudo dar de baja del proyecto.';
       return false;
     } finally {
       if (!_disposed) {

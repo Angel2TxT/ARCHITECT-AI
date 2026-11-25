@@ -629,3 +629,49 @@ def send_password_reset_email(
         text_body=text_body,
         html_body=html_body,
     )
+
+
+def send_verification_code_email(
+    *,
+    to_email: str,
+    user_name: str,
+    code: str,
+    expires_minutes: int = 5,
+) -> bool:
+    """Envía el código de verificación de 6 dígitos para activar una cuenta nueva."""
+    safe_name = user_name.strip() or "Usuario"
+    subject = "Código de verificación — ARCHITECT-AI"
+
+    text_body = (
+        f"Hola {safe_name},\n\n"
+        f"Tu código de verificación para activar tu cuenta en ARCHITECT-AI es:\n\n"
+        f"{code}\n\n"
+        f"Este código tiene una vigencia de {expires_minutes} minutos y es de un solo uso.\n"
+        "Si no creaste esta cuenta, puedes ignorar este correo.\n\n"
+        "ARCHITECT-AI"
+    )
+
+    html_body = _architect_transaction_email_html(
+        badge="Verificación de correo",
+        greeting=f"Hola {safe_name},",
+        headline="Usa el siguiente código de 6 dígitos para verificar tu correo electrónico y activar tu cuenta en ARCHITECT-AI.",
+        summary_rows=[
+            ("Cuenta", to_email),
+            ("Vigencia", f"{expires_minutes} minutos"),
+            ("Uso", "Un solo uso (máximo 5 intentos)"),
+        ],
+        hero_label="Código de verificación",
+        hero_value=code,
+        hero_note=f"Este código expira en {expires_minutes} minutos. Nunca lo compartas con nadie.",
+        cta_label="Abrir ARCHITECT-AI",
+        cta_url=_app_base_url(),
+        attachment_note="",
+        legal_note="Si no solicitaste el registro de esta cuenta, puedes ignorar este correo de forma segura.",
+    )
+
+    return _send_safe(
+        to_email=to_email,
+        subject=subject,
+        text_body=text_body,
+        html_body=html_body,
+    )

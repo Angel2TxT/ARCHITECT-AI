@@ -54,7 +54,7 @@ class _BootstrapAppState extends State<_BootstrapApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFFF7F7F8),
+        backgroundColor: const Color(0xFF0A0A0B),
         body: Center(
           child: _initError == null
               ? const SizedBox.shrink()

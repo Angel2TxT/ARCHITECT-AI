@@ -82,19 +82,19 @@ class BillingPlan {
 }
 
 class BillingConfig {
-  const BillingConfig({
-    required this.raw,
-    required this.isDemo,
-  });
+  const BillingConfig({required this.raw, required this.isDemo});
 
   final Map<String, dynamic> raw;
   final bool isDemo;
 
   factory BillingConfig.fromJson(Map<String, dynamic> json) {
-    final mode = (json['mode'] ?? json['provider'] ?? '').toString().toLowerCase();
+    final mode = (json['mode'] ?? json['provider'] ?? '')
+        .toString()
+        .toLowerCase();
     return BillingConfig(
       raw: json,
-      isDemo: json['demo'] == true ||
+      isDemo:
+          json['demo'] == true ||
           json['is_demo'] == true ||
           mode.contains('demo'),
     );
@@ -115,11 +115,17 @@ class CheckoutSession {
   final bool isDemo;
 
   factory CheckoutSession.fromJson(Map<String, dynamic> json) {
+    final mode = (json['mode'] ?? json['provider'] ?? '')
+        .toString()
+        .toLowerCase();
     return CheckoutSession(
       url: firstNonEmptyString(json, ['url', 'checkout_url', 'portal_url']),
       sessionToken: firstNonEmptyString(json, ['session_token', 'token']),
       sessionId: firstNonEmptyString(json, ['session_id']),
-      isDemo: json['demo'] == true || json['is_demo'] == true,
+      isDemo:
+          json['demo'] == true ||
+          json['is_demo'] == true ||
+          mode.contains('demo'),
     );
   }
 }
@@ -140,14 +146,16 @@ class BillingReceipt {
   factory BillingReceipt.fromJson(Map<String, dynamic> json) {
     return BillingReceipt(
       id: (json['id'] ?? json['receipt_id'] ?? '').toString(),
-      title: json['title'] as String? ??
+      title:
+          json['title'] as String? ??
           json['plan_name'] as String? ??
           json['description'] as String? ??
           'Comprobante',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
-      amountCents: (json['amount_cents'] as num?)?.toInt() ??
+      amountCents:
+          (json['amount_cents'] as num?)?.toInt() ??
           (json['total_cents'] as num?)?.toInt(),
     );
   }
@@ -179,18 +187,17 @@ class BillingRefund {
 }
 
 class UsageHistoryPoint {
-  const UsageHistoryPoint({
-    required this.label,
-    required this.analysesUsed,
-  });
+  const UsageHistoryPoint({required this.label, required this.analysesUsed});
 
   final String label;
   final int analysesUsed;
 
   factory UsageHistoryPoint.fromJson(Map<String, dynamic> json) {
     return UsageHistoryPoint(
-      label: (json['period'] ?? json['month'] ?? json['label'] ?? '').toString(),
-      analysesUsed: (json['analyses_used'] as num?)?.toInt() ??
+      label: (json['period'] ?? json['month'] ?? json['label'] ?? '')
+          .toString(),
+      analysesUsed:
+          (json['analyses_used'] as num?)?.toInt() ??
           (json['used'] as num?)?.toInt() ??
           0,
     );

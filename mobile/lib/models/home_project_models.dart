@@ -16,6 +16,7 @@ class HomeProjectPermissions {
     required this.canCompleteStage,
     required this.canReopenSection,
     required this.canReopenStage,
+    this.canChangeSectionStatus = false,
   });
 
   final bool canView;
@@ -34,6 +35,7 @@ class HomeProjectPermissions {
   final bool canCompleteStage;
   final bool canReopenSection;
   final bool canReopenStage;
+  final bool canChangeSectionStatus;
 
   factory HomeProjectPermissions.fromJson(Map<String, dynamic>? json) {
     bool flag(String key) => json?[key] == true;
@@ -54,6 +56,7 @@ class HomeProjectPermissions {
       canCompleteStage: flag('can_complete_stage'),
       canReopenSection: flag('can_reopen_section'),
       canReopenStage: flag('can_reopen_stage'),
+      canChangeSectionStatus: flag('can_change_section_status'),
     );
   }
 

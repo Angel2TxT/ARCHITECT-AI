@@ -67,7 +67,7 @@ class SettingsStorage {
       }
     } catch (_) {}
 
-    return false;
+    return true;
   }
 
   Future<void> saveDarkMode(bool enabled) async {

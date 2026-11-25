@@ -7,6 +7,7 @@ class UserModel {
     this.avatarUrl,
     this.hasPassword = true,
     this.oauthProvider,
+    this.emailVerified = true,
   });
 
   final int id;
@@ -16,6 +17,7 @@ class UserModel {
   final String? avatarUrl;
   final bool hasPassword;
   final String? oauthProvider;
+  final bool emailVerified;
 
   bool get isGoogleAccount =>
       hasPassword == false ||
@@ -30,6 +32,7 @@ class UserModel {
       avatarUrl: json['avatar_url'] as String?,
       hasPassword: json['has_password'] as bool? ?? true,
       oauthProvider: json['oauth_provider'] as String?,
+      emailVerified: json['email_verified'] as bool? ?? true,
     );
   }
 
@@ -41,6 +44,7 @@ class UserModel {
         'avatar_url': avatarUrl,
         'has_password': hasPassword,
         'oauth_provider': oauthProvider,
+        'email_verified': emailVerified,
       };
 }
 
@@ -121,16 +125,18 @@ class AuthResponse {
     required this.tokenType,
     required this.user,
     required this.subscription,
+    this.requiresVerification = false,
   });
 
   final String accessToken;
   final String tokenType;
   final UserModel user;
   final SubscriptionModel? subscription;
+  final bool requiresVerification;
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
-      accessToken: json['access_token'] as String,
+      accessToken: json['access_token'] as String? ?? '',
       tokenType: json['token_type'] as String? ?? 'bearer',
       user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       subscription: json['subscription'] is Map<String, dynamic>
@@ -138,6 +144,7 @@ class AuthResponse {
               json['subscription'] as Map<String, dynamic>,
             )
           : null,
+      requiresVerification: json['requires_verification'] as bool? ?? false,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/core/utils/date_utils.dart';
 import 'package:movil_architect/models/home_project_models.dart';
+import 'package:movil_architect/views/home_projects/slot_documents_view.dart';
 import 'package:movil_architect/views/shared/app_states.dart';
 import 'package:movil_architect/views/shared/attachment_picker_sheet.dart';
 
@@ -27,27 +28,49 @@ class SectionDetailView extends StatefulWidget {
 
 class _SectionDetailViewState extends State<SectionDetailView> {
   final _commentController = TextEditingController();
+  final _commentFocusNode = FocusNode();
+  final _commentBoxKey = GlobalKey();
   List<HomeProjectComment>? _extraComments;
   int? _commentsTotal;
 
   HomeProjectSection? get _section =>
       widget.controller.project?.sectionById(widget.sectionId);
 
-  int? get _currentUserId =>
-      AppServices.instance.authService.currentUser?.id;
+  int? get _currentUserId => AppServices.instance.authService.currentUser?.id;
 
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
+  Future<void> _handleFloatingSend() async {
+    if (_commentController.text.trim().isNotEmpty) {
+      await _sendComment();
+      return;
+    }
+    final boxContext = _commentBoxKey.currentContext;
+    if (boxContext != null) {
+      await Scrollable.ensureVisible(
+        boxContext,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+    if (mounted) {
+      _commentFocusNode.requestFocus();
+    }
+  }
+
   Future<void> _changeStatus() async {
-    if (!widget.controller.permissions.canEdit) return;
+    if (!widget.controller.permissions.canChangeSectionStatus) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sheetBg = isDark ? const Color(0xFF141417) : Colors.white;
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final current = _section?.status ?? 'pending';
 
     final selected = await showModalBottomSheet<String>(
@@ -63,7 +86,10 @@ class _SectionDetailViewState extends State<SectionDetailView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Text(
@@ -83,12 +109,18 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                   title: Text(
                     homeProjectStatusLabel(status),
                     style: TextStyle(
-                      fontWeight: status == current ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: status == current
+                          ? FontWeight.w800
+                          : FontWeight.w600,
                       color: primaryBlack,
                     ),
                   ),
                   trailing: status == current
-                      ? Icon(Icons.check_circle_rounded, color: primaryBlack, size: 20)
+                      ? Icon(
+                          Icons.check_circle_rounded,
+                          color: primaryBlack,
+                          size: 20,
+                        )
                       : null,
                   onTap: () => Navigator.pop(context, status),
                 ),
@@ -112,7 +144,10 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     );
   }
 
-  Future<void> _upload({String? preselectedSlotKey, String? preselectedSlotTitle}) async {
+  Future<void> _upload({
+    String? preselectedSlotKey,
+    String? preselectedSlotTitle,
+  }) async {
     if (!widget.controller.permissions.canUpload) return;
     final section = _section;
     if (section == null) return;
@@ -129,14 +164,12 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     final size = await file.length();
     if (size > 25 * 1024 * 1024) {
       if (!mounted) return;
-      AppNotifications.error(
-        context,
-        'El archivo supera el límite de 25 MB',
-      );
+      AppNotifications.error(context, 'El archivo supera el límite de 25 MB');
       return;
     }
 
-    final slotKey = (preselectedSlotKey != null && preselectedSlotKey.trim().isNotEmpty)
+    final slotKey =
+        (preselectedSlotKey != null && preselectedSlotKey.trim().isNotEmpty)
         ? preselectedSlotKey.trim()
         : _resolveAutoSlotKey(file.path, section);
 
@@ -161,7 +194,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     // 1. Si el apartado tiene entregables definidos, asociar al primer entregable pendiente
     if (section.slots.isNotEmpty) {
       final pendingSlot = section.slots.where((slot) {
-        final isFilled = slot.filled ||
+        final isFilled =
+            slot.filled ||
             section.documents.any((doc) => doc.slotKey == slot.key);
         return !isFilled;
       }).firstOrNull;
@@ -190,8 +224,6 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     return 'general';
   }
 
-
-
   Future<void> _addCustomSlot() async {
     if (!widget.controller.permissions.canEdit) return;
     final titleController = TextEditingController();
@@ -201,24 +233,73 @@ class _SectionDetailViewState extends State<SectionDetailView> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final dialogBg = isDark ? const Color(0xFF141417) : Colors.white;
+          final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
+          final secondaryText =
+              isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+          final borderColor =
+              isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+
           return AlertDialog(
-            title: const Text('Nueva entrega requerida'),
+            backgroundColor: dialogBg,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: borderColor, width: 1.2),
+            ),
+            title: Text(
+              'Nueva entrega requerida',
+              style: TextStyle(
+                color: primaryBlack,
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: titleController,
                   autofocus: true,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: primaryBlack, fontSize: 14),
+                  decoration: InputDecoration(
                     labelText: 'Título de la entrega',
+                    labelStyle: TextStyle(color: secondaryText),
                     hintText: 'Ej. Plano estructural',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(color: secondaryText),
+                    filled: true,
+                    fillColor: isDark
+                        ? const Color(0xFF1E1E22)
+                        : const Color(0xFFF6F6F8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryBlack, width: 1.5),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('¿Es obligatorio?'),
+                  activeThumbColor:
+                      isDark ? const Color(0xFF111111) : Colors.white,
+                  activeTrackColor: primaryBlack,
+                  title: Text(
+                    '¿Es obligatorio?',
+                    style: TextStyle(
+                      color: primaryBlack,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
                   value: isRequired,
                   onChanged: (val) => setDialogState(() => isRequired = val),
                 ),
@@ -227,7 +308,11 @@ class _SectionDetailViewState extends State<SectionDetailView> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogCtx, false),
-                child: const Text('Cancelar'),
+                style: TextButton.styleFrom(foregroundColor: secondaryText),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
               FilledButton(
                 onPressed: () {
@@ -235,7 +320,18 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                     Navigator.pop(dialogCtx, true);
                   }
                 },
-                child: const Text('Crear'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: primaryBlack,
+                  foregroundColor:
+                      isDark ? const Color(0xFF111111) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Crear',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           );
@@ -298,7 +394,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
   }
 
   Future<void> _deleteDoc(HomeProjectDocument doc) async {
-    final canDelete = widget.controller.permissions.canDeleteDocuments ||
+    final canDelete =
+        widget.controller.permissions.canDeleteDocuments ||
         widget.controller.permissions.canEdit;
     if (!canDelete) return;
 
@@ -481,10 +578,16 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF0C0C0E) : const Color(0xFFF7F7F8);
     final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final secondaryText = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF52525B);
+    final mutedText = isDark
+        ? const Color(0xFF71717A)
+        : const Color(0xFF8E8E93);
     final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
 
     return ListenableBuilder(
@@ -516,18 +619,24 @@ class _SectionDetailViewState extends State<SectionDetailView> {
               ),
             ),
           ),
-          floatingActionButton: permissions.canUpload
+          floatingActionButton: permissions.canComment
               ? FloatingActionButton.extended(
-                  onPressed: widget.controller.busy ? null : _upload,
-                  backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
-                  foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
+                  onPressed: widget.controller.busy
+                      ? null
+                      : _handleFloatingSend,
+                  backgroundColor: isDark
+                      ? Colors.white
+                      : const Color(0xFF111111),
+                  foregroundColor: isDark
+                      ? const Color(0xFF111111)
+                      : Colors.white,
                   elevation: 4,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  icon: const Icon(Icons.upload_file_rounded, size: 18),
+                  icon: const Icon(Icons.send_rounded, size: 18),
                   label: const Text(
-                    'Subir archivo',
+                    'Enviar',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 )
@@ -582,16 +691,21 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                                   tagBg,
                                 ),
                                 const Spacer(),
-                                if (permissions.canEdit)
+                                if (permissions.canChangeSectionStatus)
                                   OutlinedButton.icon(
                                     onPressed: widget.controller.busy
                                         ? null
                                         : _changeStatus,
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: primaryBlack,
-                                      side: BorderSide(color: borderColor, width: 1.2),
+                                      side: BorderSide(
+                                        color: borderColor,
+                                        width: 1.2,
+                                      ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
@@ -599,12 +713,27 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                                       ),
                                       visualDensity: VisualDensity.compact,
                                     ),
-                                    icon: const Icon(Icons.edit_outlined, size: 14),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 14,
+                                    ),
                                     label: const Text(
                                       'Cambiar estado',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  )
+                                else if (permissions.canEdit)
+                                  Flexible(
+                                    child: Text(
+                                      'Espera confirmación del responsable',
+                                      textAlign: TextAlign.end,
+                                      style: TextStyle(
+                                        color: secondaryText,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
@@ -629,10 +758,13 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                               builder: (context) {
                                 final totalSlots = section.slots.length;
                                 final completedSlots = section.slots
-                                    .where((s) =>
-                                        s.filled ||
-                                        section.documents
-                                            .any((d) => d.slotKey == s.key))
+                                    .where(
+                                      (s) =>
+                                          s.filled ||
+                                          section.documents.any(
+                                            (d) => d.slotKey == s.key,
+                                          ),
+                                    )
                                     .length;
                                 final progress = totalSlots == 0
                                     ? 0.0
@@ -666,14 +798,18 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                                     const SizedBox(height: 6),
                                     Container(
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                         border: Border.all(
                                           color: borderColor,
                                           width: 1.0,
                                         ),
                                       ),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                         child: LinearProgressIndicator(
                                           value: progress,
                                           minHeight: 6,
@@ -682,10 +818,10 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                                               : const Color(0xFFEAEAED),
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                            isDark
-                                                ? Colors.white
-                                                : const Color(0xFF111111),
-                                          ),
+                                                isDark
+                                                    ? Colors.white
+                                                    : const Color(0xFF111111),
+                                              ),
                                         ),
                                       ),
                                     ),
@@ -786,66 +922,99 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                           const SizedBox(height: 12),
                         ],
 
-                      // 3. SECCIÓN DE DOCUMENTOS
-                      const SizedBox(height: 24),
-                      Text(
-                        'Documentos (${section.documents.length})',
-                        style: TextStyle(
-                          color: primaryBlack,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (section.documents.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 18,
-                            horizontal: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderColor, width: 1.2),
-                          ),
-                          child: Row(
+                      // 3. SECCIÓN DE DOCUMENTOS (solo cuando no hay entregas configuradas o hay archivos sueltos)
+                      Builder(
+                        builder: (context) {
+                          final slotKeys = section.slots
+                              .map((s) => s.key)
+                              .toSet();
+                          final visibleDocs = section.slots.isEmpty
+                              ? section.documents
+                              : section.documents
+                                    .where(
+                                      (d) =>
+                                          d.slotKey == null ||
+                                          !slotKeys.contains(d.slotKey),
+                                    )
+                                    .toList();
+                          if (section.slots.isNotEmpty && visibleDocs.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: tagBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: borderColor),
-                                ),
-                                child: Icon(
-                                  Icons.folder_open_rounded,
-                                  size: 18,
+                              const SizedBox(height: 24),
+                              Text(
+                                section.slots.isEmpty
+                                    ? 'Documentos (${visibleDocs.length})'
+                                    : 'Otros documentos (${visibleDocs.length})',
+                                style: TextStyle(
                                   color: primaryBlack,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Aún no hay documentos en este apartado.',
-                                  style: TextStyle(
-                                    color: secondaryText,
-                                    fontSize: 13,
+                              const SizedBox(height: 12),
+                              if (visibleDocs.isEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 18,
+                                    horizontal: 16,
                                   ),
-                                ),
-                              ),
+                                  decoration: BoxDecoration(
+                                    color: cardBg,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: tagBg,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: borderColor,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.folder_open_rounded,
+                                          size: 18,
+                                          color: primaryBlack,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'Aún no hay documentos en este apartado.',
+                                          style: TextStyle(
+                                            color: secondaryText,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                for (final doc in visibleDocs) ...[
+                                  _buildDocumentTile(
+                                    context,
+                                    doc,
+                                    section,
+                                    canDeleteDocs,
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
                             ],
-                          ),
-                        )
-                      else
-                        for (final doc in section.documents) ...[
-                          _buildDocumentTile(
-                            context,
-                            doc,
-                            section,
-                            canDeleteDocs,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                          );
+                        },
+                      ),
 
                       // 4. SECCIÓN DE COMENTARIOS
                       const SizedBox(height: 28),
@@ -932,7 +1101,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                                       alignment: Alignment.center,
                                       child: Text(
                                         comment.authorName.isNotEmpty
-                                            ? comment.authorName[0].toUpperCase()
+                                            ? comment.authorName[0]
+                                                  .toUpperCase()
                                             : 'U',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w800,
@@ -1009,16 +1179,19 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                       if (permissions.canComment) ...[
                         const SizedBox(height: 16),
                         TextField(
+                          key: _commentBoxKey,
                           controller: _commentController,
+                          focusNode: _commentFocusNode,
                           maxLength: 4000,
                           minLines: 2,
                           maxLines: 4,
                           style: TextStyle(color: primaryBlack, fontSize: 13),
                           decoration: InputDecoration(
                             labelText: 'Escribe un comentario',
-                            labelStyle: TextStyle(color: mutedText, fontSize: 13),
-                            hintText: 'Puedes mencionar con @correo',
-                            hintStyle: TextStyle(color: mutedText, fontSize: 12),
+                            labelStyle: TextStyle(
+                              color: mutedText,
+                              fontSize: 13,
+                            ),
                             filled: true,
                             fillColor: cardBg,
                             border: OutlineInputBorder(
@@ -1038,37 +1211,7 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FilledButton.icon(
-                            onPressed:
-                                widget.controller.busy ? null : _sendComment,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF111111),
-                              foregroundColor: isDark
-                                  ? const Color(0xFF111111)
-                                  : Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 10,
-                              ),
-                            ),
-                            icon: const Icon(Icons.send_rounded, size: 15),
-                            label: const Text(
-                              'Enviar',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 56),
                       ],
                     ],
                   ),
@@ -1086,13 +1229,18 @@ class _SectionDetailViewState extends State<SectionDetailView> {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final mutedText = isDark
+        ? const Color(0xFF71717A)
+        : const Color(0xFF8E8E93);
     final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
 
-    final slotDocs =
-        section.documents.where((d) => d.slotKey == slot.key).toList();
+    final slotDocs = section.documents
+        .where((d) => d.slotKey == slot.key)
+        .toList();
     final isFilled = slot.filled || slotDocs.isNotEmpty;
 
     return Container(
@@ -1131,8 +1279,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                   isFilled
                       ? Icons.check_rounded
                       : (slot.required
-                          ? Icons.assignment_late_outlined
-                          : Icons.assignment_outlined),
+                            ? Icons.assignment_late_outlined
+                            : Icons.assignment_outlined),
                   color: isFilled
                       ? (isDark ? const Color(0xFF111111) : Colors.white)
                       : primaryBlack,
@@ -1180,51 +1328,6 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                               ),
                             ),
                           ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isFilled
-                                ? (isDark
-                                    ? Colors.white12
-                                    : Colors.black.withValues(alpha: 0.05))
-                                : tagBg,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: borderColor, width: 1.0),
-                          ),
-                          child: Text(
-                            isFilled
-                                ? 'Entregado (${slotDocs.length})'
-                                : 'Pendiente',
-                            style: TextStyle(
-                              color: isFilled ? primaryBlack : mutedText,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        if (slot.accept.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tagBg,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: borderColor, width: 1.0),
-                            ),
-                            child: Text(
-                              slot.accept.join(', '),
-                              style: TextStyle(
-                                color: mutedText,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ],
@@ -1241,40 +1344,84 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                 ),
             ],
           ),
-          if (permissions.canUpload) ...[
-            const SizedBox(height: 14),
-            Container(height: 1, color: borderColor),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: widget.controller.busy
-                    ? null
-                    : () => _upload(
-                          preselectedSlotKey: slot.key,
-                          preselectedSlotTitle: slot.title,
+          const SizedBox(height: 14),
+          Container(height: 1, color: borderColor),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SlotDocumentsView(
+                          controller: widget.controller,
+                          stageNumber: widget.stageNumber,
+                          sectionId: widget.sectionId,
+                          slot: slot,
                         ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryBlack,
-                  side: BorderSide(color: borderColor, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryBlack,
+                    side: BorderSide(color: borderColor, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 10,
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(Icons.upload_file_rounded, size: 18),
-                label: Text(
-                  isFilled
-                      ? 'Subir otro archivo para esta entrega'
-                      : 'Subir esta entrega',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                  icon: const Icon(Icons.folder_open_rounded, size: 17),
+                  label: Text(
+                    'Archivos (${slotDocs.length})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              if (permissions.canUpload) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.controller.busy
+                        ? null
+                        : () => _upload(
+                            preselectedSlotKey: slot.key,
+                            preselectedSlotTitle: slot.title,
+                          ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryBlack,
+                      side: BorderSide(color: borderColor, width: 1.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 10,
+                      ),
+                    ),
+                    icon: const Icon(Icons.upload_file_rounded, size: 17),
+                    label: const Text(
+                      'Subir archivo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -1288,13 +1435,18 @@ class _SectionDetailViewState extends State<SectionDetailView> {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final mutedText = isDark
+        ? const Color(0xFF71717A)
+        : const Color(0xFF8E8E93);
     final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
 
-    final matchingSlot =
-        section.slots.where((s) => s.key == doc.slotKey).firstOrNull;
+    final matchingSlot = section.slots
+        .where((s) => s.key == doc.slotKey)
+        .firstOrNull;
     final slotDisplay = matchingSlot?.title ?? doc.slotKey;
 
     final name = doc.originalFilename.toLowerCase();
@@ -1391,7 +1543,11 @@ class _SectionDetailViewState extends State<SectionDetailView> {
           ),
           IconButton(
             tooltip: 'Abrir',
-            icon: Icon(Icons.open_in_new_rounded, size: 18, color: primaryBlack),
+            icon: Icon(
+              Icons.open_in_new_rounded,
+              size: 18,
+              color: primaryBlack,
+            ),
             splashRadius: 18,
             onPressed: () => _openDoc(doc),
           ),
@@ -1404,9 +1560,7 @@ class _SectionDetailViewState extends State<SectionDetailView> {
                 color: Colors.redAccent,
               ),
               splashRadius: 18,
-              onPressed: widget.controller.busy
-                  ? null
-                  : () => _deleteDoc(doc),
+              onPressed: widget.controller.busy ? null : () => _deleteDoc(doc),
             ),
         ],
       ),

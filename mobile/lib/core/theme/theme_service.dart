@@ -6,7 +6,7 @@ class ThemeService extends ChangeNotifier {
       : _settingsStorage = settingsStorage;
 
   SettingsStorage? _settingsStorage;
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.dark;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;

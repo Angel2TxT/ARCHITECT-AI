@@ -98,10 +98,12 @@ class _BillingViewState extends State<BillingView> {
           returnUrl: '${AppServices.instance.apiClient.dio.options.baseUrl}/',
         );
         if (session.sessionToken != null &&
-            (session.isDemo || session.url == null)) {
+            (session.isDemo ||
+                session.url == null ||
+                session.url!.startsWith('/checkout'))) {
           await billing.completeDemoCheckout(session.sessionToken!);
         } else if (session.url != null) {
-          await openExternalUrl(session.url!);
+          await openExternalUrl(_resolveUrl(session.url!));
           if (session.sessionId != null) {
             await billing.completeStripeCheckout(session.sessionId!);
           }
@@ -119,12 +121,22 @@ class _BillingViewState extends State<BillingView> {
     }
   }
 
+  String _resolveUrl(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    final parsed = Uri.tryParse(trimmed);
+    if (parsed != null && parsed.hasScheme) {
+      return trimmed;
+    }
+    final base = AppServices.instance.apiClient.dio.options.baseUrl;
+    return Uri.parse(base).resolve(trimmed).toString();
+  }
+
   Future<void> _openPortal() async {
     try {
       final url = await AppServices.instance.billingService.openPortal(
         '${AppServices.instance.apiClient.dio.options.baseUrl}/',
       );
-      if (url != null) await openExternalUrl(url);
+      if (url != null) await openExternalUrl(_resolveUrl(url));
     } on ApiException catch (error) {
       if (!mounted) return;
       AppNotifications.error(context, error.message);
@@ -151,8 +163,10 @@ class _BillingViewState extends State<BillingView> {
     try {
       final bytes = await AppServices.instance.billingService
           .downloadReceiptPdf(receipt.id);
-      final file = await AppServices.instance.billingService
-          .writeTempFile(bytes, 'recibo-${receipt.id}.pdf');
+      final file = await AppServices.instance.billingService.writeTempFile(
+        bytes,
+        'recibo-${receipt.id}.pdf',
+      );
       await OpenFilex.open(file.path);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -183,10 +197,12 @@ class _BillingViewState extends State<BillingView> {
 
   Future<void> _downloadReceiptsZip() async {
     try {
-      final bytes =
-          await AppServices.instance.billingService.exportReceiptsZip();
-      final file = await AppServices.instance.billingService
-          .writeTempFile(bytes, 'comprobantes.zip');
+      final bytes = await AppServices.instance.billingService
+          .exportReceiptsZip();
+      final file = await AppServices.instance.billingService.writeTempFile(
+        bytes,
+        'comprobantes.zip',
+      );
       await OpenFilex.open(file.path);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -196,15 +212,13 @@ class _BillingViewState extends State<BillingView> {
 
   Future<void> _submitRefund() async {
     try {
-      await AppServices.instance.billingService
-          .requestRefund(_refundReason.text);
+      await AppServices.instance.billingService.requestRefund(
+        _refundReason.text,
+      );
       _refundReason.clear();
       await _load();
       if (!mounted) return;
-      AppNotifications.success(
-        context,
-        'Reembolso solicitado',
-      );
+      AppNotifications.success(context, 'Reembolso solicitado');
     } on ApiException catch (error) {
       if (!mounted) return;
       AppNotifications.error(context, error.message);
@@ -227,7 +241,10 @@ class _BillingViewState extends State<BillingView> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   if (_error != null)
-                    Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
                   if (_subscription != null) ...[
                     Text(
                       'Plan actual: ${_subscription!.plan.name}',
@@ -352,10 +369,10 @@ class _ReceiptSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    final cardBg =
-        isDark ? colorScheme.surfaceContainerHighest : Colors.white;
-    final fieldBg =
-        isDark ? colorScheme.surfaceContainerHigh : const Color(0xFFF4F4F6);
+    final cardBg = isDark ? colorScheme.surfaceContainerHighest : Colors.white;
+    final fieldBg = isDark
+        ? colorScheme.surfaceContainerHigh
+        : const Color(0xFFF4F4F6);
 
     return Container(
       width: double.infinity,
@@ -428,8 +445,9 @@ class _ReceiptSelector extends StatelessWidget {
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.onSurface,
                   foregroundColor: isDark ? Colors.black : Colors.white,
-                  disabledBackgroundColor:
-                      colorScheme.onSurface.withValues(alpha: 0.35),
+                  disabledBackgroundColor: colorScheme.onSurface.withValues(
+                    alpha: 0.35,
+                  ),
                 ),
                 icon: isOpening
                     ? SizedBox(

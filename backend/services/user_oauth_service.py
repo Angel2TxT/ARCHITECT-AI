@@ -72,6 +72,7 @@ def find_or_create_google_user(db: Session, profile: dict) -> User:
             raise HTTPException(409, "Este correo usa otro proveedor de acceso")
         by_email.oauth_provider = "google"
         by_email.oauth_subject = sub
+        by_email.email_verified = True
         by_email.full_name = profile.get("full_name") or by_email.full_name
         by_email.avatar_url = profile.get("avatar_url") or by_email.avatar_url
         db.commit()
@@ -83,6 +84,7 @@ def find_or_create_google_user(db: Session, profile: dict) -> User:
         password_hash=None,
         full_name=profile.get("full_name") or email.split("@")[0],
         role=UserRole.user,
+        email_verified=True,
         oauth_provider="google",
         oauth_subject=sub,
         avatar_url=profile.get("avatar_url"),

@@ -52,6 +52,7 @@ class User(Base):
         Enum(UserRole), default=UserRole.user, index=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=True)
     oauth_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
     oauth_subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -88,6 +89,28 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    verification_codes: Mapped[list["EmailVerificationCode"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(128))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="verification_codes")
 
 
 class Plan(Base):

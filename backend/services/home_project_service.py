@@ -818,6 +818,12 @@ def update_stage(
     reopen_reason_text = ""
     now = datetime.utcnow()
     if status is not None:
+        if not is_owner_or_admin:
+            raise HTTPException(
+                403,
+                "Solo el creador o responsable del proyecto puede modificar el estado de la etapa. "
+                "Si colaboras por invitación, espera la confirmación del responsable del proyecto.",
+            )
         try:
             new_status = HomeStageStatus(status)
         except ValueError as exc:
@@ -1233,6 +1239,7 @@ def _permissions_for_role(role: str | None) -> dict[str, bool]:
         "can_complete_stage": is_owner_or_admin,
         "can_reopen_section": is_owner_or_admin,
         "can_reopen_stage": is_owner_or_admin,
+        "can_change_section_status": is_owner_or_admin,
         "is_global_admin": role == "admin",
         "is_project_owner": role == "owner",
     }
@@ -1773,6 +1780,12 @@ def update_section(
     if description is not None:
         section.description = description.strip()
     if status is not None:
+        if not is_owner_or_admin:
+            raise HTTPException(
+                403,
+                "Solo el creador o responsable del proyecto puede modificar el estado. "
+                "Si colaboras por invitación, espera la confirmación del responsable del proyecto.",
+            )
         try:
             new_status = HomeProjectSectionStatus(status)
         except ValueError as exc:
@@ -2345,6 +2358,48 @@ def remove_project_member(
         metadata={
             "email": removed_email,
             "role": removed_role,
+        },
+    )
+
+
+def leave_project(db: Session, user: User, project_id: str) -> None:
+    """Permite que un colaborador invitado se dé de baja voluntariamente."""
+    project = get_home_project(db, user.id, project_id)
+    if project.user_id == user.id:
+        raise HTTPException(
+            400, "La persona propietaria no puede darse de baja del proyecto"
+        )
+    row = (
+        db.query(HomeProjectMember)
+        .filter(
+            HomeProjectMember.project_id == project.id,
+            HomeProjectMember.user_id == user.id,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(404, "No eres colaborador de este proyecto")
+    removed_role = row.role.value
+    (
+        db.query(HomeProjectSection)
+        .filter(
+            HomeProjectSection.project_id == project.id,
+            HomeProjectSection.assigned_to_user_id == user.id,
+        )
+        .update({HomeProjectSection.assigned_to_user_id: None}, synchronize_session=False)
+    )
+    db.delete(row)
+    project.updated_at = datetime.utcnow()
+    db.commit()
+    _log_event(
+        db,
+        project=project,
+        actor_user_id=user.id,
+        event_type=HomeProjectEventType.member_removed,
+        metadata={
+            "email": user.email,
+            "role": removed_role,
+            "self_leave": True,
         },
     )
     db.commit()

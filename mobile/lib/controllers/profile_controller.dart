@@ -23,6 +23,7 @@ class ProfileController extends ChangeNotifier {
   final emailController = TextEditingController();
   final currentPasswordController = TextEditingController();
   final newPasswordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
   final confirmDeleteController = TextEditingController();
 
   bool _loadingProfile = false;
@@ -87,6 +88,11 @@ class ProfileController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    if (next != confirmPasswordController.text) {
+      _error = 'Las contraseñas no coinciden.';
+      notifyListeners();
+      return false;
+    }
     final current = user?.hasPassword == true
         ? currentPasswordController.text
         : null;
@@ -101,6 +107,7 @@ class ProfileController extends ChangeNotifier {
     if (ok) {
       currentPasswordController.clear();
       newPasswordController.clear();
+      confirmPasswordController.clear();
     }
     return ok;
   }
@@ -213,6 +220,7 @@ class ProfileController extends ChangeNotifier {
     emailController.dispose();
     currentPasswordController.dispose();
     newPasswordController.dispose();
+    confirmPasswordController.dispose();
     confirmDeleteController.dispose();
     super.dispose();
   }

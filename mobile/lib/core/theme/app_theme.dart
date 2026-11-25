@@ -10,6 +10,39 @@ abstract final class AppTheme {
         seedColor: Colors.black,
         brightness: Brightness.light,
         surface: AppColors.dashboardSurface,
+      ).copyWith(
+        primary: AppColors.ink,
+        onPrimary: Colors.white,
+        secondary: const Color(0xFF52525B),
+        onSecondary: Colors.white,
+        surfaceContainerLowest: Colors.white,
+        surfaceContainerLow: const Color(0xFFF9F9FB),
+        surfaceContainer: const Color(0xFFF3F4F6),
+        surfaceContainerHigh: Colors.white,
+        surfaceContainerHighest: const Color(0xFFE5E7EB),
+        outline: const Color(0xFFD1D5DB),
+        outlineVariant: const Color(0xFFE5E7EB),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFD1D5DB), width: 1.2),
+        ),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.ink),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.ink,
+          foregroundColor: Colors.white,
+        ),
       ),
       fontFamily: 'Roboto',
       textTheme: ThemeData(brightness: Brightness.light).textTheme.apply(
@@ -61,8 +94,37 @@ abstract final class AppTheme {
         surface: surface,
         onSurface: onSurface,
       ).copyWith(
+        primary: Colors.white,
+        onPrimary: const Color(0xFF111111),
+        secondary: const Color(0xFFA1A1AA),
+        onSecondary: const Color(0xFF111111),
+        surfaceContainerLow: const Color(0xFF18181B),
+        surfaceContainer: card,
+        surfaceContainerHigh: const Color(0xFF141417),
         surfaceContainerHighest: const Color(0xFF2A2A2E),
+        outline: const Color(0xFF3F3F46),
         outlineVariant: const Color(0xFF3A3A3E),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF141417),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFF3F3F46), width: 1.2),
+        ),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: Color(0xFF141417),
+        surfaceTintColor: Colors.transparent,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: onSurface),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF111111),
+        ),
       ),
       fontFamily: 'Roboto',
       textTheme: ThemeData(brightness: Brightness.dark).textTheme.apply(

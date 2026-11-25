@@ -13,6 +13,7 @@ class SecureStorageService {
   static const _pinnedChatsKey = 'pinned_chat_ids';
   static const _pinnedHomeProjectsKey = 'pinned_home_project_ids';
   static const _fcmTokenKey = 'fcm_device_token';
+  static const _pendingVerificationEmailKey = 'pending_verification_email';
 
   final FlutterSecureStorage _storage;
 
@@ -22,6 +23,17 @@ class SecureStorageService {
   Future<String?> getToken() => _storage.read(key: _tokenKey);
 
   Future<void> clearToken() => _storage.delete(key: _tokenKey);
+
+  Future<void> savePendingVerificationEmail(String email) => _storage.write(
+        key: _pendingVerificationEmailKey,
+        value: email.trim().toLowerCase(),
+      );
+
+  Future<String?> getPendingVerificationEmail() =>
+      _storage.read(key: _pendingVerificationEmailKey);
+
+  Future<void> clearPendingVerificationEmail() =>
+      _storage.delete(key: _pendingVerificationEmailKey);
 
   Future<void> saveFcmToken(String token) =>
       _storage.write(key: _fcmTokenKey, value: token);

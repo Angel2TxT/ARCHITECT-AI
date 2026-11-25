@@ -723,6 +723,53 @@ def _ensure_user_device_tokens_table() -> None:
         print("  Tabla user_device_tokens creada.")
 
 
+def _ensure_email_verification_tables() -> None:
+    """Columna users.email_verified (1 para cuentas existentes) + email_verification_codes."""
+    collate = "utf8mb4_0900_ai_ci"
+    with engine.begin() as conn:
+        col_check = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' "
+                "AND COLUMN_NAME = 'email_verified'"
+            )
+        ).scalar()
+        if not col_check:
+            conn.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 1"
+                )
+            )
+            print("  Columna users.email_verified añadida.")
+
+        tbl_check = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'email_verification_codes'"
+            )
+        ).scalar()
+        if not tbl_check:
+            conn.execute(
+                text(
+                    f"""
+                    CREATE TABLE email_verification_codes (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        code_hash VARCHAR(128) NOT NULL,
+                        expires_at DATETIME NOT NULL,
+                        attempts INT NOT NULL DEFAULT 0,
+                        consumed_at DATETIME NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        INDEX ix_evc_user_id (user_id),
+                        CONSTRAINT fk_evc_user FOREIGN KEY (user_id)
+                            REFERENCES users(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE={collate}
+                    """
+                )
+            )
+            print("  Tabla email_verification_codes creada.")
+
+
 def apply_pending_migrations() -> None:
     """Aplica ALTER TABLE pendientes sin borrar datos."""
     _ensure_analysis_corrections_column()
@@ -740,3 +787,4 @@ def apply_pending_migrations() -> None:
     _ensure_home_project_geo_columns()
     _ensure_user_notifications_table()
     _ensure_user_device_tokens_table()
+    _ensure_email_verification_tables()

@@ -1,0 +1,25 @@
+﻿architect-backend  | INFO:     172.18.0.1:59124 - "GET /api/chats?limit=40 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:59124 - "GET /api/chats?limit=40 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:59124 - "GET /api/analyses?limit=20 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:59124 - "GET /api/analyses?limit=20 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35676 - "GET /api/home-projects HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35676 - "GET /api/home-projects/1323d864-b516-4db9-bfc5-8cd1e2afcacc HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:41178 - "PATCH /api/home-projects/1323d864-b516-4db9-bfc5-8cd1e2afcacc/sections/55 HTTP/1.1" 403 Forbidden
+architect-backend  | INFO:     172.18.0.1:58204 - "GET /godot-ai/status HTTP/1.1" 404 Not Found
+architect-backend  | INFO:     172.18.0.1:42992 - "GET /api/health HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:43000 - "GET /api/auth/google/enabled HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35036 - "POST /api/auth/login HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35036 - "POST /api/mobile/device-token HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35036 - "GET /api/auth/me HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35036 - "GET /api/chats?limit=40 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:35036 - "GET /api/analyses?limit=20 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40076 - "GET /api/auth/me HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40066 - "GET /api/auth/me HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40066 - "GET /api/chats?limit=40 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40066 - "GET /api/chats?limit=40 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40066 - "GET /api/analyses?limit=20 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40066 - "GET /api/analyses?limit=20 HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:52228 - "GET /api/home-projects HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:52228 - "GET /api/home-projects/1323d864-b516-4db9-bfc5-8cd1e2afcacc HTTP/1.1" 200 OK
+architect-backend  | INFO:     172.18.0.1:40244 - "PATCH /api/home-projects/1323d864-b516-4db9-bfc5-8cd1e2afcacc/sections/55 HTTP/1.1" 403 Forbidden
+architect-backend  | INFO:     172.18.0.1:50546 - "GET /godot-ai/status HTTP/1.1" 404 Not Found

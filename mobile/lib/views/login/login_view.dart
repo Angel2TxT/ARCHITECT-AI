@@ -10,6 +10,7 @@ import 'package:movil_architect/views/dashboard/dashboard_view.dart';
 import 'package:movil_architect/views/guest/guest_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
 import 'package:movil_architect/views/register/register_view.dart';
+import 'package:movil_architect/views/register/verify_email_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -54,7 +55,20 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _handleLogin() async {
-    if (!await _controller.login()) return;
+    if (!await _controller.login()) {
+      if (!mounted) return;
+      if (_controller.requiresVerification) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VerifyEmailView(
+              email: _controller.emailController.text.trim(),
+              initialCooldownSeconds: 0,
+            ),
+          ),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(

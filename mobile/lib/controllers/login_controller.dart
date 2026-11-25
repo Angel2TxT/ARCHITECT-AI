@@ -20,12 +20,14 @@ class LoginController extends ChangeNotifier {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _googleEnabled = false;
+  bool _requiresVerification = false;
   String? _errorMessage;
   bool _disposed = false;
 
   bool get obscurePassword => _obscurePassword;
   bool get isLoading => _isLoading;
   bool get googleEnabled => _googleEnabled;
+  bool get requiresVerification => _requiresVerification;
   String? get errorMessage => _errorMessage;
 
   void _notify() {
@@ -62,6 +64,7 @@ class LoginController extends ChangeNotifier {
     }
 
     _isLoading = true;
+    _requiresVerification = false;
     _errorMessage = null;
     _notify();
 
@@ -73,6 +76,10 @@ class LoginController extends ChangeNotifier {
       );
       return !_disposed;
     } on ApiException catch (error) {
+      if (error.code == 'EMAIL_NOT_VERIFIED') {
+        _requiresVerification = true;
+        await _authService.savePendingVerificationEmail(user.email);
+      }
       _errorMessage = error.message;
       return false;
     } catch (_) {

@@ -4,6 +4,7 @@ import 'package:movil_architect/controllers/register_controller.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:movil_architect/views/dashboard/dashboard_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
+import 'package:movil_architect/views/register/verify_email_view.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -30,6 +31,19 @@ class _RegisterViewState extends State<RegisterView> {
   Future<void> _handleRegister() async {
     if (!await _controller.register()) return;
     if (!mounted) return;
+
+    if (_controller.requiresVerification) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => VerifyEmailView(
+            email: _controller.registeredEmail,
+            initialCooldownSeconds: 60,
+          ),
+        ),
+        (_) => false,
+      );
+      return;
+    }
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const DashboardView()),
@@ -79,14 +93,9 @@ class _RegisterViewState extends State<RegisterView> {
                   const SizedBox(height: 28),
                   LoginPillField(
                     controller: _controller.fullNameController,
-                    hint: 'NOMBRE COMPLETO (OPCIONAL)',
+                    hint: 'NOMBRE COMPLETO',
                     keyboardType: TextInputType.name,
                     textCapitalization: TextCapitalization.words,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]'),
-                      ),
-                    ],
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     onChanged: (_) => _controller.clearError(),
@@ -96,11 +105,6 @@ class _RegisterViewState extends State<RegisterView> {
                     controller: _controller.emailController,
                     hint: 'CORREO ELECTRÓNICO',
                     keyboardType: TextInputType.emailAddress,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'[a-zA-Z0-9@._+-]'),
-                      ),
-                    ],
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     onChanged: (_) => _controller.clearError(),

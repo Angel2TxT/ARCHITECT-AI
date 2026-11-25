@@ -179,6 +179,7 @@ class ChatMessagesList extends StatelessWidget {
     }
 
     final listView = ListView.builder(
+      key: PageStorageKey<String>('chat_list_${controller.chatId}'),
       controller: scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),

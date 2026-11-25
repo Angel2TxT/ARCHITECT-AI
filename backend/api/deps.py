@@ -53,6 +53,14 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(payload["sub"])).first()
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no válido")
+    if not user.email_verified:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            {
+                "code": "EMAIL_NOT_VERIFIED",
+                "message": "Debes verificar tu correo electrónico antes de continuar.",
+            },
+        )
     _attach_impersonator(user, payload, db)
     return user
 

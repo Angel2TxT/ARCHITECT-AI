@@ -41,6 +41,7 @@ class AuthService extends ChangeNotifier {
         data: {'email': email.trim(), 'password': password},
       );
       final auth = AuthResponse.fromJson(response.data ?? {});
+      await _secureStorage.clearPendingVerificationEmail();
       await _persistSession(auth);
       await _push?.syncTokenWithBackend(force: true);
       return auth;
@@ -69,9 +70,78 @@ class AuthService extends ChangeNotifier {
         data: payload,
       );
       final auth = AuthResponse.fromJson(response.data ?? {});
+      if (auth.requiresVerification || auth.accessToken.isEmpty) {
+        await _secureStorage.savePendingVerificationEmail(auth.user.email);
+        return auth;
+      }
+      await _secureStorage.clearPendingVerificationEmail();
       await _persistSession(auth);
       await _push?.syncTokenWithBackend(force: true);
       return auth;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<String?> pendingVerificationEmail() =>
+      _secureStorage.getPendingVerificationEmail();
+
+  Future<void> clearPendingVerificationEmail() =>
+      _secureStorage.clearPendingVerificationEmail();
+
+  Future<void> savePendingVerificationEmail(String email) =>
+      _secureStorage.savePendingVerificationEmail(email);
+
+  Future<AuthResponse> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/api/auth/verify-email',
+        data: {'email': email.trim().toLowerCase(), 'code': code.trim()},
+      );
+      final auth = AuthResponse.fromJson(response.data ?? {});
+      await _secureStorage.clearPendingVerificationEmail();
+      await _persistSession(auth);
+      await _push?.syncTokenWithBackend(force: true);
+      return auth;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<int> resendVerificationCode({required String email}) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/api/auth/resend-verification',
+        data: {'email': email.trim().toLowerCase()},
+      );
+      final data = response.data ?? const <String, dynamic>{};
+      return (data['cooldown_seconds'] as num?)?.toInt() ?? 60;
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
+
+  Future<String> updateUnverifiedEmail({
+    required String currentEmail,
+    required String newEmail,
+    required String password,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/api/auth/update-unverified-email',
+        data: {
+          'current_email': currentEmail.trim().toLowerCase(),
+          'new_email': newEmail.trim().toLowerCase(),
+          'password': password,
+        },
+      );
+      final updatedEmail =
+          (response.data?['email'] as String?) ?? newEmail.trim().toLowerCase();
+      await _secureStorage.savePendingVerificationEmail(updatedEmail);
+      return updatedEmail;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }

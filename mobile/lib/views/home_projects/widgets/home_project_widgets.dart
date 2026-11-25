@@ -10,7 +10,9 @@ class HomeStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
     final isDone = status == 'completed';
     final isActive = status == 'active' || status == 'in_progress';
@@ -89,6 +91,7 @@ class HomeProjectCard extends StatelessWidget {
     this.onPin,
     this.onRename,
     this.onDelete,
+    this.onLeave,
   });
 
   final HomeProject project;
@@ -97,26 +100,34 @@ class HomeProjectCard extends StatelessWidget {
   final VoidCallback? onPin;
   final VoidCallback? onRename;
   final VoidCallback? onDelete;
+  final VoidCallback? onLeave;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final borderColor = isDark
+        ? const Color(0xFF3F3F46)
+        : const Color(0xFFD1D5DB);
     final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final secondaryText = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF52525B);
+    final mutedText = isDark
+        ? const Color(0xFF71717A)
+        : const Color(0xFF8E8E93);
     final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
-    final hasMenu = onPin != null || onRename != null || onDelete != null;
+    final hasMenu =
+        onPin != null ||
+        onRename != null ||
+        onDelete != null ||
+        onLeave != null;
 
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: borderColor,
-          width: 1.4,
-        ),
+        border: Border.all(color: borderColor, width: 1.4),
         boxShadow: [
           BoxShadow(
             color: isDark
@@ -186,6 +197,8 @@ class HomeProjectCard extends StatelessWidget {
                               onRename?.call();
                             case 'delete':
                               onDelete?.call();
+                            case 'leave':
+                              onLeave?.call();
                           }
                         },
                         itemBuilder: (context) => [
@@ -254,6 +267,27 @@ class HomeProjectCard extends StatelessWidget {
                                 ],
                               ),
                             ),
+                          if (onLeave != null)
+                            const PopupMenuItem(
+                              value: 'leave',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.exit_to_app_rounded,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Darse de baja',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -261,7 +295,8 @@ class HomeProjectCard extends StatelessWidget {
                 ),
 
                 // Cliente y Ubicación
-                if (project.clientName.isNotEmpty || project.location.isNotEmpty) ...[
+                if (project.clientName.isNotEmpty ||
+                    project.location.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   if (project.clientName.isNotEmpty) ...[
                     Row(
@@ -291,11 +326,7 @@ class HomeProjectCard extends StatelessWidget {
                   if (project.location.isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(
-                          Icons.place_outlined,
-                          size: 14,
-                          color: mutedText,
-                        ),
+                        Icon(Icons.place_outlined, size: 14, color: mutedText),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
@@ -315,10 +346,7 @@ class HomeProjectCard extends StatelessWidget {
                 ],
 
                 const SizedBox(height: 12),
-                Container(
-                  height: 1,
-                  color: borderColor.withValues(alpha: 0.6),
-                ),
+                Container(height: 1, color: borderColor.withValues(alpha: 0.6)),
                 const SizedBox(height: 12),
 
                 // Progreso y Etapa
@@ -353,12 +381,17 @@ class HomeProjectCard extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(999),
                             child: LinearProgressIndicator(
-                              value: (project.progressPercent / 100).clamp(0.0, 1.0),
+                              value: (project.progressPercent / 100).clamp(
+                                0.0,
+                                1.0,
+                              ),
                               minHeight: 5,
                               backgroundColor: isDark
                                   ? const Color(0xFF27272A)
                                   : const Color(0xFFE4E4E7),
-                              valueColor: AlwaysStoppedAnimation<Color>(primaryBlack),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                primaryBlack,
+                              ),
                             ),
                           ),
                         ],

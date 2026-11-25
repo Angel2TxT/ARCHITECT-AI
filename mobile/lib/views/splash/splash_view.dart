@@ -6,6 +6,7 @@ import 'package:movil_architect/core/config/app_config.dart';
 import 'package:movil_architect/views/dashboard/dashboard_view.dart';
 import 'package:movil_architect/views/login/login_view.dart';
 import 'package:movil_architect/views/login/widgets/login_widgets.dart';
+import 'package:movil_architect/views/register/verify_email_view.dart';
 
 /// Pantalla de bienvenida (Splash Screen) animada estilo iOS para ARCHITECT.
 ///
@@ -237,6 +238,14 @@ class _SplashViewState extends State<SplashView>
       final status = _controller.status;
       if (status == SplashStatus.readyDashboard) {
         _goTo(const DashboardView());
+      } else if (status == SplashStatus.readyVerifyEmail &&
+          (_controller.pendingVerificationEmail?.isNotEmpty ?? false)) {
+        _goTo(
+          VerifyEmailView(
+            email: _controller.pendingVerificationEmail!,
+            initialCooldownSeconds: 0,
+          ),
+        );
       } else if (status == SplashStatus.readyLogin) {
         _goTo(const LoginView());
       }

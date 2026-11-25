@@ -56,17 +56,33 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
+    void scrollOnce() {
+      if (!mounted || !_scrollController.hasClients) return;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      if ((_scrollController.offset - maxExtent).abs() < 2) return;
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
+        maxExtent,
+        duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollOnce();
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (!mounted || !_scrollController.hasClients) return;
+        final maxExtent = _scrollController.position.maxScrollExtent;
+        if (_scrollController.offset < maxExtent - 4) {
+          _scrollController.jumpTo(maxExtent);
+        }
+      });
     });
   }
 
-  Future<void> _syncChatController(String chatId) async {
+  Future<void> _syncChatController(
+    String chatId, {
+    bool showLoading = true,
+  }) async {
     if (_chatController?.chatId == chatId) {
       await _chatController!.load(showLoading: false);
       if (mounted) setState(() {});
@@ -76,7 +92,7 @@ class _DashboardViewState extends State<DashboardView> {
     _chatController?.dispose();
     _chatController = ChatController(chatId: chatId);
     if (mounted) setState(() {});
-    await _chatController!.load();
+    await _chatController!.load(showLoading: showLoading);
     if (mounted) setState(() {});
   }
 
@@ -251,7 +267,7 @@ class _DashboardViewState extends State<DashboardView> {
 
     if (chatId != null) {
       _controller.setActiveChat(chatId);
-      await _syncChatController(chatId);
+      await _syncChatController(chatId, showLoading: false);
       if (mounted) setState(() {});
     }
     _scrollToBottom();

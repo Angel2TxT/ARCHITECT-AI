@@ -10,11 +10,12 @@ from services.notification_service import notify
 
 
 def update_profile(db: Session, user: User, *, full_name: str) -> User:
-    name = (full_name or "").strip()
-    if not name:
-        raise HTTPException(400, "El nombre no puede quedar vacío")
-    if len(name) > 120:
-        raise HTTPException(400, "El nombre es demasiado largo")
+    from api.schemas import validate_full_name
+
+    try:
+        name = validate_full_name(full_name)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     user.full_name = name
     db.add(user)
     db.commit()
