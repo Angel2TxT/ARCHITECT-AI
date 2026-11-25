@@ -117,7 +117,12 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     final section = _section;
     if (section == null) return;
 
-    final pick = await showAttachmentPickerSheet(context);
+    final pick = await showAttachmentPickerSheet(
+      context,
+      allowedExtensions: projectDocumentAttachmentExtensions,
+      invalidFileMessage:
+          'Solo se permiten imágenes (PNG, JPG, WEBP), PDF, Word (.doc/.docx) o Excel (.xls/.xlsx).',
+    );
     if (pick == null || !mounted) return;
 
     final file = pick.file;
@@ -168,9 +173,11 @@ class _SectionDetailViewState extends State<SectionDetailView> {
     }
 
     // 2. Si no hay entregas preconfiguradas, clasificar por extensión
-    if (lower.endsWith('.pdf')) {
-      return 'documento';
-    } else if (lower.endsWith('.doc') || lower.endsWith('.docx')) {
+    if (lower.endsWith('.pdf') ||
+        lower.endsWith('.doc') ||
+        lower.endsWith('.docx') ||
+        lower.endsWith('.xls') ||
+        lower.endsWith('.xlsx')) {
       return 'documento';
     } else if (lower.endsWith('.png') ||
         lower.endsWith('.jpg') ||
@@ -1298,6 +1305,8 @@ class _SectionDetailViewState extends State<SectionDetailView> {
       docIcon = Icons.picture_as_pdf_outlined;
     } else if (name.endsWith('.doc') || name.endsWith('.docx')) {
       docIcon = Icons.article_outlined;
+    } else if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
+      docIcon = Icons.table_chart_outlined;
     } else {
       docIcon = Icons.description_outlined;
     }

@@ -12,7 +12,32 @@ class AttachmentPickResult {
   final String name;
 }
 
-Future<AttachmentPickResult?> showAttachmentPickerSheet(BuildContext context) {
+const List<String> defaultAttachmentExtensions = [
+  'pdf',
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+];
+
+const List<String> projectDocumentAttachmentExtensions = [
+  'pdf',
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+];
+
+Future<AttachmentPickResult?> showAttachmentPickerSheet(
+  BuildContext context, {
+  List<String> allowedExtensions = defaultAttachmentExtensions,
+  String invalidFileMessage =
+      'Solo se permiten imágenes (PNG, JPG, WEBP) o documentos PDF.',
+}) {
   final colorScheme = Theme.of(context).colorScheme;
 
   return showModalBottomSheet<AttachmentPickResult>(
@@ -21,12 +46,23 @@ Future<AttachmentPickResult?> showAttachmentPickerSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (context) => const AttachmentPickerSheet(),
+    builder: (context) => AttachmentPickerSheet(
+      allowedExtensions: allowedExtensions,
+      invalidFileMessage: invalidFileMessage,
+    ),
   );
 }
 
 class AttachmentPickerSheet extends StatefulWidget {
-  const AttachmentPickerSheet({super.key});
+  const AttachmentPickerSheet({
+    super.key,
+    this.allowedExtensions = defaultAttachmentExtensions,
+    this.invalidFileMessage =
+        'Solo se permiten imágenes (PNG, JPG, WEBP) o documentos PDF.',
+  });
+
+  final List<String> allowedExtensions;
+  final String invalidFileMessage;
 
   @override
   State<AttachmentPickerSheet> createState() => _AttachmentPickerSheetState();
@@ -97,27 +133,26 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
     _globalPicking = true;
 
     try {
+      final normalizedExtensions = widget.allowedExtensions
+          .map((e) => e.trim().toLowerCase().replaceFirst(RegExp(r'^\.+'), ''))
+          .where((e) => e.isNotEmpty)
+          .toList();
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: [
-          'pdf',
-          'png',
-          'jpg',
-          'jpeg',
-          'webp',
-        ],
+        allowedExtensions: normalizedExtensions,
       );
       if (!mounted) return;
       if (result != null && result.files.single.path != null) {
         final file = result.files.single;
-        final ext = (file.extension ?? file.name.split('.').last).toLowerCase();
-        const allowed = {'pdf', 'png', 'jpg', 'jpeg', 'webp'};
+        final ext = (file.extension ?? file.name.split('.').last)
+            .trim()
+            .toLowerCase()
+            .replaceFirst(RegExp(r'^\.+'), '');
+        final allowed = normalizedExtensions.toSet();
         if (!allowed.contains(ext)) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Solo se permiten imágenes (PNG, JPG, WEBP) o documentos PDF.',
-              ),
+            SnackBar(
+              content: Text(widget.invalidFileMessage),
               backgroundColor: Colors.redAccent,
             ),
           );

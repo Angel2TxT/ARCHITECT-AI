@@ -54,9 +54,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-dependency_overrides:
-  path_provider_android: 2.2.15
-
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -64,6 +61,10 @@ dependency_overrides:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  patrol: ^4.12.0
+
+dependency_overrides:
+  path_provider_android: 2.2.15
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -125,3 +126,8 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: assets/icons/app_icon.png
+
+patrol:
+  app_name: ARCHITECT
+  android:
+    package_name: com.example.movil_architect
