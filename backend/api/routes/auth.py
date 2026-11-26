@@ -44,6 +44,7 @@ from services.google_oauth_service import (
 from services.subscription_service import subscription_payload
 from services.user_oauth_service import find_or_create_google_user
 from services.email_verification_service import (
+    get_verification_status,
     issue_verification_code,
     update_unverified_email,
     verify_email_code,
@@ -126,12 +127,14 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
         )
         db.commit()
         db.refresh(user)
-        issue_verification_code(db, user, enforce_cooldown=False)
+        meta = issue_verification_code(db, user, enforce_cooldown=False)
         return AuthResponse(
             access_token="",
             user=_user_out(user),
             subscription=subscription_payload(db, user),
             requires_verification=True,
+            verification_expires_in_seconds=meta["expires_in_seconds"],
+            verification_cooldown_seconds=meta["cooldown_seconds"],
         )
     except HTTPException:
         raise
@@ -157,11 +160,14 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]):
         if not user.is_active:
             raise HTTPException(403, "Cuenta desactivada")
         if not user.email_verified:
+            status = get_verification_status(db, email=user.email)
             raise HTTPException(
                 403,
                 {
                     "code": "EMAIL_NOT_VERIFIED",
                     "message": "Tu correo aún no está verificado. Ingresa el código enviado a tu correo.",
+                    "expires_in_seconds": status["expires_in_seconds"],
+                    "resend_available_in_seconds": status["resend_available_in_seconds"],
                 },
             )
         return _auth_response(db, user)
@@ -198,7 +204,20 @@ def update_unverified_email_route(
         new_email=body.new_email,
         password=body.password,
     )
-    return {"ok": True, "email": user.email, "cooldown_seconds": 60}
+    status = get_verification_status(db, email=user.email)
+    return {
+        "ok": True,
+        "email": user.email,
+        "expires_in_seconds": status["expires_in_seconds"],
+        "cooldown_seconds": status["cooldown_seconds"],
+    }
+
+
+@router.get("/verification-status")
+def verification_status_route(
+    email: str, db: Annotated[Session, Depends(get_db)]
+):
+    return get_verification_status(db, email=email)
 
 
 @router.get("/google/enabled")

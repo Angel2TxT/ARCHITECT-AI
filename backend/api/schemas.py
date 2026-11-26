@@ -138,6 +138,8 @@ class AuthResponse(BaseModel):
     impersonation: bool = False
     impersonator: dict | None = None
     requires_verification: bool = False
+    verification_expires_in_seconds: int | None = None
+    verification_cooldown_seconds: int | None = None
 
 
 class VerifyEmailRequest(BaseModel):

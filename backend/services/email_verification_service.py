@@ -226,3 +226,54 @@ def update_unverified_email(
     db.refresh(user)
     return user
 
+
+def get_verification_status(db: Session, *, email: str) -> dict[str, int | bool]:
+    """Devuelve el estado y temporizadores vigentes desde el backend (fuente de verdad)."""
+    norm_email = _normalize_email(email)
+    base: dict[str, int | bool] = {
+        "requires_verification": False,
+        "expires_in_seconds": 0,
+        "resend_available_in_seconds": 0,
+        "ttl_seconds": CODE_TTL_SECONDS,
+        "cooldown_seconds": RESEND_COOLDOWN_SECONDS,
+        "attempts_remaining": 0,
+    }
+    if not norm_email:
+        return base
+
+    user = db.query(User).filter(User.email == norm_email).first()
+    if not user or not user.is_active or user.email_verified:
+        return base
+
+    now = datetime.utcnow()
+    row = (
+        db.query(EmailVerificationCode)
+        .filter(
+            EmailVerificationCode.user_id == user.id,
+            EmailVerificationCode.consumed_at.is_(None),
+        )
+        .order_by(EmailVerificationCode.id.desc())
+        .first()
+    )
+
+    expires_in = 0
+    resend_in = 0
+    attempts_remaining = 0
+    if row:
+        if row.expires_at and row.expires_at > now:
+            expires_in = max(0, int((row.expires_at - now).total_seconds()))
+        if row.created_at:
+            elapsed = (now - row.created_at).total_seconds()
+            if elapsed < RESEND_COOLDOWN_SECONDS:
+                resend_in = max(0, int(RESEND_COOLDOWN_SECONDS - elapsed) + 1)
+        attempts_remaining = max(0, MAX_ATTEMPTS_PER_CODE - (row.attempts or 0))
+
+    return {
+        "requires_verification": True,
+        "expires_in_seconds": expires_in,
+        "resend_available_in_seconds": resend_in,
+        "ttl_seconds": CODE_TTL_SECONDS,
+        "cooldown_seconds": RESEND_COOLDOWN_SECONDS,
+        "attempts_remaining": attempts_remaining,
+    }
+

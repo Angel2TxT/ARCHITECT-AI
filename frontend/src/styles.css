@@ -4399,3 +4399,262 @@ html.dark .workspace-sidebar-avatar {
   font-size: 12px;
   opacity: 0.65;
 }
+
+/* --- Verificación de correo electrónico (6 dígitos) --- */
+.auth-pending-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 24, 28, 0.14);
+  background: rgba(20, 24, 28, 0.05);
+  font-size: 12.5px;
+}
+
+.auth-pending-banner button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.verify-panel {
+  max-width: 470px;
+}
+
+.verify-icon-wrap {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.14);
+}
+
+.verify-heading {
+  text-align: center;
+}
+
+.verify-email-chip {
+  display: inline-block;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.verify-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(20, 24, 28, 0.05);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.verify-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.verify-timer.is-expired {
+  color: #b91c1c;
+}
+
+.otp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.auth-form input.otp-box {
+  height: 56px;
+  padding: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-success {
+  margin: 0;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #065f46;
+  font-size: 13px;
+  animation: authErrorIn 0.28s ease both;
+}
+
+.verify-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.verify-secondary-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 24, 28, 0.16);
+  background: transparent;
+  color: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.verify-secondary-btn:hover:not(:disabled) {
+  background: rgba(20, 24, 28, 0.06);
+}
+
+.verify-secondary-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.verify-link-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  opacity: 0.82;
+}
+
+.verify-link-btn:hover {
+  opacity: 1;
+}
+
+.verify-change-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(20, 24, 28, 0.12);
+  display: grid;
+  gap: 12px;
+}
+
+.verify-change-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.verify-change-form input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid rgba(20, 24, 28, 0.16);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.verify-change-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.verify-save-email-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.verify-save-email-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.spin {
+  animation: spinAnim 0.9s linear infinite;
+}
+
+@keyframes spinAnim {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+html.dark .verify-icon-wrap,
+html.dark .verify-save-email-btn,
+html.dark .auth-pending-banner button {
+  background: #f4f4f5;
+  color: #09090b;
+}
+
+html.dark .verify-meta-bar,
+html.dark .auth-pending-banner {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+html.dark .verify-secondary-btn,
+html.dark .verify-change-form input {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(24, 24, 27, 0.8);
+  color: #f4f4f5;
+}
+
+html.dark .form-success {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.16);
+}
+
+html.dark .verify-change-form {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 520px) {
+  .otp-grid {
+    gap: 6px;
+  }
+
+  .auth-form input.otp-box {
+    height: 48px;
+    font-size: 18px;
+    border-radius: 10px;
+  }
+
+  .verify-meta-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

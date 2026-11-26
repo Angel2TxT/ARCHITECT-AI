@@ -20,6 +20,7 @@ import {
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import AdminPanel from "./AdminPanel.jsx";
+import VerifyEmailView from "./VerifyEmailView.jsx";
 import WorkspaceSidebar from "./WorkspaceSidebar.jsx";
 import { requestPlanChange } from "./subscription.js";
 import "./styles.css";
@@ -31,6 +32,7 @@ const USER_KEY = "plano_ia_user";
 const SUB_KEY = "plano_ia_subscription";
 const SELECTED_PLAN_KEY = "plano_ia_selected_plan";
 const THEME_KEY = "plano_ia_theme";
+const PENDING_VERIFICATION_EMAIL_KEY = "plano_ia_pending_verification_email";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -77,6 +79,9 @@ function getUser() {
 function formatApiError(data, fallback) {
   if (!data) return fallback;
   if (typeof data.detail === "string") return data.detail;
+  if (data.detail && typeof data.detail === "object" && !Array.isArray(data.detail)) {
+    if (typeof data.detail.message === "string") return data.detail.message;
+  }
   if (Array.isArray(data.detail)) {
     return data.detail.map((item) => item.msg || item.message || JSON.stringify(item)).join(". ");
   }
@@ -919,10 +924,24 @@ function Login() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data?.detail?.code === "EMAIL_NOT_VERIFIED") {
+          localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, payload.email.toLowerCase());
+          navigate("/verify-email");
+          return;
+        }
         setError(formatApiError(data, mode === "register" ? "Error al registrarse" : "Error al iniciar sesion"));
         setBusy(false);
         return;
       }
+      if (data.requires_verification || !data.access_token) {
+        localStorage.setItem(
+          PENDING_VERIFICATION_EMAIL_KEY,
+          (data.user?.email || payload.email).toLowerCase()
+        );
+        navigate("/verify-email");
+        return;
+      }
+      localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
       setSession(data);
       const checkoutRedirect = await applySelectedPlan(data.access_token);
       if (checkoutRedirect) return;
@@ -955,6 +974,22 @@ function Login() {
           <h1>{mode === "register" ? "Crear cuenta" : "Iniciar sesion"}</h1>
           <p>Acceso al entorno de revision tecnica de planos asistida por IA.</p>
         </div>
+
+        {localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY) && (
+          <div className="auth-pending-banner" data-testid="pending-verification-banner">
+            <span>
+              Verificación pendiente para{" "}
+              <strong>{localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY)}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate("/verify-email")}
+              data-testid="resume-verification-btn"
+            >
+              Continuar verificación
+            </button>
+          </div>
+        )}
 
         <div className={`auth-tabs auth-tabs--${mode}`}>
           <span className="auth-tab-indicator" aria-hidden="true" />
@@ -1059,7 +1094,7 @@ function AppShell() {
 
   useEffect(() => {
     if (!getToken()) {
-      navigate("/login");
+      window.location.replace("/login");
       return;
     }
     let cancelled = false;
@@ -1151,9 +1186,46 @@ function AppShell() {
   );
 }
 
+function VerifyEmailRoute() {
+  const pendingEmail = localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY) || "";
+
+  if (!pendingEmail) {
+    return <Login />;
+  }
+
+  async function handleVerified(data) {
+    localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+    setSession(data);
+    const checkoutRedirect = await applySelectedPlan(data.access_token);
+    if (checkoutRedirect) return;
+    window.location.replace(loginRedirectTarget());
+  }
+
+  function handleEmailUpdated(nextEmail) {
+    localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, nextEmail);
+  }
+
+  function handleBackToLogin() {
+    localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+    navigate("/login");
+  }
+
+  return (
+    <VerifyEmailView
+      initialEmail={pendingEmail}
+      onVerified={handleVerified}
+      onEmailUpdated={handleEmailUpdated}
+      onBackToLogin={handleBackToLogin}
+      formatApiError={formatApiError}
+      ThemeToggleComponent={ThemeToggle}
+    />
+  );
+}
+
 function Root() {
   const path = useRoute();
   if (path === "/login") return <Login />;
+  if (path === "/verify-email") return <VerifyEmailRoute />;
   if (path === "/app" || path.startsWith("/app/")) return <AppShell />;
   return <Welcome />;
 }
