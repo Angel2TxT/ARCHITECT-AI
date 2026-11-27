@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:movil_architect/controllers/home_project_controller.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/core/utils/date_utils.dart';
 import 'package:movil_architect/models/home_project_models.dart';
 import 'package:movil_architect/views/home_projects/section_detail_view.dart';
+import 'package:movil_architect/views/home_projects/widgets/home_project_widgets.dart';
 import 'package:movil_architect/views/shared/app_states.dart';
 
 class StageDetailView extends StatelessWidget {
@@ -18,18 +20,20 @@ class StageDetailView extends StatelessWidget {
   final int stageNumber;
   final HomeProjectDetailController controller;
 
-  Future<void> _openAssist(BuildContext context, {String? initialGuidance}) async {
+  Future<void> _openAssist(
+    BuildContext context, {
+    String? initialGuidance,
+  }) async {
     if (!controller.permissions.canEdit) return;
+    final tokens = ArchitectThemeTokens.of(context);
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF141417)
-          : Colors.white,
+      backgroundColor: tokens.surfaceSecondary,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (sheetContext) => _StageAssistSheet(
         controller: controller,
@@ -41,18 +45,13 @@ class StageDetailView extends StatelessWidget {
 
   Future<void> _linkAnalysis(BuildContext context) async {
     if (!controller.permissions.canEdit) return;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final tokens = ArchitectThemeTokens.of(context);
 
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => Center(
-        child: CircularProgressIndicator(
-          color: isDark ? Colors.white : const Color(0xFF111111),
-        ),
+        child: CircularProgressIndicator(color: tokens.accent),
       ),
     );
     final analyses = await controller.loadAnalysesPicker();
@@ -69,62 +68,69 @@ class StageDetailView extends StatelessWidget {
 
     final selected = await showModalBottomSheet<LinkedAnalysisSummary>(
       context: context,
-      backgroundColor: sheetBg,
+      backgroundColor: tokens.surfaceSecondary,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
+        top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: ListView(
             shrinkWrap: true,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Text(
-                  'Vincular plano / análisis',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: primaryBlack,
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: tokens.borderStrong,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                child: Text(
+                  'Vincular plano / análisis',
+                  style: ArchitectThemeTokens.appleDisplay(
+                    color: tokens.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Divider(height: 1, thickness: 1, color: tokens.borderSubtle),
               for (final item in analyses)
                 ListTile(
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF222226) : const Color(0xFFF2F2F4),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Icon(Icons.map_outlined, size: 20, color: primaryBlack),
+                  leading: Icon(
+                    Icons.map_outlined,
+                    size: 20,
+                    color: tokens.accent,
                   ),
                   title: Text(
                     item.filename,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: primaryBlack,
+                    style: ArchitectThemeTokens.appleText(
+                      color: tokens.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   subtitle: Text(
                     item.createdAt != null
                         ? formatRelativeTime(item.createdAt)
                         : 'Sin fecha',
-                    style: TextStyle(
-                      color: isDark ? Colors.white54 : Colors.black45,
+                    style: ArchitectThemeTokens.appleText(
+                      color: tokens.textSecondary,
                       fontSize: 12,
                     ),
                   ),
                   trailing: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: tokens.textSecondary,
                   ),
-                  onTap: () => Navigator.pop(context, item),
+                  onTap: () => Navigator.pop(sheetContext, item),
                 ),
             ],
           ),
@@ -148,14 +154,8 @@ class StageDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0C0C0E) : const Color(0xFFF7F7F8);
-    final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
-    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+    final tokens = ArchitectThemeTokens.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     return ListenableBuilder(
       listenable: controller,
@@ -168,463 +168,534 @@ class StageDetailView extends StatelessWidget {
         final canEdit = controller.permissions.canEdit;
 
         return Scaffold(
-          backgroundColor: bg,
+          backgroundColor: tokens.drawerBackground,
           appBar: AppBar(
-            backgroundColor: bg,
-            foregroundColor: primaryBlack,
+            backgroundColor: tokens.drawerBackground,
+            foregroundColor: tokens.textPrimary,
             elevation: 0,
             scrolledUnderElevation: 0,
-            title: Text(
-              stage == null
-                  ? 'Etapa $stageNumber'
-                  : '${stage.stageNumber}. ${stage.title}',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 17,
-                color: primaryBlack,
+            centerTitle: true,
+            leading: Semantics(
+              button: true,
+              label: 'Regresar',
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  size: 22,
+                  color: tokens.textPrimary,
+                ),
+                tooltip: 'Regresar',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+            title: Semantics(
+              header: true,
+              child: Text(
+                stage == null
+                    ? 'Etapa $stageNumber'
+                    : '${stage.stageNumber}. ${stage.title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: ArchitectThemeTokens.appleDisplay(
+                  color: tokens.textPrimary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
           ),
-          body: project == null || stage == null
-              ? AppErrorView(
-                  message: 'No se encontró la etapa',
-                  onRetry: () => controller.load(refresh: true),
-                )
-              : RefreshIndicator(
-                  color: primaryBlack,
-                  onRefresh: () => controller.load(refresh: true),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                    children: [
-                      // 1. HERO CARD: Información principal de la etapa
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: borderColor, width: 1.4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black.withValues(alpha: 0.3)
-                                  : Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+          body: SafeArea(
+            top: false,
+            child: project == null || stage == null
+                ? AppErrorView(
+                    message: 'No se encontró la etapa',
+                    onRetry: () => controller.load(refresh: true),
+                  )
+                : RefreshIndicator(
+                    color: tokens.accent,
+                    onRefresh: () => controller.load(refresh: true),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+                      children: [
+                        // 1. TARJETA PRINCIPAL DE LA ETAPA
+                        _StageOverviewCard(
+                          stage: stage,
+                          canEdit: canEdit,
+                          busy: controller.busy,
+                          reduceMotion: reduceMotion,
+                          onAssist: () => _openAssist(
+                            context,
+                            initialGuidance: stage.aiGuidance,
+                          ),
+                          onLinkPlan: () => _linkAnalysis(context),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                        const SizedBox(height: 16),
+
+                        // 2. PROGRESO DE APARTADOS
+                        _StageProgressCard(progress: stage.sectionsProgress),
+
+                        // 3. PLANO VINCULADO (si existe)
+                        if (stage.analysis != null ||
+                            stage.analysisId != null) ...[
+                          const SizedBox(height: 16),
+                          _LinkedAnalysisCard(stage: stage),
+                        ],
+
+                        const SizedBox(height: 28),
+
+                        // 4. ENCABEZADO DE APARTADOS
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              children: [
-                                _StageStatusPill(status: stage.status, isDark: isDark, borderColor: borderColor),
-                                if (stage.planReview) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: tagBg,
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(color: borderColor, width: 1.0),
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    'Apartados',
+                                    style: ArchitectThemeTokens.appleDisplay(
+                                      color: tokens.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: -0.25,
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.layers_outlined, size: 13, color: primaryBlack),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Revisión de planos',
-                                          style: TextStyle(
-                                            color: primaryBlack,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${stage.sections.length}',
+                                    style: ArchitectThemeTokens.appleText(
+                                      color: tokens.textSecondary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
                                       ],
                                     ),
                                   ),
                                 ],
-                                const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: tagBg,
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: borderColor, width: 1.0),
-                                  ),
-                                  child: Text(
-                                    'Etapa ${stage.stageNumber} de 9',
-                                    style: TextStyle(
-                                      color: primaryBlack,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              '${stage.stageNumber}. ${stage.title}',
-                              style: TextStyle(
-                                color: primaryBlack,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
                               ),
                             ),
-                            if (stage.summary.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                stage.summary,
-                                style: TextStyle(
-                                  color: secondaryText,
-                                  height: 1.45,
-                                  fontSize: 14,
+                            if (controller.permissions.canCreateSection) ...[
+                              const SizedBox(width: 12),
+                              NewSectionButton(
+                                enabled: !controller.busy,
+                                onTap: () => showCreateSectionDialog(
+                                  context: context,
+                                  controller: controller,
+                                  stageNumber: stage.stageNumber,
                                 ),
-                              ),
-                            ],
-                            if (canEdit) ...[
-                              const SizedBox(height: 18),
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: [
-                                  FilledButton.icon(
-                                    onPressed: controller.busy
-                                        ? null
-                                        : () => _openAssist(
-                                              context,
-                                              initialGuidance: stage.aiGuidance,
-                                            ),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
-                                      foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                                    ),
-                                    icon: const Icon(Icons.auto_awesome, size: 16),
-                                    label: const Text(
-                                      'Asistencia IA',
-                                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                                    ),
-                                  ),
-                                  if (stage.planReview)
-                                    OutlinedButton.icon(
-                                      onPressed: controller.busy
-                                          ? null
-                                          : () => _linkAnalysis(context),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: primaryBlack,
-                                        side: BorderSide(color: primaryBlack, width: 1.2),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(999),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                      ),
-                                      icon: const Icon(Icons.link, size: 16),
-                                      label: const Text(
-                                        'Vincular plano',
-                                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                                      ),
-                                    ),
-                                ],
                               ),
                             ],
                           ],
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // 2. METRICS CARD: Progreso del expediente
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: borderColor, width: 1.4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black.withValues(alpha: 0.25)
-                                  : Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: tagBg,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: borderColor, width: 1.0),
-                                  ),
-                                  child: Icon(
-                                    Icons.donut_large_rounded,
-                                    size: 16,
-                                    color: primaryBlack,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Progreso de apartados',
-                                  style: TextStyle(
-                                    color: primaryBlack,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: tagBg,
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: borderColor, width: 1.0),
-                                  ),
-                                  child: Text(
-                                    '${stage.sectionsProgress.done} de ${stage.sectionsProgress.total}',
-                                    style: TextStyle(
-                                      color: primaryBlack,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: borderColor, width: 1.0),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: LinearProgressIndicator(
-                                  value: stage.sectionsProgress.total == 0
-                                      ? 0
-                                      : stage.sectionsProgress.done / stage.sectionsProgress.total,
-                                  minHeight: 8,
-                                  backgroundColor: isDark ? const Color(0xFF26262B) : const Color(0xFFEAEAED),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDark ? Colors.white : const Color(0xFF111111),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                              decoration: BoxDecoration(
-                                color: tagBg,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderColor, width: 1.2),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _MetricColumn(
-                                      number: '${stage.sectionsProgress.withFiles}',
-                                      label: 'Con archivos',
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                                  Container(width: 1.2, height: 28, color: borderColor),
-                                  Expanded(
-                                    child: _MetricColumn(
-                                      number: '${stage.sectionsProgress.needsAction}',
-                                      label: 'Por revisar',
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 3. PLANO VINCULADO (si existe)
-                      if (stage.analysis != null || stage.analysisId != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: borderColor, width: 1.4),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF222226) : const Color(0xFF111111),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: borderColor, width: 1.0),
-                                ),
-                                child: Icon(
-                                  Icons.map_outlined,
-                                  color: isDark ? Colors.white : Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      stage.analysis?.filename ?? 'Análisis #${stage.analysisId}',
-                                      style: TextStyle(
-                                        color: primaryBlack,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      stage.analysis?.createdAt != null
-                                          ? 'Vinculado ${formatRelativeTime(stage.analysis!.createdAt)}'
-                                          : 'Plano vinculado a esta etapa',
-                                      style: TextStyle(color: mutedText, fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: tagBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: borderColor, width: 1.0),
-                                ),
-                                child: Text(
-                                  'Activo',
-                                  style: TextStyle(
-                                    color: primaryBlack,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 6),
+                        Text(
+                          'Entregables y documentación requerida para esta etapa',
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
-                      ],
+                        const SizedBox(height: 14),
 
-
-
-                      const SizedBox(height: 24),
-
-                      // 5. ENCABEZADO DE APARTADOS
-                      Row(
-                        children: [
-                          Text(
-                            'Apartados',
-                            style: TextStyle(
-                              color: primaryBlack,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+                        // 5. LISTA DE APARTADOS
+                        if (stage.sections.isEmpty)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: tagBg,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: borderColor, width: 1.0),
-                            ),
-                            child: Text(
-                              '${stage.sections.length}',
-                              style: TextStyle(
-                                color: primaryBlack,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                              color: tokens.surfaceSecondary,
+                              borderRadius: BorderRadius.circular(
+                                ArchitectThemeTokens.radiusLg,
+                              ),
+                              border: Border.all(
+                                color: tokens.borderSubtle,
+                                width: 1,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Entregables y documentación requerida para esta etapa',
-                        style: TextStyle(color: mutedText, fontSize: 12),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 6. LISTA DE APARTADOS
-                      if (stage.sections.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: borderColor, width: 1.4),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.folder_open_outlined, size: 36, color: mutedText),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Esta etapa no tiene apartados.',
-                                style: TextStyle(
-                                  color: secondaryText,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.folder_outlined,
+                                  size: 32,
+                                  color: tokens.textSecondary,
                                 ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        for (final section in stage.sections) ...[
-                          _SectionCard(
-                            section: section,
-                            isDark: isDark,
-                            cardBg: cardBg,
-                            borderColor: borderColor,
-                            primaryBlack: primaryBlack,
-                            secondaryText: secondaryText,
-                            mutedText: mutedText,
-                            tagBg: tagBg,
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => SectionDetailView(
-                                    projectId: projectId,
-                                    stageNumber: stageNumber,
-                                    sectionId: section.id,
-                                    controller: controller,
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Esta etapa no tiene apartados.',
+                                  style: ArchitectThemeTokens.appleText(
+                                    color: tokens.textSecondary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
-                              );
-                              if (!controller.isDisposed) {
-                                await controller.load(refresh: true);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                    ],
+                              ],
+                            ),
+                          )
+                        else
+                          for (final section in stage.sections) ...[
+                            _SectionCard(
+                              section: section,
+                              onTap: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => SectionDetailView(
+                                      projectId: projectId,
+                                      stageNumber: stageNumber,
+                                      sectionId: section.id,
+                                      controller: controller,
+                                    ),
+                                  ),
+                                );
+                                if (!controller.isDisposed) {
+                                  await controller.load(refresh: true);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                      ],
+                    ),
                   ),
-                ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _StageOverviewCard extends StatelessWidget {
+  const _StageOverviewCard({
+    required this.stage,
+    required this.canEdit,
+    required this.busy,
+    required this.reduceMotion,
+    required this.onAssist,
+    required this.onLinkPlan,
+  });
+
+  final HomeProjectStage stage;
+  final bool canEdit;
+  final bool busy;
+  final bool reduceMotion;
+  final VoidCallback onAssist;
+  final VoidCallback onLinkPlan;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final stageLabel =
+        'Etapa ${stage.stageNumber.toString().padLeft(2, '0')} de 09';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _SemanticStatusIndicator(status: stage.status),
+              const Spacer(),
+              Text(
+                stageLabel,
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          if (stage.planReview) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.layers_outlined,
+                  size: 14,
+                  color: tokens.accent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Revisión de planos',
+                  style: ArchitectThemeTokens.appleText(
+                    color: tokens.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (stage.summary.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              stage.summary,
+              style: ArchitectThemeTokens.appleText(
+                color: tokens.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 1.45,
+              ),
+            ),
+          ],
+          if (canEdit) ...[
+            const SizedBox(height: 18),
+            _AssistAiButton(
+              busy: busy,
+              reduceMotion: reduceMotion,
+              onPressed: onAssist,
+            ),
+            if (stage.planReview) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: busy ? null : onLinkPlan,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: tokens.textPrimary,
+                    side: BorderSide(color: tokens.borderStrong, width: 1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ArchitectThemeTokens.radiusMd,
+                      ),
+                    ),
+                    minimumSize: const Size(double.infinity, 44),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.link_rounded,
+                    size: 18,
+                    color: tokens.textPrimary,
+                  ),
+                  label: Text(
+                    'Vincular plano',
+                    style: ArchitectThemeTokens.appleText(
+                      color: tokens.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AssistAiButton extends StatefulWidget {
+  const _AssistAiButton({
+    required this.busy,
+    required this.reduceMotion,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final bool reduceMotion;
+  final VoidCallback onPressed;
+
+  @override
+  State<_AssistAiButton> createState() => _AssistAiButtonState();
+}
+
+class _AssistAiButtonState extends State<_AssistAiButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final disabled = widget.busy;
+
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      label: 'Abrir Asistencia IA para esta etapa',
+      child: AnimatedScale(
+        scale: (_pressed && !disabled && !widget.reduceMotion) ? 0.98 : 1.0,
+        duration: widget.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Material(
+          color: disabled
+              ? tokens.primaryActionBg.withValues(alpha: 0.45)
+              : tokens.primaryActionBg,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+          child: InkWell(
+            onTap: disabled ? null : widget.onPressed,
+            onHighlightChanged: (value) {
+              if (mounted) setState(() => _pressed = value);
+            },
+            borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: double.infinity,
+                minHeight: 48,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_outlined,
+                      size: 18,
+                      color: tokens.primaryActionFg,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Asistencia IA',
+                      style: ArchitectThemeTokens.appleText(
+                        color: tokens.primaryActionFg,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StageProgressCard extends StatelessWidget {
+  const _StageProgressCard({required this.progress});
+
+  final SectionsProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final ratio = progress.total == 0
+        ? 0.0
+        : (progress.done / progress.total).clamp(0.0, 1.0);
+    final percent = (ratio * 100).round();
+    final isComplete = progress.total > 0 && progress.done >= progress.total;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.donut_large_rounded,
+                size: 18,
+                color: tokens.accent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Progreso de apartados',
+                  style: ArchitectThemeTokens.appleText(
+                    color: tokens.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Text(
+                '${progress.done} de ${progress.total}',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '$percent%',
+                style: ArchitectThemeTokens.appleDisplay(
+                  color: tokens.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.4,
+                ).copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Semantics(
+                  label:
+                      'Progreso de apartados: $percent por ciento, ${progress.done} de ${progress.total}',
+                  value: '$percent%',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: ratio,
+                      minHeight: 5,
+                      backgroundColor: tokens.borderSubtle,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isComplete ? tokens.statusPositive : tokens.accent,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, thickness: 1, color: tokens.borderSubtle),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricColumn(
+                  number: '${progress.withFiles}',
+                  label: 'Con archivos',
+                ),
+              ),
+              Container(width: 1, height: 32, color: tokens.borderSubtle),
+              Expanded(
+                child: _MetricColumn(
+                  number: '${progress.needsAction}',
+                  label: 'Por revisar',
+                  highlightWarning: progress.needsAction > 0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -633,36 +704,38 @@ class _MetricColumn extends StatelessWidget {
   const _MetricColumn({
     required this.number,
     required this.label,
-    required this.isDark,
+    this.highlightWarning = false,
   });
 
   final String number;
   final String label;
-  final bool isDark;
+  final bool highlightWarning;
 
   @override
   Widget build(BuildContext context) {
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
+    final tokens = ArchitectThemeTokens.of(context);
 
     return Column(
       children: [
         Text(
           number,
-          style: TextStyle(
-            color: primaryBlack,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+          style: ArchitectThemeTokens.appleDisplay(
+            color: highlightWarning ? tokens.statusWarning : tokens.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.3,
+          ).copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: mutedText,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+          style: ArchitectThemeTokens.appleText(
+            color: tokens.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -670,62 +743,127 @@ class _MetricColumn extends StatelessWidget {
   }
 }
 
+class _LinkedAnalysisCard extends StatelessWidget {
+  const _LinkedAnalysisCard({required this.stage});
+
+  final HomeProjectStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.map_outlined,
+            color: tokens.accent,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stage.analysis?.filename ?? 'Análisis #${stage.analysisId}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ArchitectThemeTokens.appleText(
+                    color: tokens.textPrimary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  stage.analysis?.createdAt != null
+                      ? 'Vinculado ${formatRelativeTime(stage.analysis!.createdAt)}'
+                      : 'Plano vinculado a esta etapa',
+                  style: ArchitectThemeTokens.appleText(
+                    color: tokens.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: tokens.statusPositive,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Activo',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.statusPositive,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.section,
-    required this.isDark,
-    required this.cardBg,
-    required this.borderColor,
-    required this.primaryBlack,
-    required this.secondaryText,
-    required this.mutedText,
-    required this.tagBg,
     required this.onTap,
   });
 
   final HomeProjectSection section;
-  final bool isDark;
-  final Color cardBg;
-  final Color borderColor;
-  final Color primaryBlack;
-  final Color secondaryText;
-  final Color mutedText;
-  final Color tagBg;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
     final filledDeliverables = section.slots
-        .where((s) => s.filled || section.documents.any((d) => d.slotKey == s.key))
+        .where(
+          (s) => s.filled || section.documents.any((d) => d.slotKey == s.key),
+        )
         .length;
+    final isDone = section.status == 'completed';
+    final isInProgress =
+        section.status == 'in_progress' || section.status == 'active';
+    final iconColor = isDone
+        ? tokens.statusPositive
+        : (isInProgress ? tokens.accent : tokens.textSecondary);
 
-    final sectionBorderColor = isDark
-        ? const Color(0xFF3F3F46)
-        : const Color(0xFFD1D5DB);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: sectionBorderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.35)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+    return Semantics(
+      button: true,
+      label:
+          '${section.title}, ${homeProjectStatusLabel(section.status)}${section.slots.isNotEmpty ? ', $filledDeliverables de ${section.slots.length} entregas' : ''}',
       child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        color: tokens.surfaceSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: primaryBlack.withValues(alpha: 0.05),
-          highlightColor: primaryBlack.withValues(alpha: 0.02),
+          hoverColor: tokens.interactionOverlay,
+          splashColor: tokens.interactionOverlay,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -734,18 +872,12 @@ class _SectionCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: tagBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: borderColor, width: 1.0),
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
                       child: Icon(
                         Icons.folder_outlined,
                         size: 20,
-                        color: primaryBlack,
+                        color: iconColor,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -755,22 +887,26 @@ class _SectionCard extends StatelessWidget {
                         children: [
                           Text(
                             section.title,
-                            style: TextStyle(
-                              color: primaryBlack,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
+                            maxLines: textScale > 1.3 ? 3 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: ArchitectThemeTokens.appleText(
+                              color: tokens.textPrimary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              height: 1.25,
                             ),
                           ),
                           if (section.description.isNotEmpty) ...[
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
                               section.description,
-                              maxLines: 2,
+                              maxLines: textScale > 1.3 ? 3 : 2,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: mutedText,
-                                fontSize: 12,
-                                height: 1.3,
+                              style: ArchitectThemeTokens.appleText(
+                                color: tokens.textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                height: 1.38,
                               ),
                             ),
                           ],
@@ -778,57 +914,58 @@ class _SectionCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: tagBg,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: borderColor, width: 1.0),
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
                       child: Icon(
                         Icons.chevron_right_rounded,
-                        size: 18,
-                        color: primaryBlack,
+                        size: 20,
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  height: 1,
-                  color: borderColor,
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                Row(
                   children: [
-                    _MonoStatusBadge(status: section.status, isDark: isDark),
-                    if (section.hasDocuments)
-                      _BadgeChip(
-                        icon: Icons.attach_file_rounded,
-                        label: '${section.documents.length} doc(s)',
-                        isDark: isDark,
-                        tagBg: tagBg,
-                        borderColor: borderColor,
+                    _SemanticStatusIndicator(status: section.status),
+                    const Spacer(),
+                    if (section.commentsCount > 0) ...[
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 13,
+                        color: tokens.textSecondary,
                       ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${section.commentsCount}',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      if (section.slots.isNotEmpty) const SizedBox(width: 12),
+                    ],
                     if (section.slots.isNotEmpty)
-                      _BadgeChip(
-                        icon: Icons.check_circle_outline_rounded,
-                        label: '$filledDeliverables/${section.slots.length} entregas',
-                        isDark: isDark,
-                        tagBg: tagBg,
-                        borderColor: borderColor,
-                      ),
-                    if (section.commentsCount > 0)
-                      _BadgeChip(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        label: '${section.commentsCount}',
-                        isDark: isDark,
-                        tagBg: tagBg,
-                        borderColor: borderColor,
+                      Text(
+                        '$filledDeliverables/${section.slots.length} entregas',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      )
+                    else if (section.hasDocuments)
+                      Text(
+                        '${section.documents.length} doc(s)',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                   ],
                 ),
@@ -841,202 +978,53 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _StageStatusPill extends StatelessWidget {
-  const _StageStatusPill({
-    required this.status,
-    required this.isDark,
-    this.borderColor,
-  });
+class _SemanticStatusIndicator extends StatelessWidget {
+  const _SemanticStatusIndicator({required this.status});
 
   final String status;
-  final bool isDark;
-  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
     final label = homeProjectStatusLabel(status);
-    final isDone = status == 'completed';
-    final effectiveBorder = borderColor ??
-        (isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB));
 
-    if (isDone) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white : const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 13,
-              color: isDark ? const Color(0xFF111111) : Colors.white,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isDark ? const Color(0xFF111111) : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final bool isCompleted = status == 'completed';
+    final bool isInProgress = status == 'in_progress' || status == 'active';
+    final bool isReview =
+        status == 'needs_review' || status == 'in_review' || status == 'review';
+    final bool isRejected = status == 'rejected' || status == 'error';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF222226) : const Color(0xFFF1F1F4),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: effectiveBorder,
-          width: 1.0,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isDark ? Colors.white : const Color(0xFF111111),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
+    final Color color = isCompleted
+        ? tokens.statusPositive
+        : (isInProgress
+            ? tokens.accent
+            : (isReview
+                ? tokens.statusWarning
+                : (isRejected ? tokens.statusError : tokens.textSecondary)));
 
-class _MonoStatusBadge extends StatelessWidget {
-  const _MonoStatusBadge({required this.status, required this.isDark});
-
-  final String status;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = homeProjectStatusLabel(status);
-    final isCompleted = status == 'completed';
-    final isInProgress = status == 'in_progress';
-
-    if (isCompleted) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white : const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check,
-              size: 11,
-              color: isDark ? const Color(0xFF111111) : Colors.white,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: isDark ? const Color(0xFF111111) : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isInProgress) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF222226) : const Color(0xFFEAEAED),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isDark ? Colors.white38 : const Color(0xFF111111),
-            width: 1,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isCompleted)
+          Icon(Icons.check_circle_outline_rounded, size: 14, color: color)
+        else if (isRejected)
+          Icon(Icons.error_outline_rounded, size: 14, color: color)
+        else
+          Container(
+            width: 6.5,
+            height: 6.5,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
           ),
-        ),
-        child: Text(
+        const SizedBox(width: 6),
+        Text(
           label,
-          style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF111111),
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+          style: ArchitectThemeTokens.appleText(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF4F4F6),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B),
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgeChip extends StatelessWidget {
-  const _BadgeChip({
-    required this.icon,
-    required this.label,
-    required this.isDark,
-    required this.tagBg,
-    required this.borderColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isDark;
-  final Color tagBg;
-  final Color borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final textCol = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
-    final iconCol = isDark ? const Color(0xFF71717A) : const Color(0xFF71717A);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: tagBg,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor, width: 1.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: iconCol),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: textCol,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -1108,9 +1096,7 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
+    final tokens = ArchitectThemeTokens.of(context);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
 
     return ConstrainedBox(
@@ -1119,7 +1105,7 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
-          top: 14,
+          top: 12,
           bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
         ),
         child: Column(
@@ -1131,44 +1117,37 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(999),
+                  color: tokens.borderStrong,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white : const Color(0xFF111111),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 18,
-                    color: isDark ? const Color(0xFF111111) : Colors.white,
-                  ),
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  size: 20,
+                  color: tokens.accent,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Asistencia IA',
-                        style: TextStyle(
-                          color: primaryBlack,
+                        style: ArchitectThemeTokens.appleDisplay(
+                          color: tokens.textPrimary,
                           fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Pregunta sobre normativas y requerimientos de esta etapa',
-                        style: TextStyle(
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        'Normativas y requerimientos de esta etapa',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -1179,13 +1158,16 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                   icon: Icon(
                     Icons.close_rounded,
                     size: 20,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: tokens.textSecondary,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
                   ),
                   onPressed: () {
                     FocusScope.of(context).unfocus();
                     Navigator.of(context).pop();
                   },
-                  splashRadius: 20,
                   tooltip: 'Cerrar',
                 ),
               ],
@@ -1200,56 +1182,73 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                       controller: _questionController,
                       maxLength: 2000,
                       maxLines: 3,
-                      style: TextStyle(
+                      style: ArchitectThemeTokens.appleText(
                         fontSize: 14,
-                        color: primaryBlack,
+                        color: tokens.textPrimary,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Ej. ¿Qué documentos se requieren para iniciar esta etapa?',
-                        hintStyle: TextStyle(
+                        hintText:
+                            'Ej. ¿Qué documentos se requieren para iniciar esta etapa?',
+                        hintStyle: ArchitectThemeTokens.appleText(
                           fontSize: 13,
-                          color: isDark ? Colors.white38 : Colors.black38,
+                          color: tokens.textSecondary,
                         ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF1C1C20) : const Color(0xFFF7F7F8),
+                        fillColor: tokens.drawerBackground,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: borderColor),
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusMd,
+                          ),
+                          borderSide: BorderSide(color: tokens.borderSubtle),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: borderColor),
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusMd,
+                          ),
+                          borderSide: BorderSide(color: tokens.borderSubtle),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: primaryBlack, width: 1.5),
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusMd,
+                          ),
+                          borderSide: BorderSide(
+                            color: tokens.accent,
+                            width: 1.2,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
-                      height: 46,
+                      height: 48,
                       child: FilledButton(
                         onPressed: _loading ? null : _run,
                         style: FilledButton.styleFrom(
-                          backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
-                          foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
+                          backgroundColor: tokens.primaryActionBg,
+                          foregroundColor: tokens.primaryActionFg,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(
+                              ArchitectThemeTokens.radiusMd,
+                            ),
                           ),
                         ),
                         child: _loading
                             ? SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: isDark ? const Color(0xFF111111) : Colors.white,
+                                  color: tokens.primaryActionFg,
                                 ),
                               )
-                            : const Text(
+                            : Text(
                                 'Consultar con la IA',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: ArchitectThemeTokens.appleText(
+                                  color: tokens.primaryActionFg,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                       ),
                     ),
@@ -1258,16 +1257,20 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                          color: tokens.statusError.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusMd,
+                          ),
+                          border: Border.all(
+                            color: tokens.statusError.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Text(
                           _error!,
-                          style: const TextStyle(
-                            color: Colors.redAccent,
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.statusError,
                             fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1277,9 +1280,11 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1C1C20) : const Color(0xFFF7F7F8),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: borderColor),
+                          color: tokens.drawerBackground,
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusLg,
+                          ),
+                          border: Border.all(color: tokens.borderSubtle),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1289,15 +1294,15 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                                 Icon(
                                   Icons.lightbulb_outline,
                                   size: 16,
-                                  color: primaryBlack,
+                                  color: tokens.accent,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Orientación técnica',
-                                  style: TextStyle(
+                                  style: ArchitectThemeTokens.appleText(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: primaryBlack,
+                                    fontWeight: FontWeight.w600,
+                                    color: tokens.textPrimary,
                                   ),
                                 ),
                               ],
@@ -1307,10 +1312,10 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                               _result!.guidance.isNotEmpty
                                   ? _result!.guidance
                                   : 'Sin orientación disponible.',
-                              style: TextStyle(
+                              style: ArchitectThemeTokens.appleText(
                                 height: 1.45,
-                                fontSize: 13,
-                                color: isDark ? Colors.white70 : Colors.black87,
+                                fontSize: 14,
+                                color: tokens.textSecondary,
                               ),
                             ),
                           ],
@@ -1321,21 +1326,29 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF222226) : const Color(0xFFF0F0F2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: primaryBlack.withValues(alpha: 0.15)),
+                            color: tokens.accentSubtle,
+                            borderRadius: BorderRadius.circular(
+                              ArchitectThemeTokens.radiusMd,
+                            ),
+                            border: Border.all(
+                              color: tokens.accent.withValues(alpha: 0.35),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.layers_outlined, size: 18, color: primaryBlack),
+                              Icon(
+                                Icons.layers_outlined,
+                                size: 18,
+                                color: tokens.accent,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Se recomienda vincular o revisar un plano en esta etapa.',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
+                                  style: ArchitectThemeTokens.appleText(
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 12,
-                                    color: primaryBlack,
+                                    color: tokens.accent,
                                   ),
                                 ),
                               ),
@@ -1347,10 +1360,10 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                         const SizedBox(height: 14),
                         Text(
                           'Fuentes normativas',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
+                          style: ArchitectThemeTokens.appleText(
+                            fontWeight: FontWeight.w600,
                             fontSize: 12,
-                            color: primaryBlack,
+                            color: tokens.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1360,13 +1373,16 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('• ', style: TextStyle(color: primaryBlack)),
+                                Text(
+                                  '• ',
+                                  style: TextStyle(color: tokens.accent),
+                                ),
                                 Expanded(
                                   child: Text(
                                     source,
-                                    style: TextStyle(
+                                    style: ArchitectThemeTokens.appleText(
                                       fontSize: 12,
-                                      color: isDark ? Colors.white60 : Colors.black54,
+                                      color: tokens.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -1378,10 +1394,10 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                         const SizedBox(height: 12),
                         Text(
                           'Fuentes web',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
+                          style: ArchitectThemeTokens.appleText(
+                            fontWeight: FontWeight.w600,
                             fontSize: 12,
-                            color: primaryBlack,
+                            color: tokens.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1391,13 +1407,16 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('• ', style: TextStyle(color: primaryBlack)),
+                                Text(
+                                  '• ',
+                                  style: TextStyle(color: tokens.accent),
+                                ),
                                 Expanded(
                                   child: Text(
                                     source,
-                                    style: TextStyle(
+                                    style: ArchitectThemeTokens.appleText(
                                       fontSize: 12,
-                                      color: isDark ? Colors.white60 : Colors.black54,
+                                      color: tokens.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -1416,4 +1435,3 @@ class _StageAssistSheetState extends State<_StageAssistSheet> {
     );
   }
 }
-

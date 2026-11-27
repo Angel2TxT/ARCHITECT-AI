@@ -69,10 +69,7 @@ class _SettingsViewState extends State<SettingsView> {
     final ok = await _settingsController.save();
     if (!mounted) return;
     if (ok && _settingsController.successMessage != null) {
-      AppNotifications.success(
-        context,
-        _settingsController.successMessage!,
-      );
+      AppNotifications.success(context, _settingsController.successMessage!);
     } else if (_settingsController.errorMessage != null) {
       AppNotifications.error(context, _settingsController.errorMessage!);
     }
@@ -82,10 +79,7 @@ class _SettingsViewState extends State<SettingsView> {
     await _settingsController.testConnection();
     if (!mounted) return;
     if (_settingsController.successMessage != null) {
-      AppNotifications.success(
-        context,
-        _settingsController.successMessage!,
-      );
+      AppNotifications.success(context, _settingsController.successMessage!);
     } else if (_settingsController.errorMessage != null) {
       AppNotifications.error(context, _settingsController.errorMessage!);
     }
@@ -103,10 +97,7 @@ class _SettingsViewState extends State<SettingsView> {
   Future<void> _confirmDeleteAllChats() async {
     final count = _dashboardController.chats.length;
     if (count == 0) {
-      AppNotifications.error(
-        context,
-        'No hay conversaciones para eliminar',
-      );
+      AppNotifications.error(context, 'No hay conversaciones para eliminar');
       return;
     }
 
@@ -291,40 +282,7 @@ class _SettingsViewState extends State<SettingsView> {
                   },
                 ),
                 const SizedBox(height: 28),
-                const _SectionTitle('Apariencia'),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: SwitchListTile(
-                    value: _settingsController.isDarkMode,
-                    onChanged: _settingsController.setDarkMode,
-                    title: Text(
-                      'Modo oscuro',
-                      style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _settingsController.isDarkMode
-                          ? 'Tema oscuro activo'
-                          : 'Tema claro activo',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                    secondary: Icon(
-                      _settingsController.isDarkMode
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                      color: colorScheme.onSurface,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
+                const _SectionTitle('Historial'),
                 const SizedBox(height: 10),
                 Container(
                   decoration: BoxDecoration(
@@ -428,8 +386,9 @@ class _SettingsViewState extends State<SettingsView> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Probar conexión'),
                       ),
@@ -561,8 +520,7 @@ class _EnterpriseCard extends StatelessWidget {
     final progress = subscription.isUnlimited || limit == null || limit == 0
         ? null
         : (usage.analysesUsed / limit).clamp(0.0, 1.0);
-    final percent =
-        progress == null ? null : (progress * 100).round();
+    final percent = progress == null ? null : (progress * 100).round();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -623,8 +581,8 @@ class _EnterpriseCard extends StatelessWidget {
             subscription.isUnlimited
                 ? 'Análisis ilimitados este mes'
                 : percent != null
-                    ? 'Uso del mes: $percent%'
-                    : 'Análisis: ${usage.analysesUsed}',
+                ? 'Uso del mes: $percent%'
+                : 'Análisis: ${usage.analysesUsed}',
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.w600,
@@ -637,7 +595,9 @@ class _EnterpriseCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 8,
-                backgroundColor: AppColors.loginFieldFill,
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? colorScheme.surfaceContainerHighest
+                    : AppColors.loginFieldFill,
                 color: const Color(0xFF1B4D8A),
               ),
             ),

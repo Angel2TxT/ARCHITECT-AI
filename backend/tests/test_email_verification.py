@@ -274,7 +274,6 @@ class EmailVerificationTests(unittest.TestCase):
                 json={
                     "current_email": old_email,
                     "new_email": new_email,
-                    "password": "Password123!",
                 },
             )
         self.assertEqual(ok_update.status_code, 200, ok_update.text)

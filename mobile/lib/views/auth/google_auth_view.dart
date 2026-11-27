@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:movil_architect/core/theme/app_colors.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class GoogleAuthView extends StatefulWidget {
@@ -59,8 +58,6 @@ class _GoogleAuthViewState extends State<GoogleAuthView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Continuar con Google'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.ink,
         elevation: 0,
       ),
       body: WebViewWidget(controller: _controller),

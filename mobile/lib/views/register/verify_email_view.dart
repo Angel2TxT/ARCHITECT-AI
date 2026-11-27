@@ -140,7 +140,6 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
 
   Future<void> _openChangeEmailDialog() async {
     final newEmailController = TextEditingController(text: _email);
-    final passwordController = TextEditingController();
     String? dialogError;
     bool saving = false;
 
@@ -156,7 +155,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Ingresa tu correo correcto y tu contraseña para enviarte un nuevo código.',
+                    'Ingresa tu correo correcto para enviarte un nuevo código.',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 14),
@@ -172,15 +171,6 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                     ],
                     decoration: const InputDecoration(
                       labelText: 'Nuevo correo electrónico',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const ValueKey('verify_confirm_password_field'),
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Contraseña de la cuenta',
                     ),
                   ),
                   if (dialogError != null) ...[
@@ -207,18 +197,11 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                       ? null
                       : () async {
                           final nextEmail = newEmailController.text.trim();
-                          final password = passwordController.text;
                           if (!RegExp(
                             r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
                           ).hasMatch(nextEmail)) {
                             setDialogState(() {
                               dialogError = 'Ingresa un correo válido.';
-                            });
-                            return;
-                          }
-                          if (password.isEmpty) {
-                            setDialogState(() {
-                              dialogError = 'Ingresa tu contraseña.';
                             });
                             return;
                           }
@@ -232,7 +215,6 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                                 .updateUnverifiedEmail(
                               currentEmail: _email,
                               newEmail: nextEmail,
-                              password: password,
                             );
                             if (dialogContext.mounted) {
                               Navigator.of(dialogContext).pop(saved);
@@ -265,7 +247,6 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     );
 
     newEmailController.dispose();
-    passwordController.dispose();
 
     if (!mounted || updatedEmail == null) return;
     setState(() {

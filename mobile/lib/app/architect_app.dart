@@ -26,21 +26,14 @@ class _ArchitectAppState extends State<ArchitectApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeService = AppServices.instance.themeService;
-
-    return ListenableBuilder(
-      listenable: themeService,
-      builder: (context, _) {
-        return MaterialApp(
-          title: 'Architect',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: themeService.themeMode,
-          navigatorKey: appNavigatorKey,
-          home: const SplashView(),
-        );
-      },
+    return MaterialApp(
+      title: 'Architect',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.dark,
+      navigatorKey: appNavigatorKey,
+      home: const SplashView(),
     );
   }
 }

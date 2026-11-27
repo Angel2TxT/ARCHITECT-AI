@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:movil_architect/controllers/home_project_controller.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/models/home_project_models.dart';
 import 'package:movil_architect/views/home_projects/home_project_detail_view.dart';
@@ -186,19 +187,47 @@ class HomeProjectTeamView extends StatelessWidget {
 
   final HomeProjectDetailController controller;
 
+  ButtonStyle _cancelButtonStyle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return FilledButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor:
+          isDark ? const Color(0xFF3E3E44) : const Color(0xFF6B6B73),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      minimumSize: const Size(0, 42),
+    );
+  }
+
+  ButtonStyle _dangerButtonStyle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return FilledButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor:
+          isDark ? const Color(0xFFD9383A) : const Color(0xFFC8282A),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      minimumSize: const Size(0, 42),
+    );
+  }
+
   Future<void> _invite(BuildContext context) async {
+    final tokens = ArchitectThemeTokens.of(context);
     final emailController = TextEditingController();
     var role = 'editor';
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setLocal) => AlertDialog(
           title: const Text('Invitar miembro'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: emailController,
+                autofocus: true,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
                 inputFormatters: [
@@ -206,22 +235,31 @@ class HomeProjectTeamView extends StatelessWidget {
                     RegExp(r'[a-zA-Z0-9@._+-]'),
                   ),
                 ],
-                decoration: const InputDecoration(
-                  labelText: 'Correo',
-                  border: OutlineInputBorder(),
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.textPrimary,
+                  fontSize: 15,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Correo electrónico',
+                  hintText: 'arquitecto@estudio.com',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 key: ValueKey(role),
                 initialValue: role,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Rol',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'editor', child: Text('Editor')),
-                  DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
+                  DropdownMenuItem(value: 'viewer', child: Text('Lectura')),
                 ],
                 onChanged: (value) {
                   if (value != null) setLocal(() => role = value);
@@ -230,13 +268,42 @@ class HomeProjectTeamView extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              style: _cancelButtonStyle(dialogContext),
+              child: Text(
+                'Cancelar',
+                style: ArchitectThemeTokens.appleText(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Invitar'),
+            const SizedBox(width: 4),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: FilledButton.styleFrom(
+                foregroundColor: tokens.primaryActionFg,
+                backgroundColor: tokens.primaryActionBg,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                minimumSize: const Size(0, 42),
+              ),
+              child: Text(
+                'Invitar',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.primaryActionFg,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
         ),
@@ -264,19 +331,38 @@ class HomeProjectTeamView extends StatelessWidget {
     BuildContext context,
     HomeProjectMember member,
   ) async {
+    final displayName =
+        member.fullName.isNotEmpty ? member.fullName : member.email;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Quitar miembro'),
-        content: Text('¿Quitar a ${member.fullName.isNotEmpty ? member.fullName : member.email}?'),
+        content: Text('¿Quitar a $displayName del proyecto?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            style: _cancelButtonStyle(dialogContext),
+            child: Text(
+              'Cancelar',
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Quitar', style: TextStyle(color: Colors.red)),
+          const SizedBox(width: 4),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: _dangerButtonStyle(dialogContext),
+            child: Text(
+              'Quitar',
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -294,7 +380,8 @@ class HomeProjectTeamView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final tokens = ArchitectThemeTokens.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     return ListenableBuilder(
       listenable: controller,
@@ -303,94 +390,389 @@ class HomeProjectTeamView extends StatelessWidget {
         final canManage = controller.permissions.canManageTeam;
 
         return Scaffold(
+          backgroundColor: tokens.drawerBackground,
           appBar: AppBar(
-            title: const Text(
-              'Equipo',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: tokens.drawerBackground,
+            foregroundColor: tokens.textPrimary,
             elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: true,
+            leading: Semantics(
+              button: true,
+              label: 'Regresar',
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  size: 22,
+                  color: tokens.textPrimary,
+                ),
+                tooltip: 'Regresar',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+            title: Semantics(
+              header: true,
+              child: Text(
+                'Equipo',
+                style: ArchitectThemeTokens.appleDisplay(
+                  color: tokens.textPrimary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
           ),
           floatingActionButton: canManage
-              ? FloatingActionButton.extended(
-                  onPressed: controller.busy ? null : () => _invite(context),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Invitar'),
+              ? SafeArea(
+                  top: false,
+                  left: false,
+                  child: _InviteMemberButton(
+                    busy: controller.busy,
+                    reduceMotion: reduceMotion,
+                    onPressed: () => _invite(context),
+                  ),
                 )
               : null,
-          body: project == null
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: () => controller.load(refresh: true),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                    children: [
-                      Text(
-                        canManage
-                            ? 'Gestiona miembros del proyecto.'
-                            : 'Solo lectura: puedes ver el equipo.',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 16),
-                      if (project.members.isEmpty)
+          body: SafeArea(
+            top: false,
+            child: project == null
+                ? Center(
+                    child: CircularProgressIndicator(color: tokens.accent),
+                  )
+                : RefreshIndicator(
+                    color: tokens.accent,
+                    onRefresh: () => controller.load(refresh: true),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 104),
+                      children: [
                         Text(
-                          'Aún no hay miembros listados.',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
-                        )
-                      else
-                        for (final member in project.members) ...[
-                          Material(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text(
-                                  ((member.fullName.isNotEmpty
-                                              ? member.fullName
-                                              : member.email)
-                                          .trim()
-                                          .isNotEmpty
-                                      ? (member.fullName.isNotEmpty
-                                              ? member.fullName
-                                              : member.email)
-                                          .trim()[0]
-                                      : '?')
-                                      .toUpperCase(),
-                                ),
-                              ),
-                              title: Text(
-                                member.fullName.isNotEmpty
-                                    ? member.fullName
-                                    : member.email,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '${member.email}\n${homeProjectRoleLabel(member.role)}',
-                              ),
-                              isThreeLine: true,
-                              trailing: canManage && !member.isOwner
-                                  ? IconButton(
-                                      tooltip: 'Quitar',
-                                      onPressed: controller.busy
-                                          ? null
-                                          : () => _remove(context, member),
-                                      icon: const Icon(
-                                        Icons.person_remove_outlined,
-                                        color: Colors.redAccent,
-                                      ),
-                                    )
-                                  : null,
-                            ),
+                          canManage
+                              ? 'Gestiona miembros del proyecto.'
+                              : 'Solo lectura: puedes ver el equipo.',
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
                           ),
-                          const SizedBox(height: 10),
-                        ],
-                    ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              'Miembros',
+                              style: ArchitectThemeTokens.appleDisplay(
+                                color: tokens.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${project.members.length}',
+                              style: ArchitectThemeTokens.appleText(
+                                color: tokens.textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (project.members.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: tokens.surfaceSecondary,
+                              borderRadius: BorderRadius.circular(
+                                ArchitectThemeTokens.radiusLg,
+                              ),
+                              border: Border.all(
+                                color: tokens.borderSubtle,
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Aún no hay miembros listados.',
+                                style: ArchitectThemeTokens.appleText(
+                                  color: tokens.textSecondary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          for (final member in project.members) ...[
+                            _TeamMemberCard(
+                              member: member,
+                              canRemove: canManage && !member.isOwner,
+                              busy: controller.busy,
+                              onRemove: () => _remove(context, member),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                      ],
+                    ),
                   ),
-                ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _TeamMemberCard extends StatelessWidget {
+  const _TeamMemberCard({
+    required this.member,
+    required this.canRemove,
+    required this.busy,
+    required this.onRemove,
+  });
+
+  final HomeProjectMember member;
+  final bool canRemove;
+  final bool busy;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final displayName =
+        member.fullName.trim().isNotEmpty ? member.fullName.trim() : member.email;
+    final initial =
+        displayName.trim().isNotEmpty ? displayName.trim()[0].toUpperCase() : '?';
+
+    return Semantics(
+      label:
+          '$displayName, ${member.email}, ${homeProjectRoleLabel(member.role)}',
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        decoration: BoxDecoration(
+          color: tokens.surfaceSecondary,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+          border: Border.all(color: tokens.borderSubtle, width: 1),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: member.isOwner
+                    ? tokens.accentSubtle
+                    : tokens.surfaceSelected,
+                border: Border.all(
+                  color: member.isOwner
+                      ? tokens.accent.withValues(alpha: 0.4)
+                      : tokens.borderStrong,
+                  width: 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: ArchitectThemeTokens.appleDisplay(
+                  color: member.isOwner ? tokens.accent : tokens.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    maxLines: textScale > 1.3 ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ArchitectThemeTokens.appleText(
+                      color: tokens.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      height: 1.25,
+                    ),
+                  ),
+                  if (member.email.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      member.email,
+                      maxLines: textScale > 1.3 ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: ArchitectThemeTokens.appleText(
+                        color: tokens.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  _RoleBadge(role: member.role, isOwner: member.isOwner),
+                ],
+              ),
+            ),
+            if (canRemove)
+              Semantics(
+                button: true,
+                label: 'Quitar a $displayName',
+                child: IconButton(
+                  tooltip: 'Quitar miembro',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  onPressed: busy ? null : onRemove,
+                  icon: Icon(
+                    Icons.person_remove_outlined,
+                    size: 20,
+                    color: tokens.statusError,
+                  ),
+                ),
+              )
+            else
+              const SizedBox(width: 6),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role, required this.isOwner});
+
+  final String role;
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final label = homeProjectRoleLabel(role);
+    final isEditor = role == 'editor';
+
+    final Color bgColor;
+    final Color fgColor;
+
+    if (isOwner) {
+      bgColor = tokens.accentSubtle;
+      fgColor = tokens.accent;
+    } else if (isEditor) {
+      bgColor = tokens.statusPositive.withValues(alpha: 0.12);
+      fgColor = tokens.statusPositive;
+    } else {
+      bgColor = tokens.surfaceSelected;
+      fgColor = tokens.textSecondary;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusSm),
+      ),
+      child: Text(
+        label,
+        style: ArchitectThemeTokens.appleText(
+          color: fgColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _InviteMemberButton extends StatefulWidget {
+  const _InviteMemberButton({
+    required this.busy,
+    required this.reduceMotion,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final bool reduceMotion;
+  final VoidCallback onPressed;
+
+  @override
+  State<_InviteMemberButton> createState() => _InviteMemberButtonState();
+}
+
+class _InviteMemberButtonState extends State<_InviteMemberButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final disabled = widget.busy;
+
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      label: 'Invitar miembro al proyecto',
+      child: AnimatedScale(
+        scale: (_pressed && !disabled && !widget.reduceMotion) ? 0.97 : 1.0,
+        duration: widget.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Material(
+          color: disabled
+              ? tokens.primaryActionBg.withValues(alpha: 0.45)
+              : tokens.primaryActionBg,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+          elevation: 0,
+          child: InkWell(
+            onTap: disabled ? null : widget.onPressed,
+            onHighlightChanged: (value) {
+              if (mounted) setState(() => _pressed = value);
+            },
+            borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.person_add_outlined,
+                      size: 18,
+                      color: tokens.primaryActionFg,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Invitar',
+                      style: ArchitectThemeTokens.appleText(
+                        color: tokens.primaryActionFg,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

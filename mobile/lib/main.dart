@@ -53,8 +53,9 @@ class _BootstrapAppState extends State<_BootstrapApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(useMaterial3: true),
       home: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0B),
+        backgroundColor: const Color(0xFF121214),
         body: Center(
           child: _initError == null
               ? const SizedBox.shrink()
@@ -67,6 +68,7 @@ class _BootstrapAppState extends State<_BootstrapApp> {
                         'No se pudo iniciar la app',
                         textAlign: TextAlign.center,
                         style: TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -75,7 +77,7 @@ class _BootstrapAppState extends State<_BootstrapApp> {
                       Text(
                         '$_initError',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.black54),
+                        style: const TextStyle(color: Colors.white70),
                       ),
                       const SizedBox(height: 20),
                       FilledButton(

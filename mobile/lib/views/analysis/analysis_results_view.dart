@@ -109,19 +109,25 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final result = _result;
     final tone = result.verdict.tone;
     final color = verdictColor(tone);
 
     return Scaffold(
-      backgroundColor: AppColors.dashboardSurface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.dashboardSurface,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.ink),
-        title: const Text(
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        title: Text(
           'Resultado',
-          style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: ListView(
@@ -130,7 +136,7 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? theme.cardColor : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
@@ -179,10 +185,10 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
             ),
           if (result.issues.isNotEmpty) ...[
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Incidencias',
               style: TextStyle(
-                color: AppColors.ink,
+                color: colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
@@ -204,10 +210,10 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
           ],
           if (result.detections.isNotEmpty) ...[
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Detecciones',
               style: TextStyle(
-                color: AppColors.ink,
+                color: colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
@@ -278,6 +284,7 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
               },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF1B4D8A),
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
@@ -295,7 +302,8 @@ class _AnalysisResultsViewState extends State<AnalysisResultsView> {
               );
             },
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.ink,
+              backgroundColor: isDark ? Colors.white : AppColors.ink,
+              foregroundColor: isDark ? AppColors.ink : Colors.white,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),

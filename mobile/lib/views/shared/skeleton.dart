@@ -71,28 +71,28 @@ class ChatHistorySkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
       itemCount: itemCount,
       itemBuilder: (context, index) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: 4),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SkeletonBox(
                   width: 140 + (index % 3) * 28.0,
-                  height: 15,
+                  height: 14,
                   borderRadius: 6,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 SkeletonBox(
                   width: 70 + (index % 2) * 20.0,
-                  height: 12,
+                  height: 11,
                   borderRadius: 6,
                 ),
               ],
@@ -123,20 +123,11 @@ class HomeProjectsListSkeleton extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: cardColor,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? const Color(0xFF2E2E34) : const Color(0xFFD0D5DD),
-              width: 1.2,
+              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
+              width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.3)
-                    : Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

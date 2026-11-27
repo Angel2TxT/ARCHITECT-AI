@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movil_architect/controllers/home_project_controller.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/models/home_project_models.dart';
 import 'package:movil_architect/views/home_projects/create_home_project_view.dart';
@@ -83,7 +84,8 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
 
     final sorted = List<HomeProject>.from(list);
     sorted.sort((a, b) {
-      final comp = a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
+      final comp =
+          a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase());
       return _sortAscending ? comp : -comp;
     });
     return sorted;
@@ -118,6 +120,11 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
   }
 
   Future<void> _confirmDelete(HomeProject project) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cancelBg =
+        isDark ? const Color(0xFF3E3E44) : const Color(0xFF6B6B73);
+    final dangerBg =
+        isDark ? const Color(0xFFD9383A) : const Color(0xFFC8282A);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -126,13 +133,48 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
           'Se eliminará "${project.name}". Esta acción no se puede deshacer.',
         ),
         actions: [
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: cancelBg,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              minimumSize: const Size(0, 42),
+            ),
+            child: Text(
+              'Cancelar',
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          TextButton(
+          const SizedBox(width: 4),
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: dangerBg,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              minimumSize: const Size(0, 42),
+            ),
+            child: Text(
+              'Eliminar',
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -152,6 +194,11 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
   }
 
   Future<void> _confirmLeave(HomeProject project) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cancelBg =
+        isDark ? const Color(0xFF3E3E44) : const Color(0xFF6B6B73);
+    final dangerBg =
+        isDark ? const Color(0xFFD9383A) : const Color(0xFFC8282A);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -160,15 +207,47 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
           '¿Seguro que deseas salir de "${project.name}"? Ya no tendrás acceso a sus etapas ni documentos.',
         ),
         actions: [
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: cancelBg,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              minimumSize: const Size(0, 42),
+            ),
+            child: Text(
+              'Cancelar',
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          TextButton(
+          const SizedBox(width: 4),
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
+            style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: dangerBg,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              minimumSize: const Size(0, 42),
+            ),
+            child: Text(
               'Darse de baja',
-              style: TextStyle(color: Colors.red),
+              style: ArchitectThemeTokens.appleText(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -235,7 +314,12 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
       ),
     );
 
-    if (newName == null || newName.isEmpty || newName == project.name || !mounted) return;
+    if (newName == null ||
+        newName.isEmpty ||
+        newName == project.name ||
+        !mounted) {
+      return;
+    }
 
     final ok = await _controller.renameProject(project.id, newName);
     if (!mounted) return;
@@ -251,13 +335,7 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0C0C0E) : const Color(0xFFF7F7F8);
-    final borderColor = isDark ? const Color(0xFF3F3F46) : const Color(0xFFD1D5DB);
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final secondaryText = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
-    final mutedText = isDark ? const Color(0xFF71717A) : const Color(0xFF8E8E93);
-    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+    final tokens = ArchitectThemeTokens.of(context);
 
     return PopScope(
       canPop: !_isSearching,
@@ -268,33 +346,44 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
         }
       },
       child: Scaffold(
-        backgroundColor: bg,
+        backgroundColor: tokens.drawerBackground,
         appBar: AppBar(
-          backgroundColor: bg,
-          foregroundColor: primaryBlack,
+          backgroundColor: tokens.drawerBackground,
+          foregroundColor: tokens.textPrimary,
           elevation: 0,
           scrolledUnderElevation: 0,
-          leading: _isSearching
-              ? IconButton(
-                  icon: Icon(Icons.arrow_back, color: primaryBlack),
-                  tooltip: 'Cerrar búsqueda',
-                  onPressed: _stopSearch,
-                )
-              : null,
+          centerTitle: true,
+          leading: Semantics(
+            button: true,
+            label: _isSearching ? 'Cerrar búsqueda' : 'Regresar',
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                size: 22,
+                color: tokens.textPrimary,
+              ),
+              tooltip: _isSearching ? 'Cerrar búsqueda' : 'Regresar',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: _isSearching
+                  ? _stopSearch
+                  : () => Navigator.of(context).maybePop(),
+            ),
+          ),
           title: _isSearching
               ? TextField(
                   controller: _searchController,
                   autofocus: true,
-                  style: TextStyle(
-                    color: primaryBlack,
+                  textInputAction: TextInputAction.search,
+                  style: ArchitectThemeTokens.appleText(
+                    color: tokens.textPrimary,
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w400,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Buscar proyectos...',
-                    hintStyle: TextStyle(
-                      color: mutedText,
-                      fontSize: 15,
+                    hintStyle: ArchitectThemeTokens.appleText(
+                      color: tokens.textSecondary,
+                      fontSize: 16,
                     ),
                     border: InputBorder.none,
                   ),
@@ -304,20 +393,34 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                     });
                   },
                 )
-              : Text(
-                  'Casa hogar',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    color: primaryBlack,
+              : Semantics(
+                  header: true,
+                  child: Text(
+                    'Casa hogar',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ArchitectThemeTokens.appleDisplay(
+                      color: tokens.textPrimary,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
           actions: [
             if (_isSearching) ...[
               if (_searchQuery.isNotEmpty)
                 IconButton(
-                  tooltip: 'Limpiar',
-                  icon: Icon(Icons.close, color: primaryBlack),
+                  tooltip: 'Limpiar búsqueda',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: tokens.textPrimary,
+                  ),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -326,234 +429,329 @@ class _HomeProjectsListViewState extends State<HomeProjectsListView> {
                   },
                 ),
             ] else ...[
-              IconButton(
-                tooltip: 'Buscar proyectos',
-                icon: Icon(Icons.search, color: primaryBlack),
-                onPressed: _startSearch,
-              ),
-              IconButton(
-                tooltip: _sortAscending ? 'Orden A-Z (activo)' : 'Orden Z-A (activo)',
-                icon: Icon(
-                  _sortAscending
-                      ? Icons.sort_by_alpha
-                      : Icons.sort_by_alpha_outlined,
-                  color: primaryBlack,
-                ),
-                onPressed: _toggleSort,
-              ),
-              IconButton(
-                tooltip: 'Aceptar invitación',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AcceptInviteView()),
-                  );
-                },
-                icon: Icon(
-                  Icons.mail_outline,
-                  color: primaryBlack,
+              Semantics(
+                button: true,
+                label: 'Buscar proyectos',
+                child: IconButton(
+                  tooltip: 'Buscar proyectos',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  icon: Icon(
+                    Icons.search_rounded,
+                    size: 22,
+                    color: tokens.textPrimary,
+                  ),
+                  onPressed: _startSearch,
                 ),
               ),
+              Semantics(
+                button: true,
+                label: _sortAscending ? 'Ordenar Z a A' : 'Ordenar A a Z',
+                child: IconButton(
+                  tooltip: _sortAscending
+                      ? 'Orden A-Z (activo)'
+                      : 'Orden Z-A (activo)',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  icon: Icon(
+                    _sortAscending
+                        ? Icons.sort_by_alpha_rounded
+                        : Icons.sort_by_alpha_outlined,
+                    size: 22,
+                    color: tokens.textPrimary,
+                  ),
+                  onPressed: _toggleSort,
+                ),
+              ),
+              Semantics(
+                button: true,
+                label: 'Aceptar invitación',
+                child: IconButton(
+                  tooltip: 'Aceptar invitación',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AcceptInviteView(),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.mail_outline_rounded,
+                    size: 21,
+                    color: tokens.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
             ],
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openCreate,
-          elevation: 2,
-          backgroundColor: isDark ? Colors.white : const Color(0xFF111111),
-          foregroundColor: isDark ? const Color(0xFF111111) : Colors.white,
-          icon: Icon(
-            Icons.add,
-            color: isDark ? const Color(0xFF111111) : Colors.white,
-          ),
-          label: Text(
-            'Nuevo proyecto',
-            style: TextStyle(
-              color: isDark ? const Color(0xFF111111) : Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        floatingActionButton: SafeArea(
+          top: false,
+          left: false,
+          child: _NewProjectButton(onPressed: _openCreate),
         ),
-        body: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) {
-            if (_controller.state == HomeProjectsState.loading) {
-              return const HomeProjectsListSkeleton();
-            }
-            if (_controller.state == HomeProjectsState.error) {
-              return AppErrorView(
-                message: _controller.errorMessage ?? 'Error al cargar',
-                onRetry: () => _controller.load(),
-              );
-            }
-            if (_controller.state == HomeProjectsState.empty) {
-              return RefreshIndicator(
-                color: primaryBlack,
-                onRefresh: () => _controller.load(refresh: true),
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
-                    Icon(
-                      Icons.home_work_outlined,
-                      size: 56,
-                      color: mutedText,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Aún no hay proyectos',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: primaryBlack,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Crea tu primer proyecto de vivienda\nunifamiliar en 9 etapas.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: secondaryText,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final projects = _getFilteredProjects();
-
-            if (projects.isEmpty && _searchQuery.isNotEmpty) {
-              return RefreshIndicator(
-                color: primaryBlack,
-                onRefresh: () => _controller.load(refresh: true),
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
-                    Icon(
-                      Icons.search_off_rounded,
-                      size: 56,
-                      color: mutedText,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Sin coincidencias',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: primaryBlack,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        'No encontramos ningún proyecto que coincida con "$_searchQuery".',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: secondaryText,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                        icon: Icon(Icons.clear, color: primaryBlack),
-                        label: Text(
-                          'Limpiar búsqueda',
-                          style: TextStyle(
-                            color: primaryBlack,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              color: primaryBlack,
-              onRefresh: () => _controller.load(refresh: true),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        body: SafeArea(
+          top: false,
+          child: ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) {
+              if (_controller.state == HomeProjectsState.loading) {
+                return const HomeProjectsListSkeleton();
+              }
+              if (_controller.state == HomeProjectsState.error) {
+                return AppErrorView(
+                  message: _controller.errorMessage ?? 'Error al cargar',
+                  onRetry: () => _controller.load(),
+                );
+              }
+              if (_controller.state == HomeProjectsState.empty) {
+                return RefreshIndicator(
+                  color: tokens.accent,
+                  onRefresh: () => _controller.load(refresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            _searchQuery.isNotEmpty
-                                ? 'Resultados'
-                                : 'Proyectos activos',
-                            style: TextStyle(
-                              color: primaryBlack,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tagBg,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: borderColor, width: 1),
-                            ),
-                            child: Text(
-                              '${projects.length}',
-                              style: TextStyle(
-                                color: primaryBlack,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
+                      SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
+                      Icon(
+                        Icons.home_work_outlined,
+                        size: 48,
+                        color: tokens.textSecondary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aún no hay proyectos',
+                        textAlign: TextAlign.center,
+                        style: ArchitectThemeTokens.appleDisplay(
+                          color: tokens.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Crea tu primer proyecto de vivienda\nunifamiliar en 9 etapas.',
+                        textAlign: TextAlign.center,
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  for (final project in projects) ...[
-                    HomeProjectCard(
-                      project: project,
-                      pinned: _controller.isPinned(project.id),
-                      onTap: () => _openDetail(project.id),
-                      onPin: () => _togglePin(
-                        project,
-                        wasPinned: _controller.isPinned(project.id),
+                );
+              }
+
+              final projects = _getFilteredProjects();
+
+              if (projects.isEmpty && _searchQuery.isNotEmpty) {
+                return RefreshIndicator(
+                  color: tokens.accent,
+                  onRefresh: () => _controller.load(refresh: true),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+                    children: [
+                      SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: tokens.textSecondary,
                       ),
-                      onRename: project.permissions.canRenameProject
-                          ? () => _promptRename(project)
-                          : null,
-                      onDelete: project.permissions.canDeleteProject
-                          ? () => _confirmDelete(project)
-                          : null,
-                      onLeave: (project.myRole != 'owner' &&
-                              !project.permissions.canDeleteProject)
-                          ? () => _confirmLeave(project)
-                          : null,
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sin coincidencias',
+                        textAlign: TextAlign.center,
+                        style: ArchitectThemeTokens.appleDisplay(
+                          color: tokens.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'No encontramos ningún proyecto que coincida con "$_searchQuery".',
+                          textAlign: TextAlign.center,
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.textSecondary,
+                            fontSize: 14,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: tokens.textPrimary,
+                          ),
+                          label: Text(
+                            'Limpiar búsqueda',
+                            style: ArchitectThemeTokens.appleText(
+                              color: tokens.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                color: tokens.accent,
+                onRefresh: () => _controller.load(refresh: true),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 104),
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          _searchQuery.isNotEmpty
+                              ? 'Resultados'
+                              : 'Proyectos activos',
+                          style: ArchitectThemeTokens.appleDisplay(
+                            color: tokens.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.25,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${projects.length}',
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
+                    for (final project in projects) ...[
+                      HomeProjectCard(
+                        project: project,
+                        pinned: _controller.isPinned(project.id),
+                        onTap: () => _openDetail(project.id),
+                        onPin: () => _togglePin(
+                          project,
+                          wasPinned: _controller.isPinned(project.id),
+                        ),
+                        onRename: project.permissions.canRenameProject
+                            ? () => _promptRename(project)
+                            : null,
+                        onDelete: project.permissions.canDeleteProject
+                            ? () => _confirmDelete(project)
+                            : null,
+                        onLeave: (project.myRole != 'owner' &&
+                                !project.permissions.canDeleteProject)
+                            ? () => _confirmLeave(project)
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ],
-                ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewProjectButton extends StatefulWidget {
+  const _NewProjectButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_NewProjectButton> createState() => _NewProjectButtonState();
+}
+
+class _NewProjectButtonState extends State<_NewProjectButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
+    return Semantics(
+      button: true,
+      label: 'Crear nuevo proyecto',
+      child: AnimatedScale(
+        scale: (_pressed && !reduceMotion) ? 0.97 : 1.0,
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Material(
+          color: tokens.primaryActionBg,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+          elevation: 0,
+          child: InkWell(
+            onTap: widget.onPressed,
+            onHighlightChanged: (value) {
+              if (mounted) setState(() => _pressed = value);
+            },
+            borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.add_rounded,
+                      size: 19,
+                      color: tokens.primaryActionFg,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Nuevo proyecto',
+                      style: ArchitectThemeTokens.appleText(
+                        color: tokens.primaryActionFg,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.15,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

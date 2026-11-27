@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:movil_architect/core/app_services.dart';
 import 'package:movil_architect/core/network/api_exception.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
 import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/core/utils/external_url.dart';
 import 'package:movil_architect/models/auth_models.dart';
 import 'package:movil_architect/models/billing_models.dart';
 import 'package:movil_architect/views/billing/widgets/plan_pricing_card.dart';
-import 'package:movil_architect/views/login/widgets/login_widgets.dart';
 import 'package:open_filex/open_filex.dart';
 
 class BillingView extends StatefulWidget {
@@ -28,6 +28,9 @@ class _BillingViewState extends State<BillingView> {
   String? _selectingSlug;
   String? _selectedReceiptId;
   bool _openingReceipt = false;
+  bool _openingPortal = false;
+  bool _canceling = false;
+  bool _submittingRefund = false;
   final _refundReason = TextEditingController();
 
   @override
@@ -132,6 +135,8 @@ class _BillingViewState extends State<BillingView> {
   }
 
   Future<void> _openPortal() async {
+    if (_openingPortal) return;
+    setState(() => _openingPortal = true);
     try {
       final url = await AppServices.instance.billingService.openPortal(
         '${AppServices.instance.apiClient.dio.options.baseUrl}/',
@@ -140,10 +145,81 @@ class _BillingViewState extends State<BillingView> {
     } on ApiException catch (error) {
       if (!mounted) return;
       AppNotifications.error(context, error.message);
+    } finally {
+      if (mounted) setState(() => _openingPortal = false);
+    }
+  }
+
+  Future<void> _confirmAndCancel() async {
+    final subscription = _subscription;
+    if (subscription == null || _canceling) return;
+    final tokens = ArchitectThemeTokens.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: tokens.surfaceSecondary,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+            side: BorderSide(color: tokens.borderSubtle, width: 1),
+          ),
+          title: Text(
+            'Cancelar plan ${subscription.plan.name}',
+            style: ArchitectThemeTokens.appleDisplay(
+              color: tokens.textPrimary,
+              fontSize: 19,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          content: Text(
+            'Se cancelará tu suscripción actual (${subscription.plan.name}). '
+            'Perderás los beneficios y límites asociados a este plan conforme '
+            'a las reglas de facturación vigentes.',
+            style: ArchitectThemeTokens.appleText(
+              color: tokens.textSecondary,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Mantener plan',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.textPrimary,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                'Cancelar plan',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.statusError,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      await _cancel();
     }
   }
 
   Future<void> _cancel() async {
+    if (_canceling) return;
+    setState(() => _canceling = true);
     try {
       await AppServices.instance.billingService.cancel();
       await _load();
@@ -153,6 +229,8 @@ class _BillingViewState extends State<BillingView> {
     } on ApiException catch (error) {
       if (!mounted) return;
       AppNotifications.error(context, error.message);
+    } finally {
+      if (mounted) setState(() => _canceling = false);
     }
   }
 
@@ -211,6 +289,8 @@ class _BillingViewState extends State<BillingView> {
   }
 
   Future<void> _submitRefund() async {
+    if (_submittingRefund) return;
+    setState(() => _submittingRefund = true);
     try {
       await AppServices.instance.billingService.requestRefund(
         _refundReason.text,
@@ -222,60 +302,75 @@ class _BillingViewState extends State<BillingView> {
     } on ApiException catch (error) {
       if (!mounted) return;
       AppNotifications.error(context, error.message);
+    } finally {
+      if (mounted) setState(() => _submittingRefund = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+
     return Scaffold(
+      backgroundColor: tokens.drawerBackground,
       appBar: AppBar(
-        title: const Text('Planes y facturación'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        centerTitle: true,
+        backgroundColor: tokens.drawerBackground,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: tokens.textPrimary,
+            size: 22,
+          ),
+          tooltip: 'Regresar',
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(
+          'Planes y facturación',
+          style: ArchitectThemeTokens.appleDisplay(
+            color: tokens.textPrimary,
+            fontSize: 19,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: tokens.accent,
+              ),
+            )
           : RefreshIndicator(
+              color: tokens.accent,
+              backgroundColor: tokens.surfaceSecondary,
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 children: [
-                  if (_error != null)
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.redAccent),
-                    ),
-                  if (_subscription != null) ...[
-                    Text(
-                      'Plan actual: ${_subscription!.plan.name}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        OutlinedButton(
-                          onPressed: _openPortal,
-                          child: const Text('Portal Stripe'),
-                        ),
-                        FilledButton(
-                          onPressed: _cancel,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFD64545),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Cancelar plan'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                  if (_error != null) ...[
+                    _ErrorBanner(message: _error!),
+                    const SizedBox(height: 16),
                   ],
-                  const Text(
-                    'Planes',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  if (_subscription != null) ...[
+                    _CurrentPlanCard(
+                      subscription: _subscription!,
+                      openingPortal: _openingPortal,
+                      canceling: _canceling,
+                      onOpenPortal: _openPortal,
+                      onCancel: _confirmAndCancel,
+                    ),
+                    const SizedBox(height: 28),
+                  ],
+                  Text(
+                    'Planes disponibles',
+                    style: ArchitectThemeTokens.appleDisplay(
+                      color: tokens.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   PlanCarousel(
@@ -284,17 +379,36 @@ class _BillingViewState extends State<BillingView> {
                     selectingSlug: _selectingSlug,
                     onSelect: _selectPlan,
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
+                  const SizedBox(height: 28),
+                  Text(
                     'Comprobantes',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                    style: ArchitectThemeTokens.appleDisplay(
+                      color: tokens.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (_receipts.isEmpty)
-                    Text(
-                      'Sin comprobantes',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: tokens.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(
+                          ArchitectThemeTokens.radiusLg,
+                        ),
+                        border: Border.all(
+                          color: tokens.borderSubtle,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'Sin comprobantes disponibles.',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textSecondary,
+                          fontSize: 14,
+                        ),
                       ),
                     )
                   else ...[
@@ -308,42 +422,308 @@ class _BillingViewState extends State<BillingView> {
                       },
                       onOpen: _openSelectedReceipt,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
                         onPressed: _downloadReceiptsZip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: tokens.accent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                          minimumSize: const Size(44, 44),
+                        ),
                         icon: const Icon(Icons.folder_zip_outlined, size: 18),
-                        label: const Text('Descargar ZIP'),
+                        label: Text(
+                          'Descargar ZIP',
+                          style: ArchitectThemeTokens.appleText(
+                            color: tokens.accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Reembolsos',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-                  ),
-                  ..._refunds.map(
-                    (item) => ListTile(
-                      title: Text(item.status),
-                      subtitle: Text(item.reason),
+                  if (_refunds.isNotEmpty || _canRefund) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'Reembolsos',
+                      style: ArchitectThemeTokens.appleDisplay(
+                        color: tokens.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  if (_canRefund) ...[
-                    const SizedBox(height: 8),
-                    LoginPillField(
-                      controller: _refundReason,
-                      hint: 'MOTIVO DEL REEMBOLSO',
-                    ),
-                    const SizedBox(height: 10),
-                    LoginPrimaryButton(
-                      label: 'Solicitar reembolso',
-                      onPressed: _submitRefund,
-                    ),
+                    const SizedBox(height: 12),
+                    for (int i = 0; i < _refunds.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 8),
+                      _RefundTile(refund: _refunds[i]),
+                    ],
+                    if (_canRefund) ...[
+                      if (_refunds.isNotEmpty) const SizedBox(height: 12),
+                      _RefundComposer(
+                        controller: _refundReason,
+                        submitting: _submittingRefund,
+                        onSubmit: _submitRefund,
+                      ),
+                    ],
                   ],
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tokens.statusError.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+        border: Border.all(
+          color: tokens.statusError.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        message,
+        style: ArchitectThemeTokens.appleText(
+          color: tokens.statusError,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+}
+
+class _CurrentPlanCard extends StatelessWidget {
+  const _CurrentPlanCard({
+    required this.subscription,
+    required this.openingPortal,
+    required this.canceling,
+    required this.onOpenPortal,
+    required this.onCancel,
+  });
+
+  final SubscriptionModel subscription;
+  final bool openingPortal;
+  final bool canceling;
+  final VoidCallback onOpenPortal;
+  final VoidCallback onCancel;
+
+  String _formatStatus(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'active':
+        return 'Activa';
+      case 'trialing':
+        return 'En prueba';
+      case 'past_due':
+        return 'Pago pendiente';
+      case 'canceled':
+      case 'cancelled':
+        return 'Cancelada';
+      case 'inactive':
+        return 'Inactiva';
+      default:
+        return raw.trim();
+    }
+  }
+
+  Color _statusColor(ArchitectThemeTokens tokens, String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'active':
+      case 'trialing':
+        return tokens.statusPositive;
+      case 'past_due':
+        return tokens.statusWarning;
+      case 'canceled':
+      case 'cancelled':
+      case 'inactive':
+        return tokens.statusError;
+      default:
+        return tokens.textSecondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    final rawStatus = subscription.status.trim();
+    final hasStatus = rawStatus.isNotEmpty;
+    final statusLabel = _formatStatus(rawStatus);
+    final statusColor = _statusColor(tokens, rawStatus);
+    final periodKey = subscription.usage.periodKey.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Tu plan actual',
+                style: ArchitectThemeTokens.appleText(
+                  color: tokens.accent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              if (hasStatus)
+                Text(
+                  statusLabel,
+                  style: ArchitectThemeTokens.appleText(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            subscription.plan.name,
+            style: ArchitectThemeTokens.appleDisplay(
+              color: tokens.textPrimary,
+              fontSize: 24,
+              fontWeight: FontWeight.w500,
+              height: 1.18,
+            ),
+          ),
+          if (periodKey.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Ciclo actual · $periodKey',
+              style: ArchitectThemeTokens.appleText(
+                color: tokens.textSecondary,
+                fontSize: 13.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: SizedBox(
+                  height: 46,
+                  child: FilledButton(
+                    onPressed: openingPortal ? null : onOpenPortal,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: tokens.primaryActionBg,
+                      foregroundColor: tokens.primaryActionFg,
+                      disabledBackgroundColor:
+                          tokens.primaryActionBg.withValues(alpha: 0.55),
+                      disabledForegroundColor: tokens.primaryActionFg,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          ArchitectThemeTokens.radiusMd,
+                        ),
+                      ),
+                    ),
+                    child: openingPortal
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: tokens.primaryActionFg,
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 16,
+                                  color: tokens.primaryActionFg,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  'Gestionar facturación',
+                                  style: ArchitectThemeTokens.appleText(
+                                    color: tokens.primaryActionFg,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 46,
+                  child: FilledButton(
+                    onPressed: canceling ? null : onCancel,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFC94A4A),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          const Color(0xFFC94A4A).withValues(alpha: 0.55),
+                      disabledForegroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          ArchitectThemeTokens.radiusMd,
+                        ),
+                      ),
+                    ),
+                    child: canceling
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Cancelar plan',
+                              style: ArchitectThemeTokens.appleText(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -367,54 +747,51 @@ class _ReceiptSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
-    final cardBg = isDark ? colorScheme.surfaceContainerHighest : Colors.white;
-    final fieldBg = isDark
-        ? colorScheme.surfaceContainerHigh
-        : const Color(0xFFF4F4F6);
+    final tokens = ArchitectThemeTokens.of(context);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : const Color(0xFFE8E8EC),
-        ),
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Seleccionar comprobante',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+            style: ArchitectThemeTokens.appleText(
+              color: tokens.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: fieldBg,
-                    borderRadius: BorderRadius.circular(14),
+                    color: tokens.drawerBackground,
+                    borderRadius: BorderRadius.circular(
+                      ArchitectThemeTokens.radiusMd,
+                    ),
+                    border: Border.all(color: tokens.borderSubtle, width: 1),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: selectedId,
                       isExpanded: true,
-                      borderRadius: BorderRadius.circular(14),
+                      dropdownColor: tokens.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(
+                        ArchitectThemeTokens.radiusMd,
+                      ),
                       icon: Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: colorScheme.onSurfaceVariant,
+                        color: tokens.textSecondary,
                       ),
                       items: [
                         for (final receipt in receipts)
@@ -424,9 +801,10 @@ class _ReceiptSelector extends StatelessWidget {
                               labelBuilder(receipt),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w600,
+                              style: ArchitectThemeTokens.appleText(
+                                color: tokens.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
@@ -438,29 +816,199 @@ class _ReceiptSelector extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: isOpening ? null : onOpen,
-                tooltip: 'Ver / descargar',
-                style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.onSurface,
-                  foregroundColor: isDark ? Colors.black : Colors.white,
-                  disabledBackgroundColor: colorScheme.onSurface.withValues(
-                    alpha: 0.35,
+              const SizedBox(width: 10),
+              Semantics(
+                button: true,
+                label: 'Descargar comprobante',
+                child: Material(
+                  color: tokens.primaryActionBg,
+                  borderRadius: BorderRadius.circular(
+                    ArchitectThemeTokens.radiusMd,
+                  ),
+                  child: InkWell(
+                    onTap: isOpening ? null : onOpen,
+                    borderRadius: BorderRadius.circular(
+                      ArchitectThemeTokens.radiusMd,
+                    ),
+                    child: SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: Center(
+                        child: isOpening
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: tokens.primaryActionFg,
+                                ),
+                              )
+                            : Icon(
+                                Icons.download_rounded,
+                                size: 20,
+                                color: tokens.primaryActionFg,
+                              ),
+                      ),
+                    ),
                   ),
                 ),
-                icon: isOpening
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: isDark ? Colors.black : Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.download_rounded),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RefundTile extends StatelessWidget {
+  const _RefundTile({required this.refund});
+
+  final BillingRefund refund;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            refund.status,
+            style: ArchitectThemeTokens.appleText(
+              color: tokens.accent,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (refund.reason.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              refund.reason,
+              style: ArchitectThemeTokens.appleText(
+                color: tokens.textPrimary,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RefundComposer extends StatelessWidget {
+  const _RefundComposer({
+    required this.controller,
+    required this.submitting,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final bool submitting;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tokens.surfaceSecondary,
+        borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+        border: Border.all(color: tokens.borderSubtle, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            enabled: !submitting,
+            minLines: 2,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            style: ArchitectThemeTokens.appleText(
+              color: tokens.textPrimary,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Motivo del reembolso',
+              hintStyle: ArchitectThemeTokens.appleText(
+                color: tokens.textSecondary,
+                fontSize: 14,
+              ),
+              filled: true,
+              fillColor: tokens.drawerBackground,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  ArchitectThemeTokens.radiusMd,
+                ),
+                borderSide: BorderSide(color: tokens.borderSubtle, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  ArchitectThemeTokens.radiusMd,
+                ),
+                borderSide: BorderSide(color: tokens.borderSubtle, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  ArchitectThemeTokens.radiusMd,
+                ),
+                borderSide: BorderSide(color: tokens.accent, width: 1),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: submitting ? null : onSubmit,
+              style: FilledButton.styleFrom(
+                backgroundColor: tokens.primaryActionBg,
+                foregroundColor: tokens.primaryActionFg,
+                disabledBackgroundColor:
+                    tokens.primaryActionBg.withValues(alpha: 0.55),
+                disabledForegroundColor: tokens.primaryActionFg,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    ArchitectThemeTokens.radiusMd,
+                  ),
+                ),
+              ),
+              child: submitting
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: tokens.primaryActionFg,
+                      ),
+                    )
+                  : Text(
+                      'Solicitar reembolso',
+                      style: ArchitectThemeTokens.appleText(
+                        color: tokens.primaryActionFg,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+            ),
           ),
         ],
       ),

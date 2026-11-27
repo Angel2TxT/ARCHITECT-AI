@@ -164,7 +164,7 @@ class ResendVerificationRequest(BaseModel):
 class UpdateUnverifiedEmailRequest(BaseModel):
     current_email: str
     new_email: str
-    password: str
+    password: str | None = None
 
     @field_validator("current_email", "new_email")
     @classmethod

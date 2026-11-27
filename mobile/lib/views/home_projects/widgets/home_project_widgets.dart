@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:movil_architect/controllers/home_project_controller.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
+import 'package:movil_architect/core/utils/app_notifications.dart';
 import 'package:movil_architect/models/home_project_models.dart';
 
 class HomeStatusChip extends StatelessWidget {
@@ -8,72 +11,56 @@ class HomeStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final borderColor = isDark
-        ? const Color(0xFF3F3F46)
-        : const Color(0xFFD1D5DB);
-    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+    final tokens = ArchitectThemeTokens.of(context);
     final isDone = status == 'completed';
     final isActive = status == 'active' || status == 'in_progress';
+    final isWarning = status == 'paused' || status == 'pending';
     final label = homeProjectStatusLabel(status);
 
-    if (isDone) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white : const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle_rounded,
-              size: 12,
-              color: isDark ? const Color(0xFF111111) : Colors.white,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isDark ? const Color(0xFF111111) : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final Color dotColor = (isDone || isActive)
+        ? tokens.statusPositive
+        : (isWarning ? tokens.statusWarning : tokens.textSecondary);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: tagBg,
+        color: isDone
+            ? tokens.statusPositive.withValues(alpha: 0.14)
+            : tokens.surfaceSelected,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor, width: 1.0),
+        border: Border.all(
+          color: isDone
+              ? tokens.statusPositive.withValues(alpha: 0.4)
+              : tokens.borderSubtle,
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? primaryBlack
-                  : (isDark ? Colors.white54 : Colors.black38),
+          if (isDone)
+            Icon(
+              Icons.check_rounded,
+              size: 13,
+              color: tokens.statusPositive,
+            )
+          else
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dotColor,
+              ),
             ),
-          ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              color: primaryBlack,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+            style: ArchitectThemeTokens.appleText(
+              color: isDone ? tokens.statusPositive : tokens.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0,
             ),
           ),
         ],
@@ -104,49 +91,35 @@ class HomeProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF141417) : Colors.white;
-    final borderColor = isDark
-        ? const Color(0xFF3F3F46)
-        : const Color(0xFFD1D5DB);
-    final primaryBlack = isDark ? Colors.white : const Color(0xFF111111);
-    final secondaryText = isDark
-        ? const Color(0xFFA1A1AA)
-        : const Color(0xFF52525B);
-    final mutedText = isDark
-        ? const Color(0xFF71717A)
-        : const Color(0xFF8E8E93);
-    final tagBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4);
+    final tokens = ArchitectThemeTokens.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final maxLines = textScale > 1.3 ? 2 : 1;
+    final progress = (project.progressPercent / 100).clamp(0.0, 1.0);
+    final progressInt = project.progressPercent.round();
     final hasMenu =
         onPin != null ||
         onRename != null ||
         onDelete != null ||
         onLeave != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+    return Semantics(
+      button: true,
+      label:
+          '${project.name}, ${homeProjectStatusLabel(project.status)}, progreso $progressInt por ciento, etapa ${project.currentStage} de 9',
       child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
+        color: tokens.surfaceSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          hoverColor: tokens.interactionOverlay,
+          splashColor: tokens.interactionOverlay,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusLg),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -157,36 +130,45 @@ class HomeProjectCard extends StatelessWidget {
                     if (pinned) ...[
                       Icon(
                         Icons.push_pin_rounded,
-                        size: 16,
-                        color: primaryBlack,
+                        size: 15,
+                        color: tokens.accent,
                       ),
                       const SizedBox(width: 6),
                     ],
                     Expanded(
                       child: Text(
                         project.name,
-                        maxLines: 1,
+                        maxLines: maxLines,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: primaryBlack,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.25,
+                          height: 1.25,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    HomeStatusChip(status: project.status),
                     if (hasMenu) ...[
                       const SizedBox(width: 2),
                       PopupMenuButton<String>(
-                        tooltip: 'Opciones',
+                        tooltip: 'Opciones del proyecto',
+                        color: tokens.surfaceSelected,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            ArchitectThemeTokens.radiusMd,
+                          ),
+                          side: BorderSide(color: tokens.borderSubtle, width: 1),
+                        ),
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        offset: const Offset(0, 36),
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        offset: const Offset(0, 40),
                         icon: Icon(
-                          Icons.more_vert_rounded,
-                          color: secondaryText,
+                          Icons.more_horiz_rounded,
+                          color: tokens.textSecondary,
                           size: 20,
                         ),
                         onSelected: (value) {
@@ -212,14 +194,17 @@ class HomeProjectCard extends StatelessWidget {
                                         ? Icons.push_pin_rounded
                                         : Icons.push_pin_outlined,
                                     size: 18,
-                                    color: primaryBlack,
+                                    color: pinned
+                                        ? tokens.accent
+                                        : tokens.textPrimary,
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
                                     pinned ? 'Desfijar' : 'Fijar',
-                                    style: TextStyle(
-                                      color: primaryBlack,
-                                      fontWeight: FontWeight.w600,
+                                    style: ArchitectThemeTokens.appleText(
+                                      color: tokens.textPrimary,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -233,56 +218,59 @@ class HomeProjectCard extends StatelessWidget {
                                   Icon(
                                     Icons.edit_outlined,
                                     size: 18,
-                                    color: primaryBlack,
+                                    color: tokens.textPrimary,
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
                                     'Editar nombre',
-                                    style: TextStyle(
-                                      color: primaryBlack,
-                                      fontWeight: FontWeight.w600,
+                                    style: ArchitectThemeTokens.appleText(
+                                      color: tokens.textPrimary,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           if (onDelete != null)
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'delete',
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.delete_outline_rounded,
                                     size: 18,
-                                    color: Colors.red,
+                                    color: tokens.statusError,
                                   ),
-                                  SizedBox(width: 12),
+                                  const SizedBox(width: 12),
                                   Text(
                                     'Eliminar',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.w600,
+                                    style: ArchitectThemeTokens.appleText(
+                                      color: tokens.statusError,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           if (onLeave != null)
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'leave',
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.exit_to_app_rounded,
                                     size: 18,
-                                    color: Colors.red,
+                                    color: tokens.statusError,
                                   ),
-                                  SizedBox(width: 12),
+                                  const SizedBox(width: 12),
                                   Text(
                                     'Darse de baja',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.w600,
+                                    style: ArchitectThemeTokens.appleText(
+                                      color: tokens.statusError,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -290,134 +278,132 @@ class HomeProjectCard extends StatelessWidget {
                             ),
                         ],
                       ),
-                    ],
+                    ] else
+                      const SizedBox(width: 4),
                   ],
                 ),
 
                 // Cliente y Ubicación
                 if (project.clientName.isNotEmpty ||
                     project.location.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   if (project.clientName.isNotEmpty) ...[
                     Row(
                       children: [
                         Icon(
                           Icons.person_outline_rounded,
-                          size: 14,
-                          color: mutedText,
+                          size: 15,
+                          color: tokens.textSecondary,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             project.clientName,
-                            maxLines: 1,
+                            maxLines: maxLines,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: secondaryText,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
+                            style: ArchitectThemeTokens.appleText(
+                              color: tokens.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    if (project.location.isNotEmpty) const SizedBox(height: 4),
                   ],
-                  if (project.location.isNotEmpty) ...[
+                  if (project.location.isNotEmpty)
                     Row(
                       children: [
-                        Icon(Icons.place_outlined, size: 14, color: mutedText),
-                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 15,
+                          color: tokens.textSecondary,
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             project.location,
-                            maxLines: 1,
+                            maxLines: maxLines,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: mutedText,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
+                            style: ArchitectThemeTokens.appleText(
+                              color: tokens.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
                 ],
 
-                const SizedBox(height: 12),
-                Container(height: 1, color: borderColor.withValues(alpha: 0.6)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Progreso y Etapa
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Progreso',
-                                style: TextStyle(
-                                  color: secondaryText,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Progreso',
+                                  style: ArchitectThemeTokens.appleText(
+                                    color: tokens.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${project.progressPercent.round()}%',
-                                style: TextStyle(
-                                  color: primaryBlack,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$progressInt%',
+                                  style: ArchitectThemeTokens.appleText(
+                                    color: tokens.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: (project.progressPercent / 100).clamp(
-                                0.0,
-                                1.0,
-                              ),
-                              minHeight: 5,
-                              backgroundColor: isDark
-                                  ? const Color(0xFF27272A)
-                                  : const Color(0xFFE4E4E7),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                primaryBlack,
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 3.5,
+                                backgroundColor: tokens.borderSubtle,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  progressInt >= 100
+                                      ? tokens.statusPositive
+                                      : tokens.textPrimary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: tagBg,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: borderColor, width: 1),
-                      ),
-                      child: Text(
-                        'Etapa ${project.currentStage}/9',
-                        style: TextStyle(
-                          color: primaryBlack,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11.5,
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      Text(
+                        'Etapa ${project.currentStage}/9',
+                        style: ArchitectThemeTokens.appleText(
+                          color: tokens.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -426,4 +412,194 @@ class HomeProjectCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class NewSectionButton extends StatelessWidget {
+  const NewSectionButton({
+    super.key,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = ArchitectThemeTokens.of(context);
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: 'Crear nuevo apartado',
+      child: Material(
+        color: tokens.surfaceSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+          side: BorderSide(color: tokens.borderSubtle, width: 1),
+        ),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(ArchitectThemeTokens.radiusMd),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_rounded,
+                    size: 16,
+                    color: enabled ? tokens.accent : tokens.textSecondary,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Nuevo apartado',
+                    style: ArchitectThemeTokens.appleText(
+                      color:
+                          enabled ? tokens.textPrimary : tokens.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> showCreateSectionDialog({
+  required BuildContext context,
+  required HomeProjectDetailController controller,
+  required int stageNumber,
+}) async {
+  final tokens = ArchitectThemeTokens.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final titleController = TextEditingController();
+  final descController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  final result = await showDialog<({String title, String? description})>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text('Nuevo apartado · Etapa $stageNumber'),
+      content: Form(
+        key: formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: titleController,
+              autofocus: true,
+              maxLength: 160,
+              textCapitalization: TextCapitalization.sentences,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del apartado',
+                hintText: 'Ej. Estudio de mecánica de suelos',
+              ),
+              validator: (value) {
+                final trimmed = (value ?? '').trim();
+                if (trimmed.isEmpty) {
+                  return 'Ingresa el nombre del apartado';
+                }
+                if (trimmed.length < 2) {
+                  return 'Debe tener al menos 2 caracteres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: descController,
+              maxLines: 3,
+              maxLength: 400,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Descripción (opcional)',
+                hintText: 'Detalles o alcance del apartado',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          style: FilledButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor:
+                isDark ? const Color(0xFF3E3E44) : const Color(0xFF6B6B73),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            minimumSize: const Size(0, 42),
+          ),
+          child: Text(
+            'Cancelar',
+            style: ArchitectThemeTokens.appleText(
+              color: Colors.white,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        FilledButton(
+          onPressed: () {
+            if (formKey.currentState?.validate() == true) {
+              final desc = descController.text.trim();
+              Navigator.pop(dialogContext, (
+                title: titleController.text.trim(),
+                description: desc.isEmpty ? null : desc,
+              ));
+            }
+          },
+          style: FilledButton.styleFrom(
+            foregroundColor: tokens.primaryActionFg,
+            backgroundColor: tokens.primaryActionBg,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            minimumSize: const Size(0, 42),
+          ),
+          child: Text(
+            'Crear',
+            style: ArchitectThemeTokens.appleText(
+              color: tokens.primaryActionFg,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  titleController.dispose();
+  descController.dispose();
+
+  if (result == null || !context.mounted) return;
+
+  final ok = await controller.createSection(
+    stageNumber: stageNumber,
+    title: result.title,
+    description: result.description,
+  );
+  if (!context.mounted) return;
+  AppNotifications.result(
+    context,
+    ok: ok,
+    successMessage: 'Apartado creado',
+    errorMessage: controller.actionError,
+  );
 }

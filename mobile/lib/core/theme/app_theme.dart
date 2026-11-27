@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movil_architect/core/theme/app_colors.dart';
+import 'package:movil_architect/core/theme/architect_theme_tokens.dart';
 
 abstract final class AppTheme {
   static ThemeData get light {
@@ -44,10 +45,12 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
         ),
       ),
-      fontFamily: 'Roboto',
-      textTheme: ThemeData(brightness: Brightness.light).textTheme.apply(
-            fontFamily: 'Roboto',
-          ),
+      fontFamily: ArchitectThemeTokens.textFontFamily,
+      fontFamilyFallback: ArchitectThemeTokens.fontFallback,
+      textTheme: ArchitectThemeTokens.buildTextTheme(
+        primaryColor: ArchitectThemeTokens.light.textPrimary,
+        secondaryColor: ArchitectThemeTokens.light.textSecondary,
+      ),
       scaffoldBackgroundColor: AppColors.dashboardSurface,
       cardColor: Colors.white,
       appBarTheme: const AppBarTheme(
@@ -77,13 +80,14 @@ abstract final class AppTheme {
           AppColors.ink.withValues(alpha: 0.08),
         ),
       ),
+      extensions: const [ArchitectThemeTokens.light],
     );
   }
 
   static ThemeData get dark {
-    const surface = Color(0xFF121214);
-    const card = Color(0xFF1C1C1F);
-    const onSurface = Color(0xFFF2F2F7);
+    const surface = Color(0xFF0B0B0B);
+    const card = Color(0xFF171717);
+    const onSurface = Color(0xFFF5F5F5);
 
     return ThemeData(
       useMaterial3: true,
@@ -94,16 +98,17 @@ abstract final class AppTheme {
         surface: surface,
         onSurface: onSurface,
       ).copyWith(
-        primary: Colors.white,
-        onPrimary: const Color(0xFF111111),
-        secondary: const Color(0xFFA1A1AA),
-        onSecondary: const Color(0xFF111111),
-        surfaceContainerLow: const Color(0xFF18181B),
+        primary: onSurface,
+        onPrimary: surface,
+        secondary: const Color(0xFFABABB0),
+        onSecondary: surface,
+        error: const Color(0xFFCF8585),
+        surfaceContainerLow: const Color(0xFF121212),
         surfaceContainer: card,
-        surfaceContainerHigh: const Color(0xFF141417),
-        surfaceContainerHighest: const Color(0xFF2A2A2E),
-        outline: const Color(0xFF3F3F46),
-        outlineVariant: const Color(0xFF3A3A3E),
+        surfaceContainerHigh: const Color(0xFF1D1D1D),
+        surfaceContainerHighest: const Color(0xFF262626),
+        outline: const Color(0xFF2A2A2A),
+        outlineVariant: const Color(0xFF2A2A2A),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: const Color(0xFF141417),
@@ -126,10 +131,12 @@ abstract final class AppTheme {
           foregroundColor: const Color(0xFF111111),
         ),
       ),
-      fontFamily: 'Roboto',
-      textTheme: ThemeData(brightness: Brightness.dark).textTheme.apply(
-            fontFamily: 'Roboto',
-          ),
+      fontFamily: ArchitectThemeTokens.textFontFamily,
+      fontFamilyFallback: ArchitectThemeTokens.fontFallback,
+      textTheme: ArchitectThemeTokens.buildTextTheme(
+        primaryColor: ArchitectThemeTokens.dark.textPrimary,
+        secondaryColor: ArchitectThemeTokens.dark.textSecondary,
+      ),
       scaffoldBackgroundColor: surface,
       cardColor: card,
       appBarTheme: const AppBarTheme(
@@ -160,6 +167,7 @@ abstract final class AppTheme {
           Colors.white.withValues(alpha: 0.08),
         ),
       ),
+      extensions: const [ArchitectThemeTokens.dark],
     );
   }
 }

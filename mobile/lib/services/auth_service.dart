@@ -127,7 +127,6 @@ class AuthService extends ChangeNotifier {
   Future<String> updateUnverifiedEmail({
     required String currentEmail,
     required String newEmail,
-    required String password,
   }) async {
     try {
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
@@ -135,7 +134,6 @@ class AuthService extends ChangeNotifier {
         data: {
           'current_email': currentEmail.trim().toLowerCase(),
           'new_email': newEmail.trim().toLowerCase(),
-          'password': password,
         },
       );
       final updatedEmail =

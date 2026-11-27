@@ -886,7 +886,7 @@ String homeProjectRoleLabel(String role) {
     case 'editor':
       return 'Editor';
     case 'viewer':
-      return 'Viewer';
+      return 'Lectura';
     default:
       return role;
   }

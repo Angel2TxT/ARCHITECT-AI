@@ -104,19 +104,6 @@ class _UserBubble extends StatelessWidget {
                 ),
               ),
             ),
-            if (filename != null && filename.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                filename,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
             if (hasText) const SizedBox(height: 10),
           ] else if (filename != null && filename.isNotEmpty) ...[
             if (isPlanoImageFile(filename)) ...[

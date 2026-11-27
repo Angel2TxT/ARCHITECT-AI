@@ -2137,7 +2137,8 @@ def delete_section_comment(
         actor_user_id=user.id,
         event_type=HomeProjectEventType.section_comment_deleted,
         section_id=section_id,
-        comment_id=comment_id,
+        comment_id=None,
+        metadata={"deleted_comment_id": comment_id},
     )
     db.commit()
 
@@ -2452,10 +2453,16 @@ def add_stage_document(
             accept = slot.get("accept") or []
             if accept:
                 ext = Path(filename or "").suffix.lower()
-                if ext not in accept:
+                allowed = {e.lower() for e in accept} | {
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".webp",
+                }
+                if ext not in allowed:
                     raise HTTPException(
                         400,
-                        f"Formato no permitido para «{slot['title']}». Usa: {', '.join(accept)}",
+                        f"Formato no permitido para «{slot['title']}». Usa: {', '.join(accept)} o imágenes (.png, .jpg, .webp)",
                     )
 
     max_bytes = MAX_PROJECT_DOC_MB * 1024 * 1024

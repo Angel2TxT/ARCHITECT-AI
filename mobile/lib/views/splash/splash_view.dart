@@ -299,7 +299,7 @@ class _SplashViewState extends State<SplashView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
@@ -315,11 +315,18 @@ class _SplashViewState extends State<SplashView>
   }
 
   Widget _animatedSplashContent() {
-    // Colores de la paleta arquitectónica iOS
-    const Color charcoalText = Color(0xFF29252A);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // Colores de la paleta arquitectónica iOS (el isotipo mantiene sus colores originales)
+    final Color charcoalText = isDark
+        ? theme.colorScheme.onSurface
+        : const Color(0xFF29252A);
     const Color buildingCharcoal = Color(0xFF1F2A32);
     const Color goldAccent = Color(0xFFD9A441);
     const Color blueprintGuideline = Color(0xFF8A939E);
+    final Color spinnerTrack = isDark
+        ? const Color(0xFF2A2A2E)
+        : const Color(0xFFE2E4E8);
 
     return SafeArea(
       child: Center(
@@ -373,7 +380,7 @@ class _SplashViewState extends State<SplashView>
                 position: _brandSlide,
                 child: FadeTransition(
                   opacity: _brandOpacity,
-                  child: const Text(
+                  child: Text(
                     'ARCHITECT',
                     style: TextStyle(
                       color: charcoalText,
@@ -392,11 +399,11 @@ class _SplashViewState extends State<SplashView>
               // 3. Indicador de actividad circular minimalista estilo iOS
               FadeTransition(
                 opacity: _indicatorOpacity,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 20,
                   height: 20,
                   child: _IosMinimalSpinner(
-                    trackColor: Color(0xFFE2E4E8),
+                    trackColor: spinnerTrack,
                     accentColor: goldAccent,
                   ),
                 ),

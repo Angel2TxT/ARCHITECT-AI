@@ -196,7 +196,7 @@ def update_unverified_email(
     *,
     current_email: str,
     new_email: str,
-    password: str,
+    password: str | None = None,
 ) -> User:
     """Permite corregir el correo electrónico antes de completar la verificación."""
     norm_current = _normalize_email(current_email)
@@ -207,7 +207,9 @@ def update_unverified_email(
         raise HTTPException(404, "Usuario no encontrado")
     if user.email_verified:
         raise HTTPException(400, "La cuenta ya está verificada")
-    if not user.password_hash or not verify_password(password, user.password_hash):
+    if password is not None and (
+        not user.password_hash or not verify_password(password, user.password_hash)
+    ):
         raise HTTPException(401, "Contraseña incorrecta")
 
     if norm_new != norm_current:
